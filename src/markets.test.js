@@ -78,6 +78,14 @@ describe("picker filter", () => {
     const rows = filterMarkets(mixed, { tab: "all", kinds: ["outcome"] });
     expect(rows.every((m) => m.kind === "outcome")).toBe(true);
     expect(filterMarkets(mixed, { tab: "outcome" }).map((m) => m.id)).toEqual(["outcome:1:0"]);
+    expect(filterMarkets(mixed, { tab: "all" }).some((m) => m.kind === "outcome")).toBe(true);
+    expect(filterMarkets(mixed, { tab: "perps" }).some((m) => m.kind === "outcome")).toBe(false);
+  });
+
+  it("keeps picker category words Favorites All Perps Spot Outcome Trending", () => {
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    const tabs = [...html.matchAll(/data-mp-tab="([^"]+)"/g)].map((m) => m[1]);
+    expect(tabs).toEqual(["favorites", "all", "perps", "spot", "outcome", "trending"]);
   });
 
   it("favorites tab uses stored ids only", () => {

@@ -838,7 +838,7 @@ export function createTradeView(app) {
       if (key === pickerSort) btn.setAttribute("aria-sort", pickerDir === "asc" ? "asc" : "desc");
       else btn.removeAttribute("aria-sort");
     });
-    pickerRows = filterMarkets(visibleMarkets(), {
+    pickerRows = filterMarkets(markets, {
       tab: pickerTab,
       query: pickerQuery,
       favs,
@@ -849,7 +849,15 @@ export function createTradeView(app) {
     clear(body);
     if (!pickerRows.length) {
       body.appendChild(
-        h("tr", null, h("td", { colSpan: "6" }, pageKind === "outcome" && !pickerQuery ? "No live outcome markets from Hyperliquid." : "No markets match."))
+        h(
+          "tr",
+          null,
+          h(
+            "td",
+            { colSpan: "6" },
+            pickerTab === "outcome" && !pickerQuery ? "No live outcome markets from Hyperliquid." : "No markets match."
+          )
+        )
       );
       return;
     }
@@ -938,6 +946,13 @@ export function createTradeView(app) {
 
   function selectPickerRow(id) {
     closePicker();
+    const m = marketById[id] || markets.find((x) => x.id === id) || null;
+    const want = m && m.kind === "outcome" ? "outcome" : "trade";
+    if (m && want !== pageKind && typeof app.navigate === "function") {
+      marketId = m.id;
+      app.navigate(want);
+      return;
+    }
     setMarket(id);
   }
 
@@ -1806,6 +1821,7 @@ export function createTradeView(app) {
   return {
     async show(kind) {
       pageKind = kind === "outcome" ? "outcome" : "trade";
+      if (pageKind === "outcome") pickerTab = "outcome";
       bind();
       if (!markets.length) {
         try {

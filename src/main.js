@@ -64,6 +64,9 @@ const app = {
   el,
   socket,
   loadMarkets,
+  navigate(view) {
+    setView(view, true);
+  },
   reloadAccount: () => {
     if (state.address) return refreshAccount(state.address);
   },
