@@ -276,7 +276,6 @@ export function createTradeView(app) {
     });
     byId("book-pane")?.classList.toggle("hidden", bookTab !== "book");
     byId("trades-pane")?.classList.toggle("hidden", bookTab !== "trades");
-    byId("book-tools")?.classList.toggle("hidden", bookTab !== "book");
   }
 
   function displaySize(lv) {
