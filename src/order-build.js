@@ -8,7 +8,16 @@
  * 100  = 10 bp = 0.1%  (perp maximum)
  *
  * We charge 1 bp. approveBuilderFee maxFeeRate must be the matching percent string "0.01%".
+ *
+ * HIP-4 outcome orders use the same `order` action as perps. Differences:
+ *   a  = 100_000_000 + 10 * outcomeId + side  (Yes=0, No=1)
+ *   s  = integer share count (szDecimals 0)
+ *   p  = probability in [0.001, 0.999], tick 0.0001
+ *   t  = { limit: { tif: "Gtc" | "Ioc" } }  (same as perps)
+ * Builder is still last-written by sealOrderPayload.
  */
+
+import { OUTCOME_ASSET_OFFSET, roundOutcomePx } from "./outcomes.js";
 
 /** Builder that receives the fee. Lowercase 0x as Hyperliquid expects. */
 export const BUILDER_ADDRESS = "0x999a4b5f268a8fbf33736feff360d462ad248dbf";
@@ -87,17 +96,21 @@ export function buildOrderWire({
 }) {
   const a = Number(asset);
   if (!Number.isInteger(a) || a < 0) throw new Error("Unknown market");
-  const szNum = roundSz(Number(size), szDecimals);
+  const outcome = a >= OUTCOME_ASSET_OFFSET;
+  const szDec = outcome ? 0 : szDecimals;
+  const szNum = roundSz(Number(size), szDec);
   if (!Number.isFinite(szNum) || szNum <= 0) throw new Error("Enter a size greater than zero");
+
+  function pxFor(raw) {
+    return outcome ? roundOutcomePx(raw) : roundPx(Number(raw), szDec);
+  }
 
   let t;
   let pxNum;
   if (type === "stop") {
-    const trig = roundPx(Number(triggerPx), szDecimals);
+    const trig = pxFor(triggerPx);
     if (!Number.isFinite(trig) || trig <= 0) throw new Error("Enter a trigger price");
-    pxNum = triggerIsMarket
-      ? roundPx(slippagePrice(trig, isBuy, 0.08), szDecimals)
-      : roundPx(Number(price), szDecimals);
+    pxNum = triggerIsMarket ? pxFor(slippagePrice(trig, isBuy, 0.08)) : pxFor(price);
     if (!Number.isFinite(pxNum) || pxNum <= 0) throw new Error("Enter a limit price for this stop");
     t = {
       trigger: {
@@ -107,11 +120,11 @@ export function buildOrderWire({
       },
     };
   } else if (type === "market") {
-    pxNum = roundPx(Number(price), szDecimals);
+    pxNum = pxFor(price);
     if (!Number.isFinite(pxNum) || pxNum <= 0) throw new Error("No price for market order");
     t = { limit: { tif: "Ioc" } };
   } else {
-    pxNum = roundPx(Number(price), szDecimals);
+    pxNum = pxFor(price);
     if (!Number.isFinite(pxNum) || pxNum <= 0) throw new Error("Enter a limit price");
     const allowed = { Gtc: "Gtc", Ioc: "Ioc", Alo: "Alo" };
     t = { limit: { tif: allowed[tif] || "Gtc" } };

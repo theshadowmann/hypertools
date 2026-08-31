@@ -66,6 +66,10 @@ describe("marks and icons", () => {
     expect(balanceMarkPx("USDC", {}, [])).toBe(1);
     expect(balanceMarkPx("HYPE", { HYPE: "20" }, [])).toBe(20);
     expect(balanceMarkPx("PURR", {}, [{ kind: "spot", base: "PURR", coin: "PURR/USDC", markPx: "0.12" }])).toBe(0.12);
+    expect(balanceMarkPx("+12100", { "#12100": "0.42" }, [])).toBe(0.42);
+    expect(
+      balanceMarkPx("+12101", {}, [{ kind: "outcome", coin: "#12100", noCoin: "#12101", balanceCoin: "+12100", markPx: "0.42", noMarkPx: "0.58" }])
+    ).toBe(0.58);
     expect(iconCoinFromBalance("PURR/USDC")).toBe("PURR");
   });
 });

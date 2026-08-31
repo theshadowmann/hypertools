@@ -4,8 +4,11 @@ import {
   encodeOutcomeBalance,
   encodeOutcomeCoin,
   formatOutcomeTitle,
+  isOutcomeCoin,
+  outcomePositionsFromSpot,
   parseOutcomeFields,
   parseOutcomeMarkets,
+  roundOutcomePx,
 } from "./outcomes.js";
 
 const meta = {
@@ -98,5 +101,44 @@ describe("parseOutcomeMarkets", () => {
   it("returns nothing for empty API payloads", () => {
     expect(parseOutcomeMarkets(null, {})).toEqual([]);
     expect(parseOutcomeMarkets({ outcomes: [] }, {})).toEqual([]);
+  });
+});
+
+describe("outcome coins and rounding", () => {
+  it("treats # and + encodings as outcome coins", () => {
+    expect(isOutcomeCoin("#12100")).toBe(true);
+    expect(isOutcomeCoin("+12101")).toBe(true);
+    expect(isOutcomeCoin("BTC")).toBe(false);
+    expect(isOutcomeCoin("PURR/USDC")).toBe(false);
+  });
+
+  it("clamps probability to a 0.0001 tick in [0.001, 0.999]", () => {
+    expect(roundOutcomePx(0.35424)).toBe(0.3542);
+    expect(roundOutcomePx(0)).toBe(0.001);
+    expect(roundOutcomePx(1.2)).toBe(0.999);
+    expect(roundOutcomePx("x")).toBeNaN();
+  });
+});
+
+describe("outcomePositionsFromSpot", () => {
+  it("maps + balances onto live outcome markets without inventing rows", () => {
+    const markets = parseOutcomeMarkets(meta, { "#12100": "0.42", "#12101": "0.58" });
+    const rows = outcomePositionsFromSpot(
+      [
+        { coin: "+12100", total: "12", hold: "2", entryNtl: "4.8" },
+        { coin: "+12101", total: "3", hold: "0" },
+        { coin: "PURR", total: "9", hold: "0" },
+        { coin: "+12100", total: "0", hold: "0" },
+      ],
+      markets
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].side).toBe("Yes");
+    expect(rows[0].coin).toBe("+12100");
+    expect(rows[0].available).toBe(10);
+    expect(rows[0].markPx).toBe("0.42");
+    expect(rows[0].title).toMatch(/BTC above 100000/);
+    expect(rows[1].side).toBe("No");
+    expect(rows[1].markPx).toBe("0.58");
   });
 });

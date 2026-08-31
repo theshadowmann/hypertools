@@ -38,10 +38,18 @@ export function balanceMarkPx(coin, mids, markets) {
   if (!c) return NaN;
   if (c.toUpperCase() === "USDC") return 1;
   const book = mids && typeof mids === "object" ? mids : {};
-  const fromMid = num(book[c]) || num(book[c + "/USDC"]);
+  const hash = c.charAt(0) === "+" ? "#" + c.slice(1) : c;
+  const fromMid = num(book[c]) || num(book[hash]) || num(book[c + "/USDC"]);
   if (fromMid > 0) return fromMid;
   const list = markets || [];
-  let m = list.find((x) => x && x.kind === "spot" && (x.base === c || x.coin === c));
+  let m = list.find((x) => x && x.kind === "outcome" && (x.coin === c || x.coin === hash || x.noCoin === c || x.noCoin === hash || x.balanceCoin === c));
+  if (m) {
+    const enc = Number((c.charAt(0) === "#" || c.charAt(0) === "+" ? c.slice(1) : c));
+    const side = Number.isInteger(enc) ? enc % 10 : 0;
+    const px = side === 1 ? num(m.noMarkPx) : num(m.markPx);
+    if (px > 0) return px;
+  }
+  m = list.find((x) => x && x.kind === "spot" && (x.base === c || x.coin === c));
   if (!m) m = list.find((x) => x && x.kind === "perp" && x.coin === c);
   if (!m) return NaN;
   const px = num(m.markPx) || num(m.oraclePx) || num(m.midPx);

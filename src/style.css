@@ -117,6 +117,14 @@ body {
   border-top: 1px solid var(--line);
 }
 
+.trade-shell.no-book {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+.trade-shell.no-book .trade-stats { grid-column: 1; }
+.trade-shell.no-book .trade-chart { grid-column: 1; }
+.trade-shell.no-book .trade-book { display: none; }
+.trade-shell.no-book .trade-ticket { grid-column: 2; }
+
 .tv-host { height: 100%; width: 100%; min-height: 0; overflow: hidden; }
 .tradingview-widget-container,
 .tradingview-widget-container__widget { height: 100% !important; width: 100% !important; }

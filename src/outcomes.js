@@ -1,4 +1,17 @@
-/** HIP-4 outcome / prediction markets. Asset ids start at 100_000_000. */
+/**
+ * HIP-4 outcome / prediction markets (not HIP-3 builder-deployed perps).
+ *
+ * Live Info:
+ *   POST /info  { "type": "outcomeMeta" }     → outcomes[], questions[]
+ *   POST /info  { "type": "allMids" }         → mids keyed "#12090", "#12091", …
+ *   POST /info  { "type": "l2Book", coin }    → levels for "#12100"
+ *   POST /info  { "type": "recentTrades", coin }
+ *   POST /info  { "type": "spotClearinghouseState" }  balances[].coin like "+12100"
+ *
+ * Exchange: same `order` action as perps. Asset `a` = 100_000_000 + 10*id + side.
+ * Size is integer shares. Price is probability [0.001, 0.999] tick 0.0001.
+ * Collateral quoteToken from live meta is USDC. No leverage / funding.
+ */
 
 export const OUTCOME_ASSET_OFFSET = 100_000_000;
 
@@ -85,6 +98,53 @@ export function formatOutcomeTitle(outcome, question) {
 
 export function isOutcomeMarket(m) {
   return !!(m && m.kind === "outcome");
+}
+
+export function isOutcomeCoin(coin) {
+  const s = String(coin || "");
+  return s.charAt(0) === "#" || s.charAt(0) === "+";
+}
+
+export function roundOutcomePx(px) {
+  const n = Number(px);
+  if (!Number.isFinite(n)) return NaN;
+  const clamped = Math.min(0.999, Math.max(0.001, n));
+  return Math.round(clamped * 10000) / 10000;
+}
+
+/**
+ * HIP-4 share balances live in spotClearinghouseState under `+{encoding}` coins.
+ */
+export function outcomePositionsFromSpot(balances, markets) {
+  const byKey = {};
+  (markets || []).forEach((m) => {
+    if (!m || m.kind !== "outcome") return;
+    if (m.balanceCoin) byKey[m.balanceCoin] = m;
+    if (m.coin) byKey[m.coin] = m;
+    if (m.noCoin) byKey[m.noCoin] = m;
+  });
+  const rows = [];
+  (balances || []).forEach((b) => {
+    if (!b || !isOutcomeCoin(b.coin)) return;
+    const total = Number(b.total);
+    if (!Number.isFinite(total) || Math.abs(total) < 1e-8) return;
+    const enc = Number(String(b.coin).slice(1));
+    const side = Number.isInteger(enc) ? enc % 10 : 0;
+    const m = byKey[b.coin] || null;
+    const mark = m ? (side === 1 ? m.noMarkPx : m.markPx) : null;
+    rows.push({
+      coin: b.coin,
+      side: side === 1 ? "No" : "Yes",
+      title: m ? m.pair : String(b.coin),
+      marketId: m ? m.id : null,
+      total,
+      hold: Number(b.hold) || 0,
+      available: total - (Number(b.hold) || 0),
+      markPx: mark,
+      entryNtl: b.entryNtl,
+    });
+  });
+  return rows;
 }
 
 /**

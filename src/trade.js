@@ -54,6 +54,10 @@ import {
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import {
+  isOutcomeCoin,
+  outcomePositionsFromSpot,
+} from "./outcomes.js";
+import {
   aggregateLevels,
   bookPrecisions,
   defaultPrecision,
@@ -126,6 +130,9 @@ export function createTradeView(app) {
   let pickerRows = [];
   let favs = loadFavs();
   let pageKind = "trade";
+  let bookSnapshotDone = false;
+  let tradesSnapshotDone = false;
+  let paneTimer = null;
 
   function currentMarket() {
     return marketById[marketId] || markets.find((m) => m.id === marketId) || null;
@@ -143,6 +150,48 @@ export function createTradeView(app) {
 
   function isCash() {
     return isSpot() || isOutcome();
+  }
+
+  function hasBookDepth() {
+    return ((book.bids && book.bids.length) || (book.asks && book.asks.length)) > 0;
+  }
+
+  function syncBookColumn() {
+    const shell = document.querySelector(".trade-shell");
+    if (!shell) return;
+    const live = hasBookDepth() || trades.length > 0;
+    if (live) {
+      shell.classList.remove("no-book");
+      return;
+    }
+    if (bookSnapshotDone && tradesSnapshotDone) shell.classList.add("no-book");
+    else shell.classList.remove("no-book");
+  }
+
+  function marketForCoin(c) {
+    if (!c) return null;
+    return (
+      markets.find((x) => x.coin === c) ||
+      markets.find((x) => x.noCoin === c) ||
+      markets.find((x) => x.balanceCoin === c) ||
+      marketById["perp:" + c] ||
+      marketById["spot:" + c] ||
+      null
+    );
+  }
+
+  function rowCoin(row) {
+    if (!row) return "";
+    if (row.coin) return String(row.coin);
+    if (row.order && row.order.coin) return String(row.order.coin);
+    if (row.state && row.state.coin) return String(row.state.coin);
+    if (row.fill && row.fill.coin) return String(row.fill.coin);
+    return "";
+  }
+
+  function forThisPage(rows) {
+    if (pageKind !== "outcome") return rows || [];
+    return (rows || []).filter((r) => isOutcomeCoin(rowCoin(r)));
   }
 
   function visibleMarkets() {
@@ -364,10 +413,12 @@ export function createTradeView(app) {
     clear(bidsEl);
     if (!askView.length && !bidView.length) {
       asksEl.appendChild(note("Waiting for live book…", "px-3 py-6 text-center text-[11px] text-mist-400"));
+      syncBookColumn();
       return;
     }
     askView.forEach((lv, i) => asksEl.appendChild(bookRow(lv, askCum[i], "ask", maxCum)));
     bidView.forEach((lv, i) => bidsEl.appendChild(bookRow(lv, bidCum[i], "bid", maxCum)));
+    syncBookColumn();
   }
 
   function renderTrades() {
@@ -376,6 +427,7 @@ export function createTradeView(app) {
     clear(body);
     if (!trades.length) {
       body.appendChild(note("Waiting for live trades…", "px-3 py-6 text-center text-[11px] text-mist-400"));
+      syncBookColumn();
       return;
     }
     trades.forEach((t) => {
@@ -408,6 +460,7 @@ export function createTradeView(app) {
         )
       );
     });
+    syncBookColumn();
   }
 
   function renderStats() {
@@ -579,7 +632,7 @@ export function createTradeView(app) {
     }
     submit.disabled = ticketBusy;
     const verb = side === "buy" ? "Buy" : "Sell";
-    submit.textContent = verb + " " + coin;
+    submit.textContent = isOutcome() ? verb + " Yes" : verb + " " + coin;
   }
 
   async function refreshEnabled() {
@@ -996,9 +1049,11 @@ export function createTradeView(app) {
     const perps = (app.state.data && app.state.data.perps) || {};
     const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
     const mids = (app.state.data && app.state.data.mids) || {};
+    const spotForPage =
+      pageKind === "outcome" ? spot.filter((b) => b && isOutcomeCoin(b.coin)) : spot;
     const rows = buildBalanceRows({
       perps,
-      spotBalances: spot,
+      spotBalances: spotForPage,
       mids,
       markets,
       hideSmall: hideSmallBalances,
@@ -1077,6 +1132,38 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load positions."));
       return;
     }
+    if (pageKind === "outcome") {
+      const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
+      const rows = outcomePositionsFromSpot(spot, markets);
+      if (!rows.length) {
+        root.appendChild(emptyNote("No outcome positions."));
+        return;
+      }
+      root.appendChild(
+        histTable(
+          ["Market", "Side", "Size", "Available", "Mark", "Value"],
+          rows.map((p) => {
+            const value = Number(p.total) * Number(p.markPx);
+            return h(
+              "tr",
+              {
+                class: "border-t border-white/5 cursor-pointer hover:bg-white/5",
+                onClick: () => {
+                  if (p.marketId) setMarket(p.marketId);
+                },
+              },
+              h("td", { class: "px-2 py-1.5 font-medium text-white" }, p.title),
+              h("td", { class: "px-2 py-1.5 " + (p.side === "Yes" ? "text-buy" : "text-sell") }, p.side),
+              h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(p.total)),
+              h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(p.available)),
+              h("td", { class: "px-2 py-1.5 font-mono" }, p.markPx == null ? "—" : fmtPx(p.markPx)),
+              h("td", { class: "px-2 py-1.5 font-mono" }, Number.isFinite(value) ? fmtUsd(value) : "—")
+            );
+          })
+        )
+      );
+      return;
+    }
     const perps = (app.state.data && app.state.data.perps) || {};
     const rows = positionRows(perps.assetPositions || []);
     const mids = (app.state.data && app.state.data.mids) || {};
@@ -1107,12 +1194,10 @@ export function createTradeView(app) {
   }
 
   function assetForCoin(c) {
-    const hit =
-      marketById["perp:" + c] ||
-      markets.find((x) => x.coin === c && x.kind === "perp") ||
-      marketById["spot:" + c] ||
-      markets.find((x) => x.coin === c);
-    return hit ? hit.asset : null;
+    const hit = marketForCoin(c);
+    if (!hit) return null;
+    if (hit.noCoin && c === hit.noCoin) return hit.noAsset;
+    return hit.asset;
   }
 
   function renderOrders() {
@@ -1123,22 +1208,26 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load open orders."));
       return;
     }
-    const orders = (app.state.data && app.state.data.openOrders) || [];
+    const orders = forThisPage((app.state.data && app.state.data.openOrders) || []);
     const tradeable = canTrade();
     if (!orders.length) {
-      root.appendChild(emptyNote("No open orders."));
+      root.appendChild(emptyNote(pageKind === "outcome" ? "No open outcome orders." : "No open orders."));
       return;
     }
     root.appendChild(
       histTable(
         ["Time", "Coin", "Direction", "Size", "Filled Size", "Order Value", "Price", "Reduce Only", "Trigger Conditions", "Status", "Order ID", ""],
-        orders.map((o) =>
-          h(
+        orders.map((o) => {
+          const cash = pageKind === "outcome" || isOutcomeCoin(o.coin);
+          const dir = o.side === "B" ? (cash ? "Buy" : "Open Long") : cash ? "Sell" : "Open Short";
+          const m = marketForCoin(o.coin);
+          const label = m && m.kind === "outcome" ? m.pair : o.coin;
+          return h(
             "tr",
             { class: "border-t border-white/5" },
             h("td", { class: "px-2 py-1.5 text-mist-400" }, formatClock(o.timestamp)),
-            h("td", { class: "px-2 py-1.5 text-white" }, o.coin),
-            h("td", { class: "px-2 py-1.5 " + (o.side === "B" ? "text-buy" : "text-sell") }, o.side === "B" ? "Open Long" : "Open Short"),
+            h("td", { class: "px-2 py-1.5 text-white" }, label),
+            h("td", { class: "px-2 py-1.5 " + (o.side === "B" ? "text-buy" : "text-sell") }, dir),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(o.origSz || o.sz)),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(o.origSz != null ? num(o.origSz) - num(o.sz) : 0)),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtUsd(num(o.sz) * num(o.limitPx))),
@@ -1154,8 +1243,8 @@ export function createTradeView(app) {
                 ? h("button", { type: "button", class: "text-sell hover:underline", onClick: () => onCancel(o.coin, Number(o.oid)) }, "Cancel")
                 : ""
             )
-          )
-        )
+          );
+        })
       )
     );
   }
@@ -1168,11 +1257,11 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load TWAPs."));
       return;
     }
-    const hist = extras.twapHistory || [];
-    const fills = extras.twapFills || [];
-    const live = twaps || [];
+    const hist = forThisPage(extras.twapHistory || []);
+    const fills = forThisPage(extras.twapFills || []);
+    const live = forThisPage(twaps || []);
     if (!hist.length && !live.length && !fills.length) {
-      root.appendChild(emptyNote("No TWAP orders."));
+      root.appendChild(emptyNote(pageKind === "outcome" ? "No outcome TWAPs." : "No TWAP orders."));
       return;
     }
     const rows = [];
@@ -1239,6 +1328,10 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load funding history."));
       return;
     }
+    if (pageKind === "outcome") {
+      root.appendChild(emptyNote("Outcome markets do not pay funding."));
+      return;
+    }
     const rows = extras.fundingHistory || [];
     if (!rows.length) {
       root.appendChild(emptyNote("No funding history."));
@@ -1270,6 +1363,34 @@ export function createTradeView(app) {
     clear(root);
     if (!app.state.address) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load order history."));
+      return;
+    }
+    if (pageKind === "outcome") {
+      const fills = forThisPage((app.state.data && app.state.data.fills) || []);
+      if (!fills.length) {
+        root.appendChild(emptyNote("No outcome fills."));
+        return;
+      }
+      root.appendChild(
+        histTable(
+          ["Time", "Coin", "Side", "Size", "Price", "Fee", "Closed PnL"],
+          fills.slice(0, 50).map((f) => {
+            const m = marketForCoin(f.coin);
+            const label = m && m.kind === "outcome" ? m.pair : f.coin;
+            return h(
+              "tr",
+              { class: "border-t border-white/5" },
+              h("td", { class: "px-2 py-1.5 text-mist-400" }, formatLocalTime(f.time)),
+              h("td", { class: "px-2 py-1.5 text-white" }, label),
+              h("td", { class: "px-2 py-1.5 " + (f.side === "B" ? "text-buy" : "text-sell") }, f.side === "B" ? "Buy" : "Sell"),
+              h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(f.sz)),
+              h("td", { class: "px-2 py-1.5 font-mono" }, fmtPx(f.px)),
+              h("td", { class: "px-2 py-1.5 font-mono" }, f.fee != null ? fmtUsd(f.fee) : "—"),
+              h("td", { class: "px-2 py-1.5 font-mono " + pnlClass(f.closedPnl) }, f.closedPnl != null ? fmtUsd(f.closedPnl, { signed: true }) : "—")
+            );
+          })
+        )
+      );
       return;
     }
     const rows = extras.historicalOrders || [];
@@ -1387,12 +1508,25 @@ export function createTradeView(app) {
     book = { bids: [], asks: [], time: 0 };
     trades = [];
     bookPrec = null;
+    bookSnapshotDone = false;
+    tradesSnapshotDone = false;
+    if (paneTimer) {
+      clearTimeout(paneTimer);
+      paneTimer = null;
+    }
+    document.querySelector(".trade-shell")?.classList.remove("no-book");
     renderBook();
     renderTrades();
-    if (!c) return;
+    if (!c) {
+      bookSnapshotDone = true;
+      tradesSnapshotDone = true;
+      syncBookColumn();
+      return;
+    }
     unsubBook = socket.subscribe({ type: "l2Book", coin: c }, (data) => {
       if (gen !== marketGen) return;
       book = bookLevels(data);
+      bookSnapshotDone = true;
       renderBook();
     });
     unsubTrades = socket.subscribe({ type: "trades", coin: c }, (data) => {
@@ -1403,11 +1537,23 @@ export function createTradeView(app) {
     });
     hlInfo({ type: "recentTrades", coin: c })
       .then((rows) => {
-        if (gen !== marketGen || !Array.isArray(rows)) return;
-        trades = mergeTrades(trades, rows);
+        if (gen !== marketGen) return;
+        if (Array.isArray(rows)) trades = mergeTrades(trades, rows);
+        tradesSnapshotDone = true;
         renderTrades();
       })
-      .catch(() => {});
+      .catch(() => {
+        if (gen !== marketGen) return;
+        tradesSnapshotDone = true;
+        renderTrades();
+      });
+    paneTimer = setTimeout(() => {
+      if (gen !== marketGen) return;
+      bookSnapshotDone = true;
+      tradesSnapshotDone = true;
+      renderBook();
+      renderTrades();
+    }, 4000);
     const m = currentMarket();
     const ctxSub =
       m && (m.kind === "spot" || m.kind === "outcome")
@@ -1476,6 +1622,8 @@ export function createTradeView(app) {
       mountTvChart(byId("chart"), { coin: "", kind: pageKind === "outcome" ? "outcome" : "perp" });
       book = { bids: [], asks: [], time: 0 };
       trades = [];
+      bookSnapshotDone = true;
+      tradesSnapshotDone = true;
       renderBook();
       renderTrades();
       renderTicketKind();
@@ -1500,11 +1648,12 @@ export function createTradeView(app) {
     updateEstimate();
     ensureChart();
     subscribeMarket();
+    const thisGen = marketGen;
     const snap = await hlInfo({ type: "l2Book", coin: m.coin }).catch(() => null);
-    if (snap) {
-      book = bookLevels(snap);
-      renderBook();
-    }
+    if (thisGen !== marketGen) return;
+    bookSnapshotDone = true;
+    if (snap) book = bookLevels(snap);
+    renderBook();
   }
 
   function setInterval_(next) {

@@ -125,6 +125,50 @@ describe("trade guards", () => {
   });
 });
 
+describe("HIP-4 outcome order wire", () => {
+  it("uses 100_000_000+ asset, integer size, and probability tick", () => {
+    const wire = buildOrderWire({
+      asset: 100_012_100,
+      isBuy: true,
+      size: 10.4,
+      price: 0.35424,
+      type: "limit",
+      tif: "Gtc",
+      szDecimals: 5,
+    });
+    expect(wire.a).toBe(100012100);
+    expect(wire.b).toBe(true);
+    expect(wire.s).toBe("10");
+    expect(wire.p).toBe("0.3542");
+    expect(wire.t).toEqual({ limit: { tif: "Gtc" } });
+  });
+
+  it("clamps outcome prices into [0.001, 0.999] and still seals builder last", () => {
+    const hi = buildOrderWire({
+      asset: 100_012_101,
+      isBuy: false,
+      size: 25,
+      price: 1.4,
+      type: "limit",
+      tif: "Ioc",
+    });
+    expect(hi.a).toBe(100012101);
+    expect(hi.p).toBe("0.999");
+    expect(hi.s).toBe("25");
+    expect(hi.t).toEqual({ limit: { tif: "Ioc" } });
+    const attacker = "0x0000000000000000000000000000000000000999";
+    const sealed = sealOrderPayload({
+      orders: [hi],
+      grouping: "na",
+      builder: { b: attacker, f: 1 },
+    });
+    expect(sealed.builder).toEqual({
+      b: "0x999a4b5f268a8fbf33736feff360d462ad248dbf",
+      f: 10,
+    });
+  });
+});
+
 describe("rounding", () => {
   it("rounds BTC-style prices to 5 sig figs and 1 decimal (szDecimals 5)", () => {
     expect(roundPx(123456.789, 5)).toBe(123460);
