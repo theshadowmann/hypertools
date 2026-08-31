@@ -104,7 +104,8 @@ describe("ticket DOM", () => {
     expect(ticket).toContain('id="sum-margin-row"');
     expect(ticket).toContain("chk-box");
     expect(html).toContain('id="market-chip-icon"');
-    expect(html).toContain("chip-chevron");
+    expect(html).toContain("Hide Small Balances");
+    expect(html).toContain('id="trade-balances"');
   });
 
   it("uses word nav Trade / Portfolio, not a pill slider", () => {

@@ -52,6 +52,7 @@ import {
   toggleFav,
 } from "./markets.js";
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
+import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import {
   aggregateLevels,
   bookPrecisions,
@@ -113,6 +114,7 @@ export function createTradeView(app) {
   let twaps = [];
   let extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: null };
   let bottomTab = "balances";
+  let hideSmallBalances = true;
   let fundingTimer = null;
   let lastTv = "";
   let pickerOpen = false;
@@ -976,45 +978,85 @@ export function createTradeView(app) {
     const root = byId("trade-balances");
     if (!root) return;
     clear(root);
+    byId("bal-hide-wrap")?.classList.toggle("hidden", bottomTab !== "balances");
     if (!app.state.address) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load balances."));
       return;
     }
     const perps = (app.state.data && app.state.data.perps) || {};
-    const spot = ((app.state.data && app.state.data.spot && app.state.data.spot.balances) || []).filter((b) => Math.abs(num(b.total)) > 1e-8);
-    const usdc = spotUsdcParts(spot);
-    const rows = [
-      h(
+    const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
+    const mids = (app.state.data && app.state.data.mids) || {};
+    const rows = buildBalanceRows({
+      perps,
+      spotBalances: spot,
+      mids,
+      markets,
+      hideSmall: hideSmallBalances,
+    });
+    if (!rows.length) {
+      root.appendChild(emptyNote("No balances."));
+      return;
+    }
+    const body = rows.map((r) => {
+      const url = coinIconUrl(r.iconCoin);
+      const pnlTxt = formatPnlPct(r.pnlPct);
+      const pnlCls =
+        r.pnlPct == null || !Number.isFinite(r.pnlPct) || r.pnlPct === 0
+          ? ""
+          : r.pnlPct > 0
+            ? " up"
+            : " down";
+      return h(
         "tr",
-        { class: "border-t border-white/5" },
-        h("td", { class: "px-2 py-1.5 text-white" }, "Perps USDC"),
-        h("td", { class: "px-2 py-1.5 font-mono" }, fmtUsd(perps.marginSummary && perps.marginSummary.accountValue)),
-        h("td", { class: "px-2 py-1.5 font-mono" }, fmtUsd(perps.withdrawable))
-      ),
-    ];
-    spot.forEach((b) => {
-      rows.push(
+        { class: "bal-row" },
         h(
-          "tr",
-          { class: "border-t border-white/5" },
-          h("td", { class: "px-2 py-1.5 text-white" }, b.coin || "—"),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(b.total)),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(Math.max(0, num(b.total) - num(b.hold))))
-        )
+          "td",
+          { class: "bal-asset" },
+          url
+            ? h("img", {
+                class: "coin-icon mp-icon",
+                alt: "",
+                hidden: true,
+                width: "16",
+                height: "16",
+                onError: (ev) => {
+                  ev.currentTarget.hidden = true;
+                  ev.currentTarget.removeAttribute("src");
+                },
+                onLoad: (ev) => {
+                  ev.currentTarget.hidden = false;
+                },
+                src: url,
+              })
+            : null,
+          h("span", null, r.coin)
+        ),
+        h("td", null, fmtQty(r.total)),
+        h("td", null, fmtQty(r.available)),
+        h("td", null, Number.isFinite(r.value) ? fmtUsd(r.value) : "—"),
+        h("td", { class: "bal-pnl" + pnlCls }, pnlTxt)
       );
     });
-    if (!spot.length) {
-      rows.push(
+    root.appendChild(
+      h(
+        "table",
+        { class: "bal-table" },
         h(
-          "tr",
-          { class: "border-t border-white/5" },
-          h("td", { class: "px-2 py-1.5 text-white" }, "Spot USDC"),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtUsd(usdc.total)),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtUsd(usdc.available))
-        )
-      );
-    }
-    root.appendChild(histTable(["Asset", "Total", "Available"], rows));
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", null, "Asset"),
+            h("th", null, "Total Balance"),
+            h("th", null, "Available Balance"),
+            h("th", null, "Value (USD)"),
+            h("th", null, "PNL %")
+          )
+        ),
+        h("tbody", null, ...body)
+      )
+    );
   }
 
   function renderPositions() {
@@ -1561,7 +1603,12 @@ export function createTradeView(app) {
         ["balances", "positions", "orders", "twap", "funding", "history"].forEach((id) => {
           byId("trade-" + id)?.classList.toggle("hidden", id !== bottomTab);
         });
+        byId("bal-hide-wrap")?.classList.toggle("hidden", bottomTab !== "balances");
       });
+    });
+    byId("bal-hide-small")?.addEventListener("change", (ev) => {
+      hideSmallBalances = !!ev.target.checked;
+      renderBalances();
     });
     setSide("buy");
     setOrderType("limit");
