@@ -85,6 +85,24 @@ describe("picker filter", () => {
     expect(asc[0].coin).toBe("ETH");
   });
 
+  it("keeps missing 24h change after real values in both directions", () => {
+    const mixed = [
+      { coin: "BTC", pair: "BTC/USDC", kind: "perp", markPx: "100", prevDayPx: "90" },
+      { coin: "Z", pair: "Z/USDC", kind: "perp", markPx: "1", prevDayPx: "0" },
+      { coin: "ETH", pair: "ETH/USDC", kind: "perp", markPx: "3", prevDayPx: "4" },
+    ];
+    expect(filterMarkets(mixed, { tab: "perps", sortKey: "change", sortDir: "desc" }).map((m) => m.coin)).toEqual([
+      "BTC",
+      "ETH",
+      "Z",
+    ]);
+    expect(filterMarkets(mixed, { tab: "perps", sortKey: "change", sortDir: "asc" }).map((m) => m.coin)).toEqual([
+      "ETH",
+      "BTC",
+      "Z",
+    ]);
+  });
+
   it("formats live 24h change as signed price / pct", () => {
     expect(formatPickerChange("100000", "90000")).toEqual({
       text: "+$10,000.00 / +11.11%",

@@ -198,15 +198,18 @@ export function sortMarkets(rows, sortKey, sortDir) {
       av = Number(a.dayNtlVlm);
       bv = Number(b.dayNtlVlm);
     }
-    const aN = Number.isFinite(av) ? av : -Infinity;
-    const bN = Number.isFinite(bv) ? bv : -Infinity;
-    if (aN === bN) return String(a.pair).localeCompare(String(b.pair));
-    return aN > bN ? dir : -dir;
+    const aOk = Number.isFinite(av);
+    const bOk = Number.isFinite(bv);
+    if (!aOk && !bOk) return String(a.pair).localeCompare(String(b.pair));
+    if (!aOk) return 1;
+    if (!bOk) return -1;
+    if (av === bv) return String(a.pair).localeCompare(String(b.pair));
+    return av > bv ? dir : -dir;
   });
   return list;
 }
 
-export function filterMarkets(markets, { tab = "all", query = "", favs = [], sortKey = "volume", sortDir = "desc" } = {}) {
+export function filterMarkets(markets, { tab = "all", query = "", favs = [], sortKey = "change", sortDir = "desc" } = {}) {
   let rows = markets || [];
   if (tab === "perps") rows = rows.filter((m) => m.kind === "perp");
   else if (tab === "spot") rows = rows.filter((m) => m.kind === "spot");
