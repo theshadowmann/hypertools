@@ -1,4 +1,4 @@
-import { HL_WS } from "./api.js";
+import { HL_WS } from "./hosts.js";
 
 function keyOf(sub) {
   return JSON.stringify(sub);

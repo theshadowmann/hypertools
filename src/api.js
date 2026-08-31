@@ -1,6 +1,5 @@
-export const HL_INFO = "https://api.hyperliquid.xyz/info";
-export const HL_EXCHANGE = "https://api.hyperliquid.xyz/exchange";
-export const HL_WS = "wss://api.hyperliquid.xyz/ws";
+import { HL_INFO, HL_EXCHANGE, HL_WS } from "./hosts.js";
+export { HL_INFO, HL_EXCHANGE, HL_WS };
 export const DUST = 1e-8;
 export const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 

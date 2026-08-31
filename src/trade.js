@@ -5,8 +5,8 @@ import {
   candlesToBars,
   hlInfo,
 } from "./api.js";
+import { clear, h, note, ths } from "./dom.js";
 import {
-  escapeHtml,
   fmtPx,
   fmtQty,
   fmtUsd,
@@ -27,8 +27,6 @@ import {
 } from "./hl-trade.js";
 import { sizeFromMarginPct } from "./order-build.js";
 
-const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
-
 function byId(id) {
   return document.getElementById(id);
 }
@@ -41,6 +39,10 @@ function setText(id, value) {
 function fieldValue(id) {
   const n = byId(id);
   return n ? n.value : "";
+}
+
+function emptyNote(message) {
+  return note(message, "px-3 py-6 text-center text-[12px] text-mist-400");
 }
 
 export function createTradeView(app) {
@@ -62,6 +64,7 @@ export function createTradeView(app) {
   let ctx = { markPx: null, midPx: null, funding: null, oraclePx: null };
   let side = "buy";
   let orderType = "limit";
+  let tif = "Gtc";
   let ticketBusy = false;
   let enabled = false;
   let twaps = [];
@@ -99,34 +102,45 @@ export function createTradeView(app) {
     const el = byId("chart");
     if (!el) return;
     if (chart) {
-      chart.resize(el.clientWidth, el.clientHeight || 360);
+      chart.resize(el.clientWidth, Math.max(el.clientHeight || 0, 1));
       return;
     }
     chart = createChart(el, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: "#0b1018" },
-        textColor: "#94a3b8",
-        fontFamily: "JetBrains Mono, ui-monospace, monospace",
+        background: { type: ColorType.Solid, color: "#05070a" },
+        textColor: "#64748b",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+        fontSize: 11,
+        attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: "rgba(255,255,255,0.035)" },
+        horzLines: { color: "rgba(255,255,255,0.035)" },
       },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
-      timeScale: { borderColor: "rgba(255,255,255,0.08)", timeVisible: true, secondsVisible: false },
+      rightPriceScale: {
+        borderColor: "rgba(255,255,255,0.06)",
+        scaleMargins: { top: 0.06, bottom: 0.08 },
+      },
+      timeScale: {
+        borderColor: "rgba(255,255,255,0.06)",
+        timeVisible: true,
+        secondsVisible: false,
+      },
     });
     series = chart.addSeries(CandlestickSeries, {
-      upColor: "#2dd4bf",
-      downColor: "#fb7185",
-      borderUpColor: "#2dd4bf",
-      borderDownColor: "#fb7185",
-      wickUpColor: "#2dd4bf",
-      wickDownColor: "#fb7185",
+      upColor: "#0ecb81",
+      downColor: "#f6465d",
+      borderUpColor: "#0ecb81",
+      borderDownColor: "#f6465d",
+      wickUpColor: "#0ecb81",
+      wickDownColor: "#f6465d",
     });
     resizeObs = new ResizeObserver(() => {
-      if (chart && el.clientWidth) chart.resize(el.clientWidth, el.clientHeight || 360);
+      if (chart && el.clientWidth) {
+        chart.resize(el.clientWidth, Math.max(el.clientHeight || 0, 1));
+      }
     });
     resizeObs.observe(el);
   }
@@ -156,13 +170,39 @@ export function createTradeView(app) {
     });
   }
 
+  function useBookPrice(px) {
+    const input = byId("ticket-price");
+    if (input) input.value = String(px);
+    if (orderType === "market") setOrderType("limit");
+    updateEstimate();
+  }
+
+  function bookRow(level, c, kind, maxCum) {
+    const width = Math.min(100, (c / maxCum) * 100);
+    return h(
+      "button",
+      {
+        type: "button",
+        class: "book-row " + kind,
+        title: "Use this price",
+        onClick: () => useBookPrice(level.px),
+      },
+      h("span", { class: "depth", style: { width: width.toFixed(1) + "%" } }),
+      h("span", { class: "px" }, fmtPx(level.px, false)),
+      h("span", { class: "sz" }, fmtQty(level.sz)),
+      h("span", { class: "sum" }, fmtQty(c))
+    );
+  }
+
   function renderBook() {
-    const root = byId("book-body");
-    if (!root) return;
+    const asksEl = byId("book-asks");
+    const bidsEl = byId("book-bids");
+    if (!asksEl || !bidsEl) return;
     const asks = (book.asks || []).slice();
     const bids = (book.bids || []).slice();
-    const askView = asks.slice(0, 12).reverse();
-    const bidView = bids.slice(0, 12);
+    const depth = 14;
+    const askView = asks.slice(0, depth).reverse();
+    const bidView = bids.slice(0, depth);
 
     function cum(rows) {
       let s = 0;
@@ -175,66 +215,30 @@ export function createTradeView(app) {
     const bidCum = cum(bidView);
     const maxCum = Math.max(askCum[0] || 0, bidCum[bidCum.length - 1] || 0, 1);
 
-    function rowHtml(level, c, kind) {
-      const px = level.px;
-      const sz = level.sz;
-      const width = Math.min(100, (c / maxCum) * 100);
-      return (
-        '<button type="button" class="book-row ' +
-        kind +
-        ' w-full px-2 py-0.5 text-[11px] font-mono" data-px="' +
-        escapeHtml(String(px)) +
-        '">' +
-        '<span class="depth" style="width:' +
-        width.toFixed(1) +
-        '%"></span>' +
-        '<span class="' +
-        (kind === "ask" ? "text-danger" : "text-accent") +
-        ' text-left">' +
-        escapeHtml(fmtPx(px, false)) +
-        "</span>" +
-        '<span class="text-right text-mist-200">' +
-        escapeHtml(fmtQty(sz)) +
-        "</span>" +
-        '<span class="text-right text-mist-400">' +
-        escapeHtml(fmtQty(c)) +
-        "</span>" +
-        "</button>"
+    const bestAsk = asks[0] && num(asks[0].px);
+    const bestBid = bids[0] && num(bids[0].px);
+    let spread = "—";
+    if (Number.isFinite(bestAsk) && Number.isFinite(bestBid)) {
+      spread = fmtPx(bestAsk - bestBid, false);
+    }
+    const midPx = mid();
+    const spreadEl = byId("book-spread");
+    if (spreadEl) {
+      clear(spreadEl);
+      spreadEl.appendChild(h("span", { class: "text-mist-400" }, "Spread " + spread));
+      spreadEl.appendChild(
+        h("span", { class: "text-white" }, Number.isFinite(midPx) ? fmtPx(midPx, false) : "—")
       );
     }
 
-    const spread = (() => {
-      const bestAsk = asks[0] && num(asks[0].px);
-      const bestBid = bids[0] && num(bids[0].px);
-      if (!Number.isFinite(bestAsk) || !Number.isFinite(bestBid)) return "—";
-      return fmtPx(bestAsk - bestBid, false);
-    })();
-
+    clear(asksEl);
+    clear(bidsEl);
     if (!askView.length && !bidView.length) {
-      root.innerHTML =
-        '<p class="px-3 py-8 text-center text-xs text-mist-400">Waiting for live book…</p>';
+      asksEl.appendChild(note("Waiting for live book…", "px-3 py-6 text-center text-[11px] text-mist-400"));
       return;
     }
-
-    root.innerHTML =
-      '<div class="grid grid-cols-3 px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-mist-400">' +
-      "<span>Price</span><span class='text-right'>Size</span><span class='text-right'>Sum</span></div>" +
-      askView.map((lv, i) => rowHtml(lv, askCum[i], "ask")).join("") +
-      '<div class="my-1 flex items-center justify-between border-y border-white/5 px-2 py-1.5 font-mono text-xs">' +
-      '<span class="text-white">Spread</span><span class="text-mist-300">' +
-      escapeHtml(spread) +
-      "</span></div>" +
-      bidView.map((lv, i) => rowHtml(lv, bidCum[i], "bid")).join("");
-
-    root.querySelectorAll("[data-px]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const px = btn.getAttribute("data-px");
-        const input = byId("ticket-price");
-        if (input) input.value = px;
-        if (orderType === "market") setOrderType("limit");
-        updateEstimate();
-      });
-    });
+    askView.forEach((lv, i) => asksEl.appendChild(bookRow(lv, askCum[i], "ask", maxCum)));
+    bidView.forEach((lv, i) => bidsEl.appendChild(bookRow(lv, bidCum[i], "bid", maxCum)));
   }
 
   function renderTicker() {
@@ -252,6 +256,7 @@ export function createTradeView(app) {
     setText("ticket-mid", Number.isFinite(m) ? "Mid " + fmtPx(m) : "Mid —");
     setText("ticket-mark", Number.isFinite(k) ? "Mark " + fmtPx(k) : "Mark —");
     updateEstimate();
+    renderBook();
   }
 
   function updateEstimate() {
@@ -288,23 +293,22 @@ export function createTradeView(app) {
     const submit = byId("ticket-submit");
     if (submit) {
       submit.textContent = (side === "buy" ? "Buy " : "Sell ") + coin;
-      submit.classList.toggle("bg-accent", side === "buy");
-      submit.classList.toggle("text-ink-950", side === "buy");
-      submit.classList.toggle("hover:bg-accent-dim", side === "buy");
-      submit.classList.toggle("bg-danger", side === "sell");
-      submit.classList.toggle("text-white", side === "sell");
-      submit.classList.toggle("hover:bg-rose-500", side === "sell");
+      submit.classList.toggle("buy", side === "buy");
+      submit.classList.toggle("sell", side === "sell");
     }
   }
 
   function setOrderType(next) {
     orderType = next;
-    const sel = byId("ticket-type");
-    if (sel && sel.value !== next) sel.value = next;
     const isLimit = next === "limit";
     const isStop = next === "stop";
     const isTwap = next === "twap";
     const isMarket = next === "market";
+    document.querySelectorAll("[data-otype]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-otype") === next ? "true" : "false");
+    });
+    const advanced = byId("ticket-advanced");
+    if (advanced && (isStop || isTwap)) advanced.classList.remove("hidden");
     byId("ticket-price-wrap")?.classList.toggle("hidden", isMarket || isTwap || (isStop && byId("ticket-stop-market")?.checked));
     byId("ticket-tif-wrap")?.classList.toggle("hidden", !isLimit);
     byId("ticket-stop-wrap")?.classList.toggle("hidden", !isStop);
@@ -312,12 +316,22 @@ export function createTradeView(app) {
     updateEstimate();
   }
 
+  function setTif(next) {
+    tif = next;
+    const hidden = byId("ticket-tif");
+    if (hidden) hidden.value = next;
+    document.querySelectorAll("[data-tif]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-tif") === next ? "true" : "false");
+    });
+  }
+
   function ticketMessage(text, kind) {
     const el = byId("ticket-status");
     if (!el) return;
     el.textContent = text || "";
-    el.classList.remove("text-danger", "text-accent", "text-mist-400");
-    el.classList.add(kind === "err" ? "text-danger" : kind === "ok" ? "text-accent" : "text-mist-400");
+    el.classList.remove("err", "ok");
+    if (kind === "err") el.classList.add("err");
+    if (kind === "ok") el.classList.add("ok");
   }
 
   function canTrade() {
@@ -328,11 +342,13 @@ export function createTradeView(app) {
     const lock = byId("ticket-lock");
     const form = byId("ticket-form");
     const enableBtn = byId("ticket-enable");
+    const submit = byId("ticket-submit");
     if (!lock || !form) return;
     if (canTrade()) {
       lock.classList.add("hidden");
       form.classList.remove("pointer-events-none", "opacity-40");
       if (enableBtn) enableBtn.classList.toggle("hidden", enabled);
+      if (submit) submit.disabled = !enabled || ticketBusy;
     } else {
       lock.classList.remove("hidden");
       form.classList.add("pointer-events-none", "opacity-40");
@@ -342,6 +358,7 @@ export function createTradeView(app) {
         lock.textContent = "Connect a wallet to place Hyperliquid perps orders.";
       }
       if (enableBtn) enableBtn.classList.add("hidden");
+      if (submit) submit.disabled = true;
     }
   }
 
@@ -361,7 +378,7 @@ export function createTradeView(app) {
   }
 
   async function onEnable() {
-    if (!canTrade()) return;
+    if (!canTrade() || ticketBusy) return;
     ticketBusy = true;
     ticketMessage("Waiting for wallet…");
     try {
@@ -377,6 +394,7 @@ export function createTradeView(app) {
       ticketMessage(userMessage(err), "err");
     } finally {
       ticketBusy = false;
+      renderTicketLock();
     }
   }
 
@@ -385,6 +403,10 @@ export function createTradeView(app) {
     if (ticketBusy) return;
     if (!canTrade()) {
       ticketMessage("Connect a wallet to trade.", "err");
+      return;
+    }
+    if (!enabled) {
+      ticketMessage("Click Enable trading first.", "err");
       return;
     }
     const mkt = currentMarket();
@@ -400,7 +422,6 @@ export function createTradeView(app) {
       if (orderType === "twap") {
         const result = await placeTwapOrder({
           source: app.state.source,
-          provider: app.state.provider,
           address: app.state.address,
           market: mkt,
           side,
@@ -414,7 +435,6 @@ export function createTradeView(app) {
       } else {
         const result = await placePerpOrder({
           source: app.state.source,
-          provider: app.state.provider,
           address: app.state.address,
           market: mkt,
           side,
@@ -422,7 +442,7 @@ export function createTradeView(app) {
           price: fieldValue("ticket-price"),
           mid: mid(),
           type: orderType,
-          tif: fieldValue("ticket-tif") || "Gtc",
+          tif: tif || "Gtc",
           reduceOnly: byId("ticket-reduce")?.checked,
           triggerPx: fieldValue("ticket-trigger"),
           tpsl: fieldValue("ticket-tpsl") || "sl",
@@ -431,15 +451,13 @@ export function createTradeView(app) {
         });
         ticketMessage(summarizeResult(result), "ok");
       }
-      enabled = true;
-      renderTicketLock();
       await refreshUserTables();
       app.reloadAccount && app.reloadAccount();
     } catch (err) {
       ticketMessage(userMessage(err), "err");
     } finally {
       ticketBusy = false;
-      if (submit) submit.disabled = false;
+      renderTicketLock();
     }
   }
 
@@ -467,22 +485,12 @@ export function createTradeView(app) {
       if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
       return 0;
     });
-    sel.innerHTML = ordered
-      .map((m) => {
-        const vol = num(m.dayNtlVlm);
-        const tag = Number.isFinite(vol) && vol > 0 ? "" : "";
-        return (
-          '<option value="' +
-          escapeHtml(m.coin) +
-          '"' +
-          (m.coin === coin ? " selected" : "") +
-          ">" +
-          escapeHtml(m.coin) +
-          tag +
-          "</option>"
-        );
-      })
-      .join("");
+    clear(sel);
+    ordered.forEach((m) => {
+      sel.appendChild(
+        h("option", { value: m.coin, selected: m.coin === coin }, m.coin)
+      );
+    });
   }
 
   function renderBottom() {
@@ -494,67 +502,57 @@ export function createTradeView(app) {
   function renderPositions() {
     const root = byId("trade-positions");
     if (!root) return;
+    clear(root);
     if (!app.state.address) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect a wallet to trade, or paste an address to load positions.</p>';
+      root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load positions."));
       return;
     }
     const perps = (app.state.data && app.state.data.perps) || {};
     const rows = positionRows(perps.assetPositions || []);
     const mids = (app.state.data && app.state.data.mids) || {};
     if (!rows.length) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">No open perps.</p>';
+      root.appendChild(emptyNote("No open perps."));
       return;
     }
-    root.innerHTML =
-      '<div class="overflow-x-auto"><table class="min-w-full text-xs">' +
-      '<thead class="text-[10px] uppercase tracking-wider text-mist-400"><tr>' +
-      ["Market", "Side", "Size", "Entry", "Mark", "Liq.", "Lev", "uPnL"]
-        .map((h) => '<th class="px-2 py-1.5 text-left font-medium">' + h + "</th>")
-        .join("") +
-      "</tr></thead><tbody>" +
-      rows
-        .map((p) => {
-          const szi = num(p.szi);
-          const markPx = mids[p.coin];
-          return (
-            '<tr class="border-t border-white/5 cursor-pointer hover:bg-white/5" data-coin="' +
-            escapeHtml(p.coin) +
-            '">' +
-            '<td class="px-2 py-1.5 font-medium text-white">' +
-            escapeHtml(p.coin) +
-            "</td>" +
-            '<td class="px-2 py-1.5 ' +
-            (szi >= 0 ? "text-accent" : "text-danger") +
-            '">' +
-            (szi >= 0 ? "Long" : "Short") +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular">' +
-            escapeHtml(fmtQty(Math.abs(szi))) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular">' +
-            escapeHtml(fmtPx(p.entryPx)) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular">' +
-            escapeHtml(markPx == null ? "—" : fmtPx(markPx)) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular">' +
-            escapeHtml(p.liquidationPx ? fmtPx(p.liquidationPx) : "—") +
-            "</td>" +
-            '<td class="px-2 py-1.5">' +
-            escapeHtml(levLabel(p.leverage)) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular ' +
-            pnlClass(p.unrealizedPnl) +
-            '">' +
-            escapeHtml(fmtUsd(p.unrealizedPnl, { signed: true })) +
-            "</td></tr>"
-          );
-        })
-        .join("") +
-      "</tbody></table></div>";
-    root.querySelectorAll("[data-coin]").forEach((tr) => {
-      tr.addEventListener("click", () => setMarket(tr.getAttribute("data-coin")));
+    const body = rows.map((p) => {
+      const szi = num(p.szi);
+      const markPx = mids[p.coin];
+      return h(
+        "tr",
+        {
+          class: "border-t border-white/5 cursor-pointer hover:bg-white/5",
+          onClick: () => setMarket(p.coin),
+        },
+        h("td", { class: "px-2 py-1.5 font-medium text-white" }, p.coin),
+        h("td", { class: "px-2 py-1.5 " + (szi >= 0 ? "text-buy" : "text-sell") }, szi >= 0 ? "Long" : "Short"),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, fmtQty(Math.abs(szi))),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, fmtPx(p.entryPx)),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, markPx == null ? "—" : fmtPx(markPx)),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, p.liquidationPx ? fmtPx(p.liquidationPx) : "—"),
+        h("td", { class: "px-2 py-1.5" }, levLabel(p.leverage)),
+        h(
+          "td",
+          { class: "px-2 py-1.5 font-mono tabular " + pnlClass(p.unrealizedPnl) },
+          fmtUsd(p.unrealizedPnl, { signed: true })
+        )
+      );
     });
+    root.appendChild(
+      h(
+        "div",
+        { class: "overflow-x-auto" },
+        h(
+          "table",
+          { class: "min-w-full text-xs" },
+          h(
+            "thead",
+            { class: "text-[10px] uppercase tracking-wider text-mist-400" },
+            h("tr", null, ...ths(["Market", "Side", "Size", "Entry", "Mark", "Liq.", "Lev", "uPnL"], "px-2 py-1.5 text-left font-medium"))
+          ),
+          h("tbody", null, ...body)
+        )
+      )
+    );
   }
 
   function assetForCoin(c) {
@@ -565,8 +563,9 @@ export function createTradeView(app) {
   function renderOrders() {
     const root = byId("trade-orders");
     if (!root) return;
+    clear(root);
     if (!app.state.address) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect a wallet to trade, or paste an address to load open orders.</p>';
+      root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load open orders."));
       return;
     }
     const orders = (app.state.data && app.state.data.openOrders) || [];
@@ -575,144 +574,129 @@ export function createTradeView(app) {
       .filter((t) => t && (t.status === "activated" || !t.status))
       .map((t) => {
         const st = t.state || t;
-        return (
-          "<tr class='border-t border-white/5'>" +
-          '<td class="px-2 py-1.5 text-white">' +
-          escapeHtml(st.coin || "—") +
-          "</td>" +
-          '<td class="px-2 py-1.5">' +
-          escapeHtml(st.side === "B" ? "Buy" : "Sell") +
-          "</td>" +
-          '<td class="px-2 py-1.5">TWAP</td>' +
-          '<td class="px-2 py-1.5 font-mono">' +
-          escapeHtml(fmtQty(st.sz)) +
-          "</td>" +
-          '<td class="px-2 py-1.5 text-mist-400">—</td>' +
-          '<td class="px-2 py-1.5 text-mist-400">' +
-          escapeHtml(String(st.minutes || "")) +
-          "m</td>" +
-          "<td class='px-2 py-1.5'>" +
-          (tradeable && t.id != null
-            ? '<button type="button" class="text-danger hover:underline" data-twap="' +
-              t.id +
-              '" data-coin="' +
-              escapeHtml(st.coin || "") +
-              '">Cancel</button>'
-            : "") +
-          "</td></tr>"
+        const cancelBtn =
+          tradeable && t.id != null
+            ? h(
+                "button",
+                {
+                  type: "button",
+                  class: "text-sell hover:underline",
+                  onClick: () => onCancelTwap(st.coin || "", Number(t.id)),
+                },
+                "Cancel"
+              )
+            : "";
+        return h(
+          "tr",
+          { class: "border-t border-white/5" },
+          h("td", { class: "px-2 py-1.5 text-white" }, st.coin || "—"),
+          h("td", { class: "px-2 py-1.5" }, st.side === "B" ? "Buy" : "Sell"),
+          h("td", { class: "px-2 py-1.5" }, "TWAP"),
+          h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(st.sz)),
+          h("td", { class: "px-2 py-1.5 text-mist-400" }, "—"),
+          h("td", { class: "px-2 py-1.5 text-mist-400" }, String(st.minutes || "") + "m"),
+          h("td", { class: "px-2 py-1.5" }, cancelBtn)
         );
       });
 
     if (!orders.length && !twapRows.length) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">No open orders.</p>';
+      root.appendChild(emptyNote("No open orders."));
       return;
     }
     const rows = orders.map((o) => {
       const sideLabel = o.side === "B" ? "Buy" : "Sell";
       const kind = o.isTrigger ? o.orderType || "Stop" : o.orderType || "Limit";
-      return (
-        "<tr class='border-t border-white/5'>" +
-        '<td class="px-2 py-1.5 font-medium text-white">' +
-        escapeHtml(o.coin) +
-        "</td>" +
-        '<td class="px-2 py-1.5 ' +
-        (o.side === "B" ? "text-accent" : "text-danger") +
-        '">' +
-        sideLabel +
-        "</td>" +
-        '<td class="px-2 py-1.5">' +
-        escapeHtml(kind) +
-        "</td>" +
-        '<td class="px-2 py-1.5 font-mono tabular">' +
-        escapeHtml(fmtQty(o.sz)) +
-        "</td>" +
-        '<td class="px-2 py-1.5 font-mono tabular">' +
-        escapeHtml(fmtPx(o.limitPx)) +
-        "</td>" +
-        '<td class="px-2 py-1.5 text-mist-400">' +
-        escapeHtml(formatClock(o.timestamp)) +
-        "</td>" +
-        "<td class='px-2 py-1.5'>" +
-        (tradeable
-          ? '<button type="button" class="text-danger hover:underline" data-oid="' +
-            o.oid +
-            '" data-coin="' +
-            escapeHtml(o.coin) +
-            '">Cancel</button>'
-          : "") +
-        "</td></tr>"
+      const cancelBtn = tradeable
+        ? h(
+            "button",
+            {
+              type: "button",
+              class: "text-sell hover:underline",
+              onClick: () => onCancel(o.coin, Number(o.oid)),
+            },
+            "Cancel"
+          )
+        : "";
+      return h(
+        "tr",
+        { class: "border-t border-white/5" },
+        h("td", { class: "px-2 py-1.5 font-medium text-white" }, o.coin),
+        h("td", { class: "px-2 py-1.5 " + (o.side === "B" ? "text-buy" : "text-sell") }, sideLabel),
+        h("td", { class: "px-2 py-1.5" }, kind),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, fmtQty(o.sz)),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, fmtPx(o.limitPx)),
+        h("td", { class: "px-2 py-1.5 text-mist-400" }, formatClock(o.timestamp)),
+        h("td", { class: "px-2 py-1.5" }, cancelBtn)
       );
     });
-    root.innerHTML =
-      '<div class="overflow-x-auto"><table class="min-w-full text-xs">' +
-      '<thead class="text-[10px] uppercase tracking-wider text-mist-400"><tr>' +
-      ["Market", "Side", "Type", "Size", "Price", "Time", ""]
-        .map((h) => '<th class="px-2 py-1.5 text-left font-medium">' + h + "</th>")
-        .join("") +
-      "</tr></thead><tbody>" +
-      rows.join("") +
-      twapRows.join("") +
-      "</tbody></table></div>";
-    root.querySelectorAll("[data-oid]").forEach((btn) => {
-      btn.addEventListener("click", () => onCancel(btn.getAttribute("data-coin"), Number(btn.getAttribute("data-oid"))));
-    });
-    root.querySelectorAll("[data-twap]").forEach((btn) => {
-      btn.addEventListener("click", () =>
-        onCancelTwap(btn.getAttribute("data-coin"), Number(btn.getAttribute("data-twap")))
-      );
-    });
+    root.appendChild(
+      h(
+        "div",
+        { class: "overflow-x-auto" },
+        h(
+          "table",
+          { class: "min-w-full text-xs" },
+          h(
+            "thead",
+            { class: "text-[10px] uppercase tracking-wider text-mist-400" },
+            h("tr", null, ...ths(["Market", "Side", "Type", "Size", "Price", "Time", ""], "px-2 py-1.5 text-left font-medium"))
+          ),
+          h("tbody", null, ...rows, ...twapRows)
+        )
+      )
+    );
   }
 
   function renderFills() {
     const root = byId("trade-fills");
     if (!root) return;
+    clear(root);
     if (!app.state.address) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect a wallet to trade, or paste an address to load fills.</p>';
+      root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load fills."));
       return;
     }
     const fills = ((app.state.data && app.state.data.fills) || []).slice(0, 30);
     if (!fills.length) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">No recent fills.</p>';
+      root.appendChild(emptyNote("No recent fills."));
       return;
     }
-    root.innerHTML =
-      '<div class="overflow-x-auto"><table class="min-w-full text-xs">' +
-      '<thead class="text-[10px] uppercase tracking-wider text-mist-400"><tr>' +
-      ["Time", "Market", "Dir", "Size", "Price", "Fee"]
-        .map((h) => '<th class="px-2 py-1.5 text-left font-medium">' + h + "</th>")
-        .join("") +
-      "</tr></thead><tbody>" +
-      fills
-        .map((f) => {
-          return (
-            "<tr class='border-t border-white/5'>" +
-            '<td class="px-2 py-1.5 text-mist-400">' +
-            escapeHtml(formatLocalTime(f.time)) +
-            "</td>" +
-            '<td class="px-2 py-1.5 text-white">' +
-            escapeHtml(f.coin) +
-            "</td>" +
-            '<td class="px-2 py-1.5">' +
-            escapeHtml(f.dir || (f.side === "B" ? "Buy" : "Sell")) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular">' +
-            escapeHtml(fmtQty(f.sz)) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular">' +
-            escapeHtml(fmtPx(f.px)) +
-            "</td>" +
-            '<td class="px-2 py-1.5 font-mono tabular text-mist-300">' +
-            escapeHtml(fmtUsd(f.fee)) +
-            "</td></tr>"
-          );
-        })
-        .join("") +
-      "</tbody></table></div>";
+    const rows = fills.map((f) =>
+      h(
+        "tr",
+        { class: "border-t border-white/5" },
+        h("td", { class: "px-2 py-1.5 text-mist-400" }, formatLocalTime(f.time)),
+        h("td", { class: "px-2 py-1.5 text-white" }, f.coin),
+        h("td", { class: "px-2 py-1.5" }, f.dir || (f.side === "B" ? "Buy" : "Sell")),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, fmtQty(f.sz)),
+        h("td", { class: "px-2 py-1.5 font-mono tabular" }, fmtPx(f.px)),
+        h("td", { class: "px-2 py-1.5 font-mono tabular text-mist-300" }, fmtUsd(f.fee))
+      )
+    );
+    root.appendChild(
+      h(
+        "div",
+        { class: "overflow-x-auto" },
+        h(
+          "table",
+          { class: "min-w-full text-xs" },
+          h(
+            "thead",
+            { class: "text-[10px] uppercase tracking-wider text-mist-400" },
+            h("tr", null, ...ths(["Time", "Market", "Dir", "Size", "Price", "Fee"], "px-2 py-1.5 text-left font-medium"))
+          ),
+          h("tbody", null, ...rows)
+        )
+      )
+    );
   }
 
   async function onCancel(c, oid) {
     if (!canTrade()) {
       ticketMessage("Connect a wallet to cancel orders.", "err");
+      return;
+    }
+    if (!enabled) {
+      ticketMessage("Click Enable trading first.", "err");
       return;
     }
     const asset = assetForCoin(c);
@@ -724,7 +708,6 @@ export function createTradeView(app) {
       ticketMessage("Canceling…");
       await cancelOrders({
         source: app.state.source,
-        provider: app.state.provider,
         address: app.state.address,
         cancels: [{ asset, oid }],
         onStatus: (s) => ticketMessage(s),
@@ -738,11 +721,14 @@ export function createTradeView(app) {
 
   async function onCancelTwap(c, twapId) {
     if (!canTrade()) return;
+    if (!enabled) {
+      ticketMessage("Click Enable trading first.", "err");
+      return;
+    }
     const asset = assetForCoin(c);
     try {
       await cancelTwap({
         source: app.state.source,
-        provider: app.state.provider,
         address: app.state.address,
         asset,
         twapId,
@@ -874,8 +860,6 @@ export function createTradeView(app) {
     interval = next;
     document.querySelectorAll("[data-interval]").forEach((btn) => {
       const on = btn.getAttribute("data-interval") === interval;
-      btn.classList.toggle("bg-white/10", on);
-      btn.classList.toggle("text-white", on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
     subscribeMarket();
@@ -892,7 +876,15 @@ export function createTradeView(app) {
     });
     byId("side-buy")?.addEventListener("click", () => setSide("buy"));
     byId("side-sell")?.addEventListener("click", () => setSide("sell"));
-    byId("ticket-type")?.addEventListener("change", (ev) => setOrderType(ev.target.value));
+    document.querySelectorAll("[data-otype]").forEach((btn) => {
+      btn.addEventListener("click", () => setOrderType(btn.getAttribute("data-otype")));
+    });
+    document.querySelectorAll("[data-tif]").forEach((btn) => {
+      btn.addEventListener("click", () => setTif(btn.getAttribute("data-tif")));
+    });
+    byId("ticket-advanced-toggle")?.addEventListener("click", () => {
+      byId("ticket-advanced")?.classList.toggle("hidden");
+    });
     byId("ticket-size")?.addEventListener("input", updateEstimate);
     byId("ticket-price")?.addEventListener("input", updateEstimate);
     byId("ticket-trigger")?.addEventListener("input", updateEstimate);
@@ -918,6 +910,7 @@ export function createTradeView(app) {
     });
     setSide("buy");
     setOrderType("limit");
+    setTif("Gtc");
   }
 
   async function initMarkets() {
@@ -949,6 +942,7 @@ export function createTradeView(app) {
       requestAnimationFrame(() => ensureChart());
     },
     onAccount() {
+      enabled = false;
       renderTicketLock();
       refreshEnabled();
       subscribeUser();

@@ -1,6 +1,6 @@
 import { DUST } from "./api.js";
+import { clear, dashedEmpty, h, ths } from "./dom.js";
 import {
-  escapeHtml,
   fmtHype,
   fmtPx,
   fmtQty,
@@ -11,29 +11,15 @@ import {
   pnlClass,
 } from "./format.js";
 
-function cardMini(label, value, hint) {
-  return (
-    '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card">' +
-    '<p class="text-xs font-medium uppercase tracking-wider text-mist-400">' +
-    escapeHtml(label) +
-    "</p>" +
-    '<p class="mt-2 font-mono text-xl font-medium tracking-tight text-white tabular">' +
-    escapeHtml(value) +
-    "</p>" +
-    (hint ? '<p class="mt-1 text-[10px] tracking-wide text-mist-400/70">' + escapeHtml(hint) + "</p>" : "") +
-    "</article>"
-  );
-}
-
 export function spotUsdcParts(balances) {
   let total = 0;
   let hold = 0;
   (balances || []).forEach((b) => {
     if (!b || String(b.coin).toUpperCase() !== "USDC") return;
     const t = num(b.total);
-    const h = num(b.hold);
+    const ho = num(b.hold);
     if (Number.isFinite(t)) total += t;
-    if (Number.isFinite(h)) hold += h;
+    if (Number.isFinite(ho)) hold += ho;
   });
   return { total, available: Math.max(0, total - hold) };
 }
@@ -57,6 +43,25 @@ export function levLabel(lev) {
   const t = lev.type || "";
   if (v == null || v === "") return t || "—";
   return String(v) + "× " + t;
+}
+
+function cardMini(label, value, hint) {
+  return h(
+    "article",
+    { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card" },
+    h("p", { class: "text-xs font-medium uppercase tracking-wider text-mist-400" }, label),
+    h("p", { class: "mt-2 font-mono text-xl font-medium tracking-tight text-white tabular" }, value),
+    hint ? h("p", { class: "mt-1 text-[10px] tracking-wide text-mist-400/70" }, hint) : null
+  );
+}
+
+function kvRow(k, v, cls) {
+  return h(
+    "div",
+    { class: "flex items-baseline justify-between gap-3 py-1" },
+    h("span", { class: "text-xs uppercase tracking-wider text-mist-400" }, k),
+    h("span", { class: "font-mono text-sm tabular " + (cls || "text-white") }, v)
+  );
 }
 
 function renderOverview(el, perps, spotBalances) {
@@ -121,147 +126,114 @@ function renderOverview(el, perps, spotBalances) {
     },
   ];
 
-  el.overview.innerHTML = cards
-    .map((c) => {
-      const color = c.pnl == null ? "text-white" : pnlClass(c.pnl);
-      return (
-        '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card">' +
-        '<p class="text-xs font-medium uppercase tracking-wider text-mist-400">' +
-        escapeHtml(c.label) +
-        "</p>" +
-        '<p class="mt-2 font-mono text-2xl font-medium tracking-tight tabular ' +
-        color +
-        '">' +
-        escapeHtml(c.value) +
-        "</p>" +
-        (c.extra ? '<p class="mt-1 text-xs text-mist-400">' + escapeHtml(c.extra) + "</p>" : "") +
-        '<p class="mt-1 text-[10px] uppercase tracking-wider text-mist-400/70">' +
-        escapeHtml(c.hint) +
-        "</p>" +
-        "</article>"
-      );
-    })
-    .join("");
+  clear(el.overview);
+  cards.forEach((c) => {
+    const color = c.pnl == null ? "text-white" : pnlClass(c.pnl);
+    el.overview.appendChild(
+      h(
+        "article",
+        { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card" },
+        h("p", { class: "text-xs font-medium uppercase tracking-wider text-mist-400" }, c.label),
+        h("p", { class: "mt-2 font-mono text-2xl font-medium tracking-tight tabular " + color }, c.value),
+        c.extra ? h("p", { class: "mt-1 text-xs text-mist-400" }, c.extra) : null,
+        h("p", { class: "mt-1 text-[10px] uppercase tracking-wider text-mist-400/70" }, c.hint)
+      )
+    );
+  });
 }
 
 function renderPerps(el, assetPositions, mids) {
   const rows = positionRows(assetPositions);
   el.perpsCount.textContent = rows.length ? rows.length + " open" : "";
+  clear(el.perpsRoot);
 
   if (!rows.length) {
-    el.perpsRoot.innerHTML =
-      '<div class="rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-10 text-center text-sm text-mist-400">No open perps.</div>';
+    el.perpsRoot.appendChild(dashedEmpty("No open perps."));
     return;
   }
 
-  const head =
-    '<thead class="text-xs font-medium uppercase tracking-wider text-mist-400">' +
-    "<tr>" +
-    ["Market", "Side", "Size", "Entry", "Mark", "Liq. price", "Leverage", "uPnL", "ROE"]
-      .map((h) => '<th class="px-3 py-2 text-left font-medium">' + h + "</th>")
-      .join("") +
-    "</tr></thead>";
+  const bodyRows = rows.map((p) => {
+    const szi = num(p.szi);
+    const side = szi >= 0 ? "Long" : "Short";
+    const sideCls =
+      szi >= 0 ? "text-buy bg-buy/10 ring-buy/30" : "text-sell bg-sell/10 ring-sell/30";
+    const mark = mids && p.coin != null ? mids[p.coin] : null;
+    const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
+    return h(
+      "tr",
+      { class: "border-t border-white/5" },
+      h("td", { class: "px-3 py-2.5 font-medium text-white" }, p.coin || "—"),
+      h(
+        "td",
+        { class: "px-3 py-2.5" },
+        h(
+          "span",
+          { class: "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 " + sideCls },
+          side
+        )
+      ),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtQty(Math.abs(szi))),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtPx(p.entryPx)),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, mark == null ? "—" : fmtPx(mark)),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, liq),
+      h("td", { class: "px-3 py-2.5 text-sm text-mist-300" }, levLabel(p.leverage)),
+      h(
+        "td",
+        { class: "px-3 py-2.5 font-mono text-sm tabular " + pnlClass(p.unrealizedPnl) },
+        fmtUsd(p.unrealizedPnl, { signed: true })
+      ),
+      h(
+        "td",
+        { class: "px-3 py-2.5 font-mono text-sm tabular " + pnlClass(p.returnOnEquity) },
+        fmtRoe(p.returnOnEquity)
+      )
+    );
+  });
 
-  const body = rows
-    .map((p) => {
-      const szi = num(p.szi);
-      const side = szi >= 0 ? "Long" : "Short";
-      const sideCls =
-        szi >= 0 ? "text-accent bg-accent-muted ring-accent/30" : "text-danger bg-danger/muted ring-danger/30";
-      const mark = mids && p.coin != null ? mids[p.coin] : null;
-      const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
-      return (
-        "<tr class='border-t border-white/5'>" +
-        '<td class="px-3 py-2.5 font-medium text-white">' +
-        escapeHtml(p.coin || "—") +
-        "</td>" +
-        '<td class="px-3 py-2.5"><span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ' +
-        sideCls +
-        '">' +
-        side +
-        "</span></td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-        escapeHtml(fmtQty(Math.abs(szi))) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-        escapeHtml(fmtPx(p.entryPx)) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-        escapeHtml(mark == null ? "—" : fmtPx(mark)) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-        escapeHtml(liq) +
-        "</td>" +
-        '<td class="px-3 py-2.5 text-sm text-mist-300">' +
-        escapeHtml(levLabel(p.leverage)) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular ' +
-        pnlClass(p.unrealizedPnl) +
-        '">' +
-        escapeHtml(fmtUsd(p.unrealizedPnl, { signed: true })) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular ' +
-        pnlClass(p.returnOnEquity) +
-        '">' +
-        escapeHtml(fmtRoe(p.returnOnEquity)) +
-        "</td>" +
-        "</tr>"
-      );
-    })
-    .join("");
+  el.perpsRoot.appendChild(
+    h(
+      "div",
+      { class: "hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card md:block" },
+      h(
+        "table",
+        { class: "min-w-full text-sm" },
+        h(
+          "thead",
+          { class: "text-xs font-medium uppercase tracking-wider text-mist-400" },
+          h("tr", null, ...ths(["Market", "Side", "Size", "Entry", "Mark", "Liq. price", "Leverage", "uPnL", "ROE"]))
+        ),
+        h("tbody", null, ...bodyRows)
+      )
+    )
+  );
 
-  const table =
-    '<div class="hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card md:block">' +
-    '<table class="min-w-full text-sm">' +
-    head +
-    "<tbody>" +
-    body +
-    "</tbody></table></div>";
-
-  const cards = rows
-    .map((p) => {
-      const szi = num(p.szi);
-      const side = szi >= 0 ? "Long" : "Short";
-      const sideCls = szi >= 0 ? "text-accent" : "text-danger";
-      const mark = mids && p.coin != null ? mids[p.coin] : null;
-      const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
-      function row(k, v, cls) {
-        return (
-          '<div class="flex items-baseline justify-between gap-3 py-1"><span class="text-xs uppercase tracking-wider text-mist-400">' +
-          k +
-          '</span><span class="font-mono text-sm tabular ' +
-          (cls || "text-white") +
-          '">' +
-          v +
-          "</span></div>"
-        );
-      }
-      return (
-        '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card">' +
-        '<div class="mb-3 flex items-center justify-between">' +
-        '<p class="text-base font-semibold text-white">' +
-        escapeHtml(p.coin || "—") +
-        "</p>" +
-        '<span class="text-xs font-semibold uppercase tracking-wider ' +
-        sideCls +
-        '">' +
-        side +
-        " · " +
-        escapeHtml(levLabel(p.leverage)) +
-        "</span>" +
-        "</div>" +
-        row("Size", escapeHtml(fmtQty(Math.abs(szi)))) +
-        row("Entry", escapeHtml(fmtPx(p.entryPx))) +
-        row("Mark", escapeHtml(mark == null ? "—" : fmtPx(mark))) +
-        row("Liq. price", escapeHtml(liq)) +
-        row("uPnL", escapeHtml(fmtUsd(p.unrealizedPnl, { signed: true })), pnlClass(p.unrealizedPnl)) +
-        row("ROE", escapeHtml(fmtRoe(p.returnOnEquity)), pnlClass(p.returnOnEquity)) +
-        "</article>"
-      );
-    })
-    .join("");
-
-  el.perpsRoot.innerHTML = table + '<div class="grid gap-3 md:hidden">' + cards + "</div>";
+  const cards = h("div", { class: "grid gap-3 md:hidden" });
+  rows.forEach((p) => {
+    const szi = num(p.szi);
+    const side = szi >= 0 ? "Long" : "Short";
+    const sideCls = szi >= 0 ? "text-buy" : "text-sell";
+    const mark = mids && p.coin != null ? mids[p.coin] : null;
+    const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
+    cards.appendChild(
+      h(
+        "article",
+        { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card" },
+        h(
+          "div",
+          { class: "mb-3 flex items-center justify-between" },
+          h("p", { class: "text-base font-semibold text-white" }, p.coin || "—"),
+          h("span", { class: "text-xs font-semibold uppercase tracking-wider " + sideCls }, side + " · " + levLabel(p.leverage))
+        ),
+        kvRow("Size", fmtQty(Math.abs(szi))),
+        kvRow("Entry", fmtPx(p.entryPx)),
+        kvRow("Mark", mark == null ? "—" : fmtPx(mark)),
+        kvRow("Liq. price", liq),
+        kvRow("uPnL", fmtUsd(p.unrealizedPnl, { signed: true }), pnlClass(p.unrealizedPnl)),
+        kvRow("ROE", fmtRoe(p.returnOnEquity), pnlClass(p.returnOnEquity))
+      )
+    );
+  });
+  el.perpsRoot.appendChild(cards);
 }
 
 function renderSpot(el, balances) {
@@ -271,141 +243,144 @@ function renderSpot(el, balances) {
   });
   rows.sort((a, b) => Math.abs(num(b.total)) - Math.abs(num(a.total)));
   el.spotCount.textContent = rows.length ? rows.length + " tokens" : "";
+  clear(el.spotRoot);
 
   if (!rows.length) {
-    el.spotRoot.innerHTML =
-      '<div class="rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-10 text-center text-sm text-mist-400">No spot balances.</div>';
+    el.spotRoot.appendChild(dashedEmpty("No spot balances."));
     return;
   }
 
-  const head =
-    "<thead class='text-xs font-medium uppercase tracking-wider text-mist-400'><tr>" +
-    ["Token", "Total", "In orders", "Available"]
-      .map((h) => '<th class="px-3 py-2 text-left font-medium">' + h + "</th>")
-      .join("") +
-    "</tr></thead>";
+  const bodyRows = rows.map((b) => {
+    const total = num(b.total);
+    const hold = num(b.hold);
+    const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
+    return h(
+      "tr",
+      { class: "border-t border-white/5" },
+      h("td", { class: "px-3 py-2.5 font-medium text-white" }, b.coin || "—"),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtQty(b.total)),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular text-mist-300" }, fmtQty(b.hold)),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, Number.isFinite(avail) ? fmtQty(avail) : "—")
+    );
+  });
 
-  const body = rows
-    .map((b) => {
-      const total = num(b.total);
-      const hold = num(b.hold);
-      const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
-      return (
-        "<tr class='border-t border-white/5'>" +
-        '<td class="px-3 py-2.5 font-medium text-white">' +
-        escapeHtml(b.coin || "—") +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-        escapeHtml(fmtQty(b.total)) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular text-mist-300">' +
-        escapeHtml(fmtQty(b.hold)) +
-        "</td>" +
-        '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-        escapeHtml(Number.isFinite(avail) ? fmtQty(avail) : "—") +
-        "</td>" +
-        "</tr>"
-      );
-    })
-    .join("");
+  el.spotRoot.appendChild(
+    h(
+      "div",
+      { class: "hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card sm:block" },
+      h(
+        "table",
+        { class: "min-w-full text-sm" },
+        h(
+          "thead",
+          { class: "text-xs font-medium uppercase tracking-wider text-mist-400" },
+          h("tr", null, ...ths(["Token", "Total", "In orders", "Available"]))
+        ),
+        h("tbody", null, ...bodyRows)
+      )
+    )
+  );
 
-  const table =
-    '<div class="hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card sm:block">' +
-    '<table class="min-w-full text-sm">' +
-    head +
-    "<tbody>" +
-    body +
-    "</tbody></table></div>";
-
-  const cards = rows
-    .map((b) => {
-      const total = num(b.total);
-      const hold = num(b.hold);
-      const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
-      return (
-        '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card sm:hidden">' +
-        '<p class="font-semibold text-white">' +
-        escapeHtml(b.coin || "—") +
-        "</p>" +
-        '<div class="mt-2 grid grid-cols-3 gap-2 text-xs">' +
-        '<div><p class="uppercase tracking-wider text-mist-400">Total</p><p class="mt-0.5 font-mono tabular">' +
-        escapeHtml(fmtQty(b.total)) +
-        "</p></div>" +
-        '<div><p class="uppercase tracking-wider text-mist-400">In orders</p><p class="mt-0.5 font-mono tabular">' +
-        escapeHtml(fmtQty(b.hold)) +
-        "</p></div>" +
-        '<div><p class="uppercase tracking-wider text-mist-400">Available</p><p class="mt-0.5 font-mono tabular">' +
-        escapeHtml(Number.isFinite(avail) ? fmtQty(avail) : "—") +
-        "</p></div>" +
-        "</div>" +
-        "</article>"
-      );
-    })
-    .join("");
-
-  el.spotRoot.innerHTML = table + '<div class="grid gap-3 sm:hidden">' + cards + "</div>";
+  const cards = h("div", { class: "grid gap-3 sm:hidden" });
+  rows.forEach((b) => {
+    const total = num(b.total);
+    const hold = num(b.hold);
+    const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
+    cards.appendChild(
+      h(
+        "article",
+        { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card sm:hidden" },
+        h("p", { class: "font-semibold text-white" }, b.coin || "—"),
+        h(
+          "div",
+          { class: "mt-2 grid grid-cols-3 gap-2 text-xs" },
+          h(
+            "div",
+            null,
+            h("p", { class: "uppercase tracking-wider text-mist-400" }, "Total"),
+            h("p", { class: "mt-0.5 font-mono tabular" }, fmtQty(b.total))
+          ),
+          h(
+            "div",
+            null,
+            h("p", { class: "uppercase tracking-wider text-mist-400" }, "In orders"),
+            h("p", { class: "mt-0.5 font-mono tabular" }, fmtQty(b.hold))
+          ),
+          h(
+            "div",
+            null,
+            h("p", { class: "uppercase tracking-wider text-mist-400" }, "Available"),
+            h("p", { class: "mt-0.5 font-mono tabular" }, Number.isFinite(avail) ? fmtQty(avail) : "—")
+          )
+        )
+      )
+    );
+  });
+  el.spotRoot.appendChild(cards);
 }
 
 function renderStaking(el, summary, delegations, validatorNames) {
   const s = summary || {};
   const dels = Array.isArray(delegations) ? delegations : [];
   const names = validatorNames || {};
+  clear(el.stakingRoot);
 
-  const totals =
-    '<div class="grid gap-3 sm:grid-cols-3">' +
-    cardMini("Delegated", fmtHype(s.delegated), "HYPE staked with validators") +
-    cardMini("Undelegated", fmtHype(s.undelegated), "HYPE not currently staked") +
-    cardMini(
-      "Pending withdrawal",
-      fmtHype(s.totalPendingWithdrawal),
-      s.nPendingWithdrawals != null ? s.nPendingWithdrawals + " pending" : "Waiting to unstake"
-    ) +
-    "</div>";
+  el.stakingRoot.appendChild(
+    h(
+      "div",
+      { class: "grid gap-3 sm:grid-cols-3" },
+      cardMini("Delegated", fmtHype(s.delegated), "HYPE staked with validators"),
+      cardMini("Undelegated", fmtHype(s.undelegated), "HYPE not currently staked"),
+      cardMini(
+        "Pending withdrawal",
+        fmtHype(s.totalPendingWithdrawal),
+        s.nPendingWithdrawals != null ? s.nPendingWithdrawals + " pending" : "Waiting to unstake"
+      )
+    )
+  );
 
-  let list;
   if (!dels.length) {
-    list =
-      '<div class="mt-4 rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-8 text-center text-sm text-mist-400">No active delegations.</div>';
-  } else {
-    const rows = dels
-      .map((d) => {
-        const lock = d.lockedUntilTimestamp != null ? formatLocalTime(d.lockedUntilTimestamp) : "—";
-        const key = String(d.validator || "").toLowerCase();
-        const label = names[key] || d.validator || "—";
-        const showAddr = names[key] ? String(d.validator || "") : "";
-        return (
-          "<tr class='border-t border-white/5'>" +
-          '<td class="px-3 py-2.5">' +
-          '<p class="text-sm font-medium text-white">' +
-          escapeHtml(label) +
-          "</p>" +
-          (showAddr
-            ? '<p class="mt-0.5 font-mono text-[11px] text-mist-400">' + escapeHtml(showAddr) + "</p>"
-            : "") +
-          "</td>" +
-          '<td class="px-3 py-2.5 font-mono text-sm tabular">' +
-          escapeHtml(fmtHype(d.amount)) +
-          "</td>" +
-          '<td class="px-3 py-2.5 text-sm text-mist-300">' +
-          escapeHtml(lock) +
-          "</td>" +
-          "</tr>"
-        );
-      })
-      .join("");
-    list =
-      '<div class="mt-4 overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card">' +
-      '<table class="min-w-full text-sm">' +
-      '<thead class="text-xs font-medium uppercase tracking-wider text-mist-400"><tr>' +
-      '<th class="px-3 py-2 text-left font-medium">Validator</th>' +
-      '<th class="px-3 py-2 text-left font-medium">Amount</th>' +
-      '<th class="px-3 py-2 text-left font-medium">Locked until</th>' +
-      "</tr></thead><tbody>" +
-      rows +
-      "</tbody></table></div>";
+    const empty = dashedEmpty("No active delegations.");
+    empty.classList.add("mt-4");
+    el.stakingRoot.appendChild(empty);
+    return;
   }
 
-  el.stakingRoot.innerHTML = totals + list;
+  const bodyRows = dels.map((d) => {
+    const lock = d.lockedUntilTimestamp != null ? formatLocalTime(d.lockedUntilTimestamp) : "—";
+    const key = String(d.validator || "").toLowerCase();
+    const label = names[key] || d.validator || "—";
+    const showAddr = names[key] ? String(d.validator || "") : "";
+    return h(
+      "tr",
+      { class: "border-t border-white/5" },
+      h(
+        "td",
+        { class: "px-3 py-2.5" },
+        h("p", { class: "text-sm font-medium text-white" }, label),
+        showAddr ? h("p", { class: "mt-0.5 font-mono text-[11px] text-mist-400" }, showAddr) : null
+      ),
+      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtHype(d.amount)),
+      h("td", { class: "px-3 py-2.5 text-sm text-mist-300" }, lock)
+    );
+  });
+
+  el.stakingRoot.appendChild(
+    h(
+      "div",
+      { class: "mt-4 overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card" },
+      h(
+        "table",
+        { class: "min-w-full text-sm" },
+        h(
+          "thead",
+          { class: "text-xs font-medium uppercase tracking-wider text-mist-400" },
+          h("tr", null, ...ths(["Validator", "Amount", "Locked until"]))
+        ),
+        h("tbody", null, ...bodyRows)
+      )
+    )
+  );
 }
 
 export function renderDashboard(el, state) {

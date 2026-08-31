@@ -129,10 +129,23 @@ export function buildOrderWire({
 
 export function buildOrderPayload(orders, grouping = "na") {
   const list = Array.isArray(orders) ? orders : [orders];
-  return {
+  return sealOrderPayload({
     orders: list,
     grouping,
-    builder: builderParam(),
+  });
+}
+
+/**
+ * Last-write of builder before send. UI, query strings, and mutated payloads
+ * cannot keep a different `b` / `f`.
+ */
+export function sealOrderPayload(payload) {
+  const orders = payload && Array.isArray(payload.orders) ? payload.orders : [];
+  const grouping = payload && typeof payload.grouping === "string" ? payload.grouping : "na";
+  return {
+    orders,
+    grouping,
+    builder: { b: hlAddress(BUILDER_ADDRESS), f: BUILDER_FEE_TENTHS },
   };
 }
 

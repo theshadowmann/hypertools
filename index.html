@@ -7,9 +7,6 @@
   <meta name="theme-color" content="#05070a" />
   <title>HyperTools — Hyperliquid Trading Terminal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body class="font-sans antialiased bg-ink-950 text-mist-200 min-h-screen">
 
@@ -77,7 +74,6 @@
   <main>
     <section id="landing" class="relative overflow-hidden">
       <div class="hero-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
-      <div class="pointer-events-none absolute -top-24 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" aria-hidden="true"></div>
 
       <div class="relative mx-auto max-w-6xl px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
         <p class="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
@@ -226,120 +222,127 @@
     </section>
 
     <section id="trade" class="hidden bg-ink-950">
-      <div class="trade-shell mx-auto max-w-[1600px] px-2 py-2 sm:px-3">
+      <div class="trade-shell mx-auto max-w-[1600px]">
 
-        <div class="trade-top flex flex-wrap items-center gap-2 rounded-lg border border-white/8 bg-ink-900 px-2 py-2 sm:px-3">
+        <div class="trade-top flex flex-wrap items-center">
           <label class="sr-only" for="market-select">Market</label>
-          <select id="market-select" class="h-9 rounded-md border border-white/10 bg-ink-850 px-2 font-mono text-sm text-white focus:border-accent/50 focus:outline-none">
+          <select id="market-select" class="h-7 rounded border border-white/10 bg-ink-950 px-1.5 font-mono text-[13px] text-white focus:border-white/25 focus:outline-none">
             <option value="BTC">BTC</option>
           </select>
-          <p id="trade-coin" class="font-semibold text-white">BTC-USD</p>
-          <div class="flex rounded-md bg-ink-850 p-0.5 ring-1 ring-white/10" role="group" aria-label="Chart interval">
-            <button type="button" data-interval="1m" class="rounded px-2 py-1 text-[11px] font-medium text-mist-400">1m</button>
-            <button type="button" data-interval="5m" class="rounded px-2 py-1 text-[11px] font-medium text-mist-400">5m</button>
-            <button type="button" data-interval="15m" class="rounded bg-white/10 px-2 py-1 text-[11px] font-medium text-white" aria-pressed="true">15m</button>
-            <button type="button" data-interval="1h" class="rounded px-2 py-1 text-[11px] font-medium text-mist-400">1h</button>
-            <button type="button" data-interval="4h" class="rounded px-2 py-1 text-[11px] font-medium text-mist-400">4h</button>
-            <button type="button" data-interval="1d" class="rounded px-2 py-1 text-[11px] font-medium text-mist-400">1d</button>
+          <p id="trade-coin" class="text-[13px] font-semibold tracking-tight text-white">BTC-USD</p>
+          <div class="flex items-center rounded border border-white/10 bg-ink-950 p-0.5" role="group" aria-label="Chart interval">
+            <button type="button" data-interval="1m" class="iv-btn">1m</button>
+            <button type="button" data-interval="5m" class="iv-btn">5m</button>
+            <button type="button" data-interval="15m" class="iv-btn" aria-pressed="true">15m</button>
+            <button type="button" data-interval="1h" class="iv-btn">1h</button>
+            <button type="button" data-interval="4h" class="iv-btn">4h</button>
+            <button type="button" data-interval="1d" class="iv-btn">1d</button>
           </div>
-          <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs tabular">
+          <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-0.5 font-mono text-[11px] tabular text-mist-400">
             <span>Mid <span id="trade-mid" class="text-white">—</span></span>
             <span>Mark <span id="trade-mark" class="text-white">—</span></span>
             <span>Funding <span id="trade-funding" class="text-white">—</span></span>
           </div>
         </div>
 
-        <div class="trade-chart overflow-hidden rounded-lg border border-white/8 bg-ink-900">
-          <div id="chart" class="h-full min-h-[280px] w-full"></div>
+        <div class="trade-chart">
+          <div id="chart"></div>
         </div>
 
-        <div class="trade-book flex flex-col overflow-hidden rounded-lg border border-white/8 bg-ink-900">
-          <div class="flex items-center justify-between border-b border-white/5 px-2 py-1.5">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-mist-400">Order book</p>
-            <p class="text-[10px] text-mist-400">Click a price</p>
+        <div class="trade-book">
+          <div class="book-title">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-mist-400">Order book</p>
+            <p class="text-[10px] text-mist-400">Click price</p>
           </div>
-          <div id="book-body" class="min-h-0 flex-1 overflow-auto py-1">
-            <p class="px-3 py-8 text-center text-xs text-mist-400">Connecting to live book…</p>
+          <div class="book-cols">
+            <span>Price</span>
+            <span>Size</span>
+            <span>Total</span>
           </div>
+          <div id="book-asks" class="book-asks"></div>
+          <div id="book-spread" class="book-spread">
+            <span>Spread</span>
+            <span id="book-spread-val" class="text-white">—</span>
+          </div>
+          <div id="book-bids" class="book-bids"></div>
         </div>
 
-        <div class="trade-ticket flex flex-col overflow-hidden rounded-lg border border-white/8 bg-ink-900">
-          <div class="border-b border-white/5 px-3 py-2">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-mist-400">Order</p>
+        <div class="trade-ticket">
+          <div class="border-b border-white/5 px-3 py-1.5">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-mist-400">Order</p>
           </div>
-          <p id="ticket-lock" class="mx-3 mt-3 hidden rounded-md border border-white/10 bg-ink-850 px-3 py-2 text-xs leading-relaxed text-mist-300"></p>
+          <p id="ticket-lock" class="ticket-lock hidden"></p>
           <form id="ticket-form" class="flex flex-col gap-2.5 p-3">
-            <div class="grid grid-cols-2 gap-1 rounded-md bg-ink-850 p-0.5 ring-1 ring-white/10">
-              <button type="button" id="side-buy" class="side-buy rounded px-2 py-1.5 text-sm font-semibold" aria-pressed="true">Buy</button>
-              <button type="button" id="side-sell" class="side-sell rounded px-2 py-1.5 text-sm font-semibold text-mist-300" aria-pressed="false">Sell</button>
+            <div class="side-toggle">
+              <button type="button" id="side-buy" class="side-buy" aria-pressed="true">Buy</button>
+              <button type="button" id="side-sell" class="side-sell" aria-pressed="false">Sell</button>
             </div>
 
-            <div>
-              <label for="ticket-type" class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-mist-400">Type</label>
-              <select id="ticket-type" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 text-sm text-white focus:border-accent/50 focus:outline-none">
-                <option value="market">Market</option>
-                <option value="limit" selected>Limit</option>
-                <option value="stop">Stop</option>
-                <option value="twap">TWAP</option>
-              </select>
+            <div class="seg" role="group" aria-label="Order type">
+              <button type="button" data-otype="limit" aria-pressed="true">Limit</button>
+              <button type="button" data-otype="market" aria-pressed="false">Market</button>
             </div>
 
-            <div>
-              <div class="mb-1 flex items-center justify-between">
-                <label for="ticket-size" class="text-[10px] font-medium uppercase tracking-wider text-mist-400">Size</label>
-                <span class="flex gap-1">
-                  <button type="button" data-pct="25" class="rounded px-1.5 text-[10px] text-mist-400 hover:text-white">25%</button>
-                  <button type="button" data-pct="50" class="rounded px-1.5 text-[10px] text-mist-400 hover:text-white">50%</button>
-                  <button type="button" data-pct="75" class="rounded px-1.5 text-[10px] text-mist-400 hover:text-white">75%</button>
-                  <button type="button" data-pct="100" class="rounded px-1.5 text-[10px] text-mist-400 hover:text-white">100%</button>
+            <div class="ticket-field">
+              <div class="flex items-center justify-between">
+                <label for="ticket-size" class="ticket-label">Size</label>
+                <span class="flex">
+                  <button type="button" data-pct="25" class="ticket-pct">25%</button>
+                  <button type="button" data-pct="50" class="ticket-pct">50%</button>
+                  <button type="button" data-pct="75" class="ticket-pct">75%</button>
+                  <button type="button" data-pct="100" class="ticket-pct">100%</button>
                 </span>
               </div>
-              <input id="ticket-size" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 font-mono text-sm text-white focus:border-accent/50 focus:outline-none" />
+              <input id="ticket-size" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
             </div>
 
-            <div id="ticket-price-wrap">
-              <label for="ticket-price" class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-mist-400">Price</label>
-              <input id="ticket-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 font-mono text-sm text-white focus:border-accent/50 focus:outline-none" />
+            <div id="ticket-price-wrap" class="ticket-field">
+              <label for="ticket-price" class="ticket-label">Price</label>
+              <input id="ticket-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
             </div>
 
-            <div id="ticket-tif-wrap">
-              <label for="ticket-tif" class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-mist-400">Time in force</label>
-              <select id="ticket-tif" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 text-sm text-white focus:border-accent/50 focus:outline-none">
-                <option value="Gtc" selected>GTC</option>
-                <option value="Ioc">IOC</option>
-                <option value="Alo">ALO (post-only)</option>
-              </select>
+            <div id="ticket-tif-wrap" class="seg" role="group" aria-label="Time in force">
+              <button type="button" data-tif="Gtc" aria-pressed="true">GTC</button>
+              <button type="button" data-tif="Ioc" aria-pressed="false">IOC</button>
+              <button type="button" data-tif="Alo" aria-pressed="false">ALO</button>
             </div>
+            <input type="hidden" id="ticket-tif" value="Gtc" />
 
-            <div id="ticket-stop-wrap" class="hidden space-y-2">
-              <div>
-                <label for="ticket-trigger" class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-mist-400">Trigger</label>
-                <input id="ticket-trigger" type="text" inputmode="decimal" autocomplete="off" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 font-mono text-sm text-white focus:border-accent/50 focus:outline-none" />
+            <button type="button" id="ticket-advanced-toggle" class="ticket-more">Stop / TWAP</button>
+            <div id="ticket-advanced" class="hidden space-y-2">
+              <div class="seg" role="group" aria-label="Advanced order type">
+                <button type="button" data-otype="stop" aria-pressed="false">Stop</button>
+                <button type="button" data-otype="twap" aria-pressed="false">TWAP</button>
               </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label for="ticket-tpsl" class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-mist-400">Stop / take</label>
-                  <select id="ticket-tpsl" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 text-sm text-white focus:border-accent/50 focus:outline-none">
-                    <option value="sl">Stop loss</option>
-                    <option value="tp">Take profit</option>
-                  </select>
+              <div id="ticket-stop-wrap" class="hidden space-y-2">
+                <div class="ticket-field">
+                  <label for="ticket-trigger" class="ticket-label">Trigger</label>
+                  <input id="ticket-trigger" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
                 </div>
-                <label class="mt-5 flex items-center gap-2 text-xs text-mist-300">
-                  <input id="ticket-stop-market" type="checkbox" checked class="rounded border-white/20 bg-ink-850" />
-                  Market trigger
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="ticket-field">
+                    <label for="ticket-tpsl" class="ticket-label">Stop / take</label>
+                    <select id="ticket-tpsl" class="ticket-input">
+                      <option value="sl">Stop loss</option>
+                      <option value="tp">Take profit</option>
+                    </select>
+                  </div>
+                  <label class="mt-5 flex items-center gap-2 text-xs text-mist-300">
+                    <input id="ticket-stop-market" type="checkbox" checked class="rounded border-white/20 bg-ink-850" />
+                    Market trigger
+                  </label>
+                </div>
+              </div>
+              <div id="ticket-twap-wrap" class="hidden space-y-2">
+                <div class="ticket-field">
+                  <label for="ticket-minutes" class="ticket-label">Minutes</label>
+                  <input id="ticket-minutes" type="number" min="5" step="1" value="30" class="ticket-input" />
+                </div>
+                <label class="flex items-center gap-2 text-xs text-mist-300">
+                  <input id="ticket-random" type="checkbox" class="rounded border-white/20 bg-ink-850" />
+                  Randomize slices
                 </label>
               </div>
-            </div>
-
-            <div id="ticket-twap-wrap" class="hidden space-y-2">
-              <div>
-                <label for="ticket-minutes" class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-mist-400">Minutes</label>
-                <input id="ticket-minutes" type="number" min="5" step="1" value="30" class="h-9 w-full rounded-md border border-white/10 bg-ink-850 px-2 font-mono text-sm text-white focus:border-accent/50 focus:outline-none" />
-              </div>
-              <label class="flex items-center gap-2 text-xs text-mist-300">
-                <input id="ticket-random" type="checkbox" class="rounded border-white/20 bg-ink-850" />
-                Randomize slices
-              </label>
             </div>
 
             <label class="flex items-center gap-2 text-xs text-mist-300">
@@ -347,35 +350,35 @@
               Reduce only
             </label>
 
-            <div class="flex flex-wrap justify-between gap-x-3 text-[11px] text-mist-400">
+            <div class="meta-row">
               <span id="ticket-mid">Mid —</span>
               <span id="ticket-mark">Mark —</span>
             </div>
-            <div class="flex flex-wrap justify-between gap-x-3 text-[11px] text-mist-400">
+            <div class="meta-row">
               <span id="ticket-notional">Est. —</span>
               <span id="ticket-avail">Avail. —</span>
             </div>
             <p id="ticket-min" class="hidden text-[11px] text-warn">Hyperliquid rejects orders under $10 notional.</p>
 
-            <button type="button" id="ticket-enable" class="hidden h-9 rounded-md border border-white/15 text-xs font-medium text-mist-200 hover:border-accent/40 hover:text-white">
+            <button type="button" id="ticket-enable" class="ticket-enable hidden">
               Enable trading
             </button>
-            <button type="submit" id="ticket-submit" class="h-10 rounded-md bg-accent text-sm font-semibold text-ink-950 hover:bg-accent-dim">
+            <button type="submit" id="ticket-submit" class="ticket-submit buy" disabled>
               Buy BTC
             </button>
-            <p id="ticket-status" class="min-h-[1.25rem] text-xs text-mist-400" role="status"></p>
+            <p id="ticket-status" class="ticket-status" role="status"></p>
           </form>
         </div>
 
-        <div class="trade-bottom rounded-lg border border-white/8 bg-ink-900">
-          <div class="flex gap-1 border-b border-white/5 p-1">
+        <div class="trade-bottom">
+          <div class="flex gap-0.5 border-b border-white/5 px-1 py-1">
             <button type="button" data-bottom-tab="positions" class="rounded px-3 py-1.5 text-xs font-medium text-white bg-white/10">Positions</button>
             <button type="button" data-bottom-tab="orders" class="rounded px-3 py-1.5 text-xs font-medium text-mist-400">Open orders</button>
             <button type="button" data-bottom-tab="fills" class="rounded px-3 py-1.5 text-xs font-medium text-mist-400">Fills</button>
           </div>
-          <div id="trade-positions" class="max-h-56 overflow-auto"></div>
-          <div id="trade-orders" class="hidden max-h-56 overflow-auto"></div>
-          <div id="trade-fills" class="hidden max-h-56 overflow-auto"></div>
+          <div id="trade-positions" class="max-h-[22vh] overflow-auto"></div>
+          <div id="trade-orders" class="hidden max-h-[22vh] overflow-auto"></div>
+          <div id="trade-fills" class="hidden max-h-[22vh] overflow-auto"></div>
         </div>
       </div>
     </section>
@@ -408,9 +411,10 @@
             <p>
               <strong class="text-mist-300">Wallet trading.</strong>
               Connect a wallet to place and cancel Hyperliquid perps orders. Connecting requests
-              <span class="font-mono">eth_requestAccounts</span>; each place or cancel asks the wallet
-              to sign (agent approval, builder fee, or the order). Agent keys stay in this browser’s
-              localStorage. Private keys are not sent to a server. Paste an address to load an account.
+              <span class="font-mono">eth_requestAccounts</span>. Enable trading signs official
+              Hyperliquid EIP-712 messages (approveBuilderFee, approveAgent). Orders are L1 actions
+              signed by the agent key in this tab’s memory — wiped on Disconnect, never written to
+              localStorage, never sent to a server. Paste an address to load an account.
             </p>
             <p>
               <strong class="text-mist-300">Do your own research.</strong>

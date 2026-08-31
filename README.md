@@ -10,7 +10,7 @@ Live: [https://www.hypertools.app](https://www.hypertools.app)
 - **Account** — equity, withdrawable, margin used, uPnL, perp positions (entry, mark, liq, leverage), spot balances, HYPE staking with validator names.
 - **Wallet** — EIP-6963 (MetaMask / Rabby) to place and cancel orders. Paste a `0x` address to load an account; orders still need a connected wallet.
 
-Orders go to `https://api.hyperliquid.xyz/exchange` (mainnet). Chart, book, and account data come from the Info API and `wss://api.hyperliquid.xyz/ws`. Signing is in the browser. First trade (or **Enable trading**) approves a local agent key and a builder fee; later orders are signed by the agent. Agent keys stay in `localStorage` and are not sent to a server.
+Orders go to `https://api.hyperliquid.xyz/exchange` (mainnet). Chart, book, and account data come from the Info API and `wss://api.hyperliquid.xyz/ws`. Signing is in the browser. **Enable trading** (explicit click) approves a local agent key and a builder fee via official Hyperliquid EIP-712; later orders are signed by the agent. The agent key stays in memory for this tab, is wiped on Disconnect, and is not written to localStorage.
 
 Builder on every `order` action: `0x999a4b5f268a8fbf33736feff360d462ad248dbf` (`f` = 10 tenths of a bp = 1 bp).
 

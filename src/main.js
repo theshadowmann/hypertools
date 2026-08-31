@@ -1,6 +1,8 @@
 import "./style.css";
+import { wipeAgents } from "./agent-store.js";
 import { ADDR_RE, loadAccount, loadMarkets } from "./api.js";
 import { renderDashboard } from "./dashboard.js";
+import { clear, h } from "./dom.js";
 import { truncAddr } from "./format.js";
 import { createHlWs } from "./ws.js";
 import {
@@ -10,7 +12,7 @@ import {
   requestAccounts,
   walletTargets,
 } from "./wallet.js";
-import { escapeHtml } from "./format.js";
+import { guardProvider } from "./wallet-guard.js";
 
 const state = {
   address: null,
@@ -97,49 +99,48 @@ function setView(view, push) {
   }
 }
 
+function safeDataImage(src) {
+  if (typeof src !== "string") return null;
+  if (src.indexOf("data:image/") !== 0) return null;
+  if (src.length > 24_000) return null;
+  return src;
+}
+
+function connectButton(label, onClick, iconSrc) {
+  const icon = iconSrc
+    ? h("img", { src: iconSrc, alt: "", class: "h-5 w-5 rounded-sm" })
+    : null;
+  return h(
+    "button",
+    {
+      type: "button",
+      class:
+        "wallet-connect-btn inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim",
+      onClick,
+    },
+    icon,
+    "Connect " + label + " to trade"
+  );
+}
+
 function renderWalletButtons() {
   const list = discoveredList;
-  let html = "";
+  clear(el.walletButtons);
   if (list.length) {
     list.forEach((entry) => {
-      const name = escapeHtml(entry.info.name || "Wallet");
-      const uuid = escapeHtml(entry.info.uuid);
-      const icon = entry.info.icon
-        ? '<img src="' + escapeHtml(entry.info.icon) + '" alt="" class="h-5 w-5 rounded-sm" />'
-        : "";
-      html +=
-        '<button type="button" data-uuid="' +
-        uuid +
-        '" class="wallet-connect-btn inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim">' +
-        icon +
-        "Connect " +
-        name +
-        " to trade" +
-        "</button>";
+      const name = entry.info.name || "Wallet";
+      el.walletButtons.appendChild(
+        connectButton(name, () => connectWallet(entry.provider), safeDataImage(entry.info.icon))
+      );
     });
     el.noWallet.classList.add("hidden");
   } else if (window.ethereum) {
     const label = labelInjected(window.ethereum);
-    html =
-      '<button type="button" data-fallback="1" class="wallet-connect-btn inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim">Connect ' +
-      escapeHtml(label) +
-      " to trade</button>";
+    el.walletButtons.appendChild(connectButton(label, () => connectWallet(window.ethereum)));
     el.noWallet.classList.add("hidden");
   } else {
     el.noWallet.classList.remove("hidden");
   }
-  el.walletButtons.innerHTML = html;
-  el.walletButtons.querySelectorAll(".wallet-connect-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const uuid = btn.getAttribute("data-uuid");
-      let provider = null;
-      const found = list.find((e) => e.info.uuid === uuid);
-      if (found) provider = found.provider;
-      else if (btn.getAttribute("data-fallback")) provider = window.ethereum;
-      if (!provider) return;
-      connectWallet(provider);
-    });
-  });
 }
 
 function showPasteError(msg) {
@@ -192,6 +193,9 @@ function setAddress(address, source) {
     return;
   }
   clearPasteError();
+  if (state.address && state.address.toLowerCase() !== normalized.toLowerCase()) {
+    wipeAgents();
+  }
   state.address = normalized;
   state.source = source;
   refreshAccount(normalized);
@@ -199,6 +203,7 @@ function setAddress(address, source) {
 }
 
 function disconnect() {
+  wipeAgents();
   if (typeof walletUnsub === "function") walletUnsub();
   walletUnsub = null;
   state.address = null;
@@ -214,8 +219,9 @@ function disconnect() {
 
 async function connectWallet(provider) {
   try {
-    const addr = await requestAccounts(provider);
-    state.provider = provider;
+    const guarded = guardProvider(provider);
+    const addr = await requestAccounts(guarded);
+    state.provider = guarded;
     if (typeof walletUnsub === "function") walletUnsub();
     walletUnsub = attachWalletListeners(provider, {
       onAccounts: (next) => {
@@ -262,34 +268,33 @@ function hideNavWalletMenu() {
   if (!el.navWalletMenu) return;
   el.navWalletMenu.classList.add("hidden");
   el.navWalletMenu.setAttribute("hidden", "");
-  el.navWalletMenu.innerHTML = "";
+  clear(el.navWalletMenu);
 }
 
 function showNavWalletMenu(targets) {
   if (!el.navWalletMenu) return;
-  el.navWalletMenu.innerHTML = targets
-    .map((t, i) => {
-      return (
-        '<button type="button" data-i="' +
-        i +
-        '" class="block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-white/5 hover:text-white" role="menuitem">' +
-        "Connect " +
-        escapeHtml(t.name) +
-        " to trade" +
-        "</button>"
-      );
-    })
-    .join("");
+  clear(el.navWalletMenu);
+  targets.forEach((t) => {
+    el.navWalletMenu.appendChild(
+      h(
+        "button",
+        {
+          type: "button",
+          class:
+            "block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-white/5 hover:text-white",
+          role: "menuitem",
+          onClick: (ev) => {
+            ev.stopPropagation();
+            hideNavWalletMenu();
+            connectWallet(t.provider);
+          },
+        },
+        "Connect " + t.name + " to trade"
+      )
+    );
+  });
   el.navWalletMenu.classList.remove("hidden");
   el.navWalletMenu.removeAttribute("hidden");
-  el.navWalletMenu.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      const i = Number(btn.getAttribute("data-i"));
-      hideNavWalletMenu();
-      if (targets[i]) connectWallet(targets[i].provider);
-    });
-  });
 }
 
 function connectFromNav() {

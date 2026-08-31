@@ -24,9 +24,19 @@ export default {
           muted: "rgba(45, 212, 191, 0.12)",
           line: "rgba(45, 212, 191, 0.28)",
         },
+        buy: {
+          DEFAULT: "#0ecb81",
+          dim: "#0bb36f",
+          muted: "rgba(14, 203, 129, 0.12)",
+        },
+        sell: {
+          DEFAULT: "#f6465d",
+          dim: "#dc3349",
+          muted: "rgba(246, 70, 93, 0.12)",
+        },
         danger: {
-          DEFAULT: "#fb7185",
-          muted: "rgba(251, 113, 133, 0.12)",
+          DEFAULT: "#f6465d",
+          muted: "rgba(246, 70, 93, 0.12)",
         },
         warn: {
           DEFAULT: "#fbbf24",
@@ -34,8 +44,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: ["ui-sans-serif", "system-ui", "Segoe UI", "Helvetica Neue", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {
         glow: "0 0 80px rgba(45, 212, 191, 0.08)",

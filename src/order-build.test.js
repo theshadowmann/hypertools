@@ -8,6 +8,7 @@ import {
   buildOrderWire,
   roundPx,
   roundSz,
+  sealOrderPayload,
   sizeFromMarginPct,
   toWire,
 } from "./order-build.js";
@@ -39,6 +40,34 @@ describe("builder attachment", () => {
     });
     expect(payload.grouping).toBe("na");
     expect(payload.orders[0].t).toEqual({ limit: { tif: "Gtc" } });
+  });
+
+  it("ignores a mutated or query-supplied builder", () => {
+    const wire = buildOrderWire({
+      asset: 0,
+      isBuy: true,
+      size: 0.01,
+      price: 95000,
+      type: "limit",
+      tif: "Gtc",
+      szDecimals: 5,
+    });
+    const attacker = "0x0000000000000000000000000000000000000999";
+    const payload = {
+      orders: [wire],
+      grouping: "na",
+      builder: { b: attacker, f: 1 },
+    };
+    const sealed = sealOrderPayload(payload);
+    expect(sealed.builder).toEqual({
+      b: "0x999a4b5f268a8fbf33736feff360d462ad248dbf",
+      f: 10,
+    });
+    sealed.builder.b = attacker;
+    sealed.builder.f = 99;
+    const sent = sealOrderPayload(sealed);
+    expect(sent.builder.b).toBe("0x999a4b5f268a8fbf33736feff360d462ad248dbf");
+    expect(sent.builder.f).toBe(10);
   });
 
   it("encodes market as aggressive IOC", () => {

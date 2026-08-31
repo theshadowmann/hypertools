@@ -1,6 +1,8 @@
 import { createWalletClient, custom } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
+import { getAgent, rememberAgent } from "./agent-store.js";
+import { HL_API } from "./hosts.js";
 import {
   AGENT_NAME,
   BUILDER_ADDRESS,
@@ -12,41 +14,12 @@ import {
   explainExchangeError,
   hlAddress,
   orderSucceeded,
+  sealOrderPayload,
   slippagePrice,
 } from "./order-build.js";
 
-const transport = new HttpTransport({ isTestnet: false });
+const transport = new HttpTransport({ isTestnet: false, apiUrl: HL_API });
 const info = new InfoClient({ transport });
-
-const AGENT_STORE_PREFIX = "ht.agent.";
-
-function agentKey(user) {
-  return AGENT_STORE_PREFIX + hlAddress(user);
-}
-
-export function loadStoredAgent(user) {
-  try {
-    const raw = localStorage.getItem(agentKey(user));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.privateKey || !parsed.address) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveStoredAgent(user, agent) {
-  localStorage.setItem(
-    agentKey(user),
-    JSON.stringify({
-      privateKey: agent.privateKey,
-      address: hlAddress(agent.address),
-      name: AGENT_NAME,
-      savedAt: Date.now(),
-    })
-  );
-}
 
 function walletClient(provider, address) {
   return createWalletClient({
@@ -86,7 +59,7 @@ export async function tradingStatus(user) {
     info.maxBuilderFee({ user, builder: BUILDER_ADDRESS }).catch(() => 0),
     info.extraAgents({ user }).catch(() => []),
   ]);
-  const stored = loadStoredAgent(user);
+  const stored = getAgent(user);
   const feeOk = Number(maxFee) >= BUILDER_FEE_TENTHS;
   const agentOk = stored
     ? (extras || []).some(
@@ -100,8 +73,8 @@ export async function tradingStatus(user) {
 }
 
 /**
- * One-time setup: approve builder fee + agent. Master wallet signs both EIP-712
- * messages. The agent private key never leaves this browser (memory / localStorage).
+ * Explicit user click only. Approves builder fee + agent via official EIP-712
+ * (approveBuilderFee / approveAgent). The agent private key is never logged.
  */
 export async function enableTrading({ provider, address, onStatus }) {
   assertCanTrade("wallet");
@@ -132,7 +105,7 @@ export async function enableTrading({ provider, address, onStatus }) {
       agentName: AGENT_NAME,
     });
     agent = { privateKey, address: acct.address };
-    saveStoredAgent(user, agent);
+    rememberAgent(user, agent);
   }
 
   onStatus && onStatus("Trading enabled.");
@@ -147,9 +120,20 @@ function agentExchange(agent) {
   });
 }
 
+async function requireReadyAgent(address) {
+  const stored = getAgent(address);
+  if (!stored || !stored.privateKey) {
+    throw new Error("Enable trading first.");
+  }
+  const ready = await tradingStatus(address);
+  if (!ready.feeOk || !ready.agentOk) {
+    throw new Error("Enable trading first.");
+  }
+  return stored;
+}
+
 export async function placePerpOrder({
   source,
-  provider,
   address,
   market,
   side,
@@ -165,13 +149,7 @@ export async function placePerpOrder({
   onStatus,
 }) {
   assertCanTrade(source);
-  let agent = loadStoredAgent(address);
-  const ready = await tradingStatus(address);
-  if (!ready.feeOk || !ready.agentOk) {
-    agent = await enableTrading({ provider, address, onStatus });
-  } else {
-    agent = ready.stored;
-  }
+  const agent = await requireReadyAgent(address);
 
   const isBuy = side === "buy";
   let px = price;
@@ -197,7 +175,7 @@ export async function placePerpOrder({
     tpsl,
     triggerIsMarket,
   });
-  const payload = buildOrderPayload(wire);
+  const payload = sealOrderPayload(buildOrderPayload(wire));
   const exch = agentExchange(agent);
   const result = await exch.order(payload);
   const err = explainExchangeError(result);
@@ -210,7 +188,6 @@ export async function placePerpOrder({
 
 export async function placeTwapOrder({
   source,
-  provider,
   address,
   market,
   side,
@@ -221,13 +198,7 @@ export async function placeTwapOrder({
   onStatus,
 }) {
   assertCanTrade(source);
-  let agent = loadStoredAgent(address);
-  const ready = await tradingStatus(address);
-  if (!ready.feeOk || !ready.agentOk) {
-    agent = await enableTrading({ provider, address, onStatus });
-  } else {
-    agent = ready.stored;
-  }
+  const agent = await requireReadyAgent(address);
   const m = Math.max(5, Math.round(Number(minutes) || 30));
   onStatus && onStatus("Signing TWAP order…");
   const exch = agentExchange(agent);
@@ -246,15 +217,9 @@ export async function placeTwapOrder({
   return result;
 }
 
-export async function cancelOrders({ source, provider, address, cancels, onStatus }) {
+export async function cancelOrders({ source, address, cancels, onStatus }) {
   assertCanTrade(source);
-  let agent = loadStoredAgent(address);
-  const ready = await tradingStatus(address);
-  if (!ready.feeOk || !ready.agentOk) {
-    agent = await enableTrading({ provider, address, onStatus });
-  } else {
-    agent = ready.stored;
-  }
+  const agent = await requireReadyAgent(address);
   onStatus && onStatus("Signing cancel…");
   const exch = agentExchange(agent);
   const result = await exch.cancel({
@@ -265,15 +230,9 @@ export async function cancelOrders({ source, provider, address, cancels, onStatu
   return result;
 }
 
-export async function cancelTwap({ source, provider, address, asset, twapId, onStatus }) {
+export async function cancelTwap({ source, address, asset, twapId, onStatus }) {
   assertCanTrade(source);
-  let agent = loadStoredAgent(address);
-  const ready = await tradingStatus(address);
-  if (!ready.feeOk || !ready.agentOk) {
-    agent = await enableTrading({ provider, address, onStatus });
-  } else {
-    agent = ready.stored;
-  }
+  const agent = await requireReadyAgent(address);
   onStatus && onStatus("Signing TWAP cancel…");
   const exch = agentExchange(agent);
   const result = await exch.twapCancel({ a: asset, t: twapId });
