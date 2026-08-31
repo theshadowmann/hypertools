@@ -27,7 +27,7 @@ export function createHlWs() {
     if (!msg || !sub) return false;
     const ch = msg.channel;
     if (ch === "subscriptionResponse" || ch === "pong") return false;
-    if (ch !== channelOf(sub) && !(sub.type === "l2Book" && ch === "l2Book")) return false;
+    if (ch !== channelOf(sub) && !(sub.type === "l2Book" && ch === "l2Book") && !(sub.type === "activeSpotAssetCtx" && ch === "activeSpotAssetCtx") && !(sub.type === "activeAssetCtx" && ch === "activeAssetCtx")) return false;
     const data = msg.data;
     if (sub.coin && data) {
       if (data.coin && data.coin !== sub.coin) return false;

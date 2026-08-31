@@ -23,6 +23,8 @@ describe("TradingView Hyperliquid symbols", () => {
     expect(tvSymbol("kPEPE")).toBe("HYPERLIQUID:KPEPEUSDC.P");
     expect(tvSymbol("btc<script>")).toBe("HYPERLIQUID:BTCSCRIPTUSDC.P");
     expect(tvSymbol("")).toBe("HYPERLIQUID:BTCUSDC.P");
+    expect(tvSymbol("PURR/USDC", "spot", "PURR", "USDC")).toBe("HYPERLIQUID:PURRUSDC");
+    expect(tvSymbol("@1", "spot", "HFUN", "USDC")).toBe("HYPERLIQUID:HFUNUSDC");
   });
 
   it("maps intervals to TradingView resolutions", () => {
@@ -103,7 +105,10 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="nav-trade"');
     expect(html).toContain('id="nav-portfolio"');
     expect(html).toContain(">Portfolio<");
-    expect(html).not.toMatch(/nav-slider|segmented-nav|pill-nav/);
-    expect(html).not.toMatch(/>Account</);
+    expect(html).not.toMatch(/<select[^>]*id="market-select"/);
+    expect(html).toContain('id="market-chip"');
+    expect(html).toContain('id="market-picker"');
+    expect(html).toContain("Favorites");
+    expect(html).toContain("8h Funding");
   });
 });

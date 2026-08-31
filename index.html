@@ -219,11 +219,10 @@
 
         <div class="trade-stats">
           <div class="stats-left">
-            <label class="sr-only" for="market-select">Market</label>
-            <select id="market-select" class="market-select">
-              <option value="BTC">BTC</option>
-            </select>
-            <p id="trade-coin" class="stats-coin">BTC</p>
+            <button type="button" id="market-chip" class="market-chip" aria-haspopup="dialog" aria-expanded="false" aria-controls="market-picker">
+              <span id="market-chip-pair">BTC-USDC</span>
+              <span id="market-chip-lev" class="lev-badge">20x</span>
+            </button>
             <div class="iv-bar" role="group" aria-label="Chart interval">
               <button type="button" data-interval="1m" class="iv-btn">1m</button>
               <button type="button" data-interval="5m" class="iv-btn">5m</button>
@@ -241,6 +240,39 @@
             <div class="stat"><span class="stat-k">Open Interest</span><span id="stat-oi" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">Funding</span><span id="stat-funding" class="stat-v">—</span></div>
           </div>
+        </div>
+
+        <div id="market-picker" class="market-picker hidden" role="dialog" aria-label="Markets" hidden>
+          <div class="mp-search">
+            <svg class="mp-mag" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M10.5 10.5 L14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            <input id="mp-search" type="text" placeholder="Search" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="mp-tabs" role="tablist" aria-label="Market category">
+            <button type="button" data-mp-tab="favorites" class="mp-tab" role="tab" aria-selected="false">Favorites</button>
+            <button type="button" data-mp-tab="all" class="mp-tab" role="tab" aria-selected="true">All</button>
+            <button type="button" data-mp-tab="perps" class="mp-tab" role="tab" aria-selected="false">Perps</button>
+            <button type="button" data-mp-tab="spot" class="mp-tab" role="tab" aria-selected="false">Spot</button>
+            <button type="button" data-mp-tab="trending" class="mp-tab" role="tab" aria-selected="false">Trending</button>
+          </div>
+          <div class="mp-table-wrap">
+            <table class="mp-table">
+              <thead>
+                <tr>
+                  <th>Market</th>
+                  <th><button type="button" data-mp-sort="price">Last Price</button></th>
+                  <th><button type="button" data-mp-sort="change">24h Change</button></th>
+                  <th><button type="button" data-mp-sort="funding">8h Funding</button></th>
+                  <th><button type="button" data-mp-sort="volume">Volume</button></th>
+                  <th><button type="button" data-mp-sort="oi">Open Interest</button></th>
+                </tr>
+              </thead>
+              <tbody id="mp-body"></tbody>
+            </table>
+          </div>
+          <p class="mp-foot">Esc to close · ↑↓ to move · Enter to select</p>
         </div>
 
         <div class="trade-chart">
@@ -286,7 +318,7 @@
               </div>
             </div>
 
-            <div class="lev-row">
+            <div id="lev-row" class="lev-row">
               <button type="button" id="lev-toggle" class="lev-btn"><span id="lev-label">20x</span></button>
               <div class="margin-mode">
                 <button type="button" id="mode-isolated" class="mode-btn" aria-pressed="false">Isolated</button>

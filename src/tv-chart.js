@@ -5,7 +5,7 @@ import { tvInterval, tvSymbol } from "./ticket-math.js";
 export const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
 export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 
-export function mountTvChart(container, { coin, interval }) {
+export function mountTvChart(container, { coin, interval, kind, base, quote }) {
   if (!container) return;
   clear(container);
   const wrap = document.createElement("div");
@@ -23,7 +23,7 @@ export function mountTvChart(container, { coin, interval }) {
   script.type = "text/javascript";
   script.textContent = JSON.stringify({
     autosize: true,
-    symbol: tvSymbol(coin),
+    symbol: tvSymbol(coin, kind, base, quote),
     interval: tvInterval(interval),
     timezone: "Etc/UTC",
     theme: "dark",

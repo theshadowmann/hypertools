@@ -2,10 +2,21 @@ import { roundPx, roundSz, toWire, buildOrderWire, sealOrderPayload } from "./or
 
 export const DEFAULT_MAX_SLIPPAGE = 0.08;
 
-export function tvSymbol(coin) {
-  const c = String(coin || "")
+function sanitizeTicker(s) {
+  return String(s || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
+}
+
+/** Official TradingView Hyperliquid symbols. Perps: HYPERLIQUID:BTCUSDC.P. Spot: HYPERLIQUID:PURRUSDC. */
+export function tvSymbol(coin, kind = "perp", base, quote) {
+  if (kind === "spot") {
+    const b = sanitizeTicker(base || coin);
+    const q = sanitizeTicker(quote || "USDC");
+    if (!b) return "HYPERLIQUID:PURRUSDC";
+    return "HYPERLIQUID:" + b + q;
+  }
+  const c = sanitizeTicker(coin);
   if (!c) return "HYPERLIQUID:BTCUSDC.P";
   return "HYPERLIQUID:" + c + "USDC.P";
 }

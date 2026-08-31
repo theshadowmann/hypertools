@@ -1,0 +1,105 @@
+import { describe, expect, it } from "vitest";
+import {
+  compactUsd,
+  displayPair,
+  filterMarkets,
+  funding8h,
+  loadFavs,
+  parsePerpMarkets,
+  parseSpotMarkets,
+  SPOT_ASSET_OFFSET,
+  toggleFav,
+} from "./markets.js";
+
+const perps = parsePerpMarkets([
+  {
+    universe: [
+      { name: "BTC", szDecimals: 5, maxLeverage: 40 },
+      { name: "ETH", szDecimals: 4, maxLeverage: 25 },
+    ],
+  },
+  [
+    { markPx: "100000", prevDayPx: "90000", dayNtlVlm: "50", funding: "0.0001", openInterest: "10", oraclePx: "100001" },
+    { markPx: "3000", prevDayPx: "3100", dayNtlVlm: "20", funding: "-0.0002", openInterest: "5", oraclePx: "3001" },
+  ],
+]);
+
+const spot = parseSpotMarkets([
+  {
+    universe: [{ tokens: [1, 0], name: "PURR/USDC", index: 0, isCanonical: true }],
+    tokens: [
+      { name: "USDC", index: 0, szDecimals: 8 },
+      { name: "PURR", index: 1, szDecimals: 0 },
+    ],
+  },
+  [{ coin: "PURR/USDC", markPx: "0.12", prevDayPx: "0.10", dayNtlVlm: "1000" }],
+]);
+
+describe("parse markets", () => {
+  it("builds perp rows from metaAndAssetCtxs", () => {
+    expect(perps[0].id).toBe("perp:BTC");
+    expect(perps[0].pair).toBe("BTC-USDC");
+    expect(perps[0].kind).toBe("perp");
+    expect(perps[0].asset).toBe(0);
+  });
+
+  it("builds spot rows with 10000+index asset ids", () => {
+    expect(spot[0].id).toBe("spot:PURR/USDC");
+    expect(spot[0].pair).toBe("PURR-USDC");
+    expect(spot[0].base).toBe("PURR");
+    expect(spot[0].asset).toBe(SPOT_ASSET_OFFSET);
+    expect(spot[0].funding).toBeNull();
+  });
+});
+
+describe("picker filter", () => {
+  const all = perps.concat(spot);
+
+  it("filters by ticker search", () => {
+    const rows = filterMarkets(all, { tab: "all", query: "purr" });
+    expect(rows.map((m) => m.id)).toEqual(["spot:PURR/USDC"]);
+  });
+
+  it("tabs Perps / Spot without inventing rows", () => {
+    expect(filterMarkets(all, { tab: "perps" }).every((m) => m.kind === "perp")).toBe(true);
+    expect(filterMarkets(all, { tab: "spot" }).every((m) => m.kind === "spot")).toBe(true);
+  });
+
+  it("favorites tab uses stored ids only", () => {
+    const rows = filterMarkets(all, { tab: "favorites", favs: ["perp:ETH"] });
+    expect(rows.map((m) => m.id)).toEqual(["perp:ETH"]);
+  });
+
+  it("sorts 24h change", () => {
+    const desc = filterMarkets(perps, { tab: "perps", sortKey: "change", sortDir: "desc" });
+    expect(desc[0].coin).toBe("BTC");
+    const asc = filterMarkets(perps, { tab: "perps", sortKey: "change", sortDir: "asc" });
+    expect(asc[0].coin).toBe("ETH");
+  });
+});
+
+describe("funding and display", () => {
+  it("converts hourly funding to 8h", () => {
+    expect(funding8h(0.0000125)).toBeCloseTo(0.0001);
+  });
+
+  it("formats compact USD from live-scale notionals", () => {
+    expect(compactUsd(2.21e9)).toBe("$2.21B");
+    expect(displayPair("PURR", "USDC")).toBe("PURR-USDC");
+  });
+});
+
+describe("favorites store", () => {
+  it("toggles ids in the provided store", () => {
+    const mem = {};
+    const store = {
+      getItem: (k) => mem[k] || null,
+      setItem: (k, v) => {
+        mem[k] = v;
+      },
+    };
+    expect(loadFavs(store)).toEqual([]);
+    expect(toggleFav("perp:BTC", store)).toEqual(["perp:BTC"]);
+    expect(toggleFav("perp:BTC", store)).toEqual([]);
+  });
+});

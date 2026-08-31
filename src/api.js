@@ -1,4 +1,5 @@
 import { HL_INFO, HL_EXCHANGE, HL_WS } from "./hosts.js";
+import { mergeMarkets, parsePerpMarkets, parseSpotMarkets } from "./markets.js";
 export { HL_INFO, HL_EXCHANGE, HL_WS };
 export const DUST = 1e-8;
 export const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -70,30 +71,14 @@ export async function loadAccount(address) {
 }
 
 export async function loadMarkets() {
-  const payload = await hlInfo({ type: "metaAndAssetCtxs" });
-  const meta = payload && payload[0];
-  const ctxs = payload && payload[1];
-  const universe = (meta && meta.universe) || [];
-  const markets = [];
-  universe.forEach((u, i) => {
-    if (!u || u.isDelisted) return;
-    const ctx = (ctxs && ctxs[i]) || {};
-    markets.push({
-      coin: u.name,
-      asset: i,
-      szDecimals: u.szDecimals,
-      maxLeverage: u.maxLeverage,
-      onlyIsolated: !!u.onlyIsolated,
-      markPx: ctx.markPx,
-      midPx: ctx.midPx,
-      oraclePx: ctx.oraclePx,
-      funding: ctx.funding,
-      openInterest: ctx.openInterest,
-      dayNtlVlm: ctx.dayNtlVlm,
-      prevDayPx: ctx.prevDayPx,
-    });
-  });
-  markets.sort((a, b) => Number(b.dayNtlVlm || 0) - Number(a.dayNtlVlm || 0));
+  const results = await Promise.allSettled([
+    hlInfo({ type: "metaAndAssetCtxs" }),
+    hlInfo({ type: "spotMetaAndAssetCtxs" }),
+  ]);
+  const perps = results[0].status === "fulfilled" ? parsePerpMarkets(results[0].value) : [];
+  const spot = results[1].status === "fulfilled" ? parseSpotMarkets(results[1].value) : [];
+  const markets = mergeMarkets(perps, spot);
+  if (!markets.length) throw new Error("Hyperliquid returned no markets");
   return markets;
 }
 

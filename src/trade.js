@@ -41,6 +41,14 @@ import {
   sizeFromAvailablePct,
 } from "./ticket-math.js";
 import { mountTvChart } from "./tv-chart.js";
+import {
+  changeAbs,
+  compactUsd,
+  filterMarkets,
+  funding8h,
+  loadFavs,
+  toggleFav,
+} from "./markets.js";
 
 function byId(id) {
   return document.getElementById(id);
@@ -63,7 +71,8 @@ function emptyNote(message) {
 export function createTradeView(app) {
   const socket = app.socket;
   let markets = [];
-  let marketByCoin = {};
+  let marketById = {};
+  let marketId = "perp:BTC";
   let coin = "BTC";
   let interval = "15m";
   let unsubBook = null;
@@ -85,9 +94,22 @@ export function createTradeView(app) {
   let bottomTab = "balances";
   let fundingTimer = null;
   let lastTv = "";
+  let pickerOpen = false;
+  let pickerTab = "all";
+  let pickerQuery = "";
+  let pickerSort = "volume";
+  let pickerDir = "desc";
+  let pickerHi = 0;
+  let pickerRows = [];
+  let favs = loadFavs();
 
   function currentMarket() {
-    return marketByCoin[coin] || markets.find((m) => m.coin === coin) || null;
+    return marketById[marketId] || markets.find((m) => m.id === marketId) || null;
+  }
+
+  function isSpot() {
+    const m = currentMarket();
+    return !!(m && m.kind === "spot");
   }
 
   function mid() {
@@ -98,6 +120,8 @@ export function createTradeView(app) {
     if (m && num(m.markPx) > 0) return num(m.markPx);
     const mids = app.state.data && app.state.data.mids;
     if (mids && mids[coin]) return num(mids[coin]);
+    const mkt = currentMarket();
+    if (mkt && mids && mids[mkt.coin]) return num(mids[mkt.coin]);
     return NaN;
   }
 
@@ -110,11 +134,29 @@ export function createTradeView(app) {
   }
 
   function withdrawable() {
+    if (isSpot()) {
+      const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
+      if (side === "sell") {
+        const m = currentMarket();
+        const row = spot.find((b) => b && m && String(b.coin) === m.base);
+        const px = sizePx() || mark();
+        const qty = row ? Math.max(0, num(row.total) - num(row.hold)) : 0;
+        return Number.isFinite(px) && px > 0 ? qty * px : qty;
+      }
+      return spotUsdcParts(spot).available;
+    }
     const perps = app.state.data && app.state.data.perps;
     return perps ? num(perps.withdrawable) : NaN;
   }
 
   function currentPos() {
+    const m = currentMarket();
+    if (m && m.kind === "spot") {
+      const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
+      const row = spot.find((b) => b && String(b.coin) === m.base);
+      const qty = row ? Math.max(0, num(row.total) - num(row.hold)) : 0;
+      return { coin: m.base, szi: qty, leverage: null };
+    }
     const perps = (app.state.data && app.state.data.perps) || {};
     const rows = positionRows(perps.assetPositions || []);
     return rows.find((p) => p.coin === coin) || null;
@@ -140,10 +182,17 @@ export function createTradeView(app) {
   }
 
   function ensureChart() {
-    const key = coin + "|" + interval;
+    const m = currentMarket();
+    const key = (m ? m.id : coin) + "|" + interval;
     if (key === lastTv && byId("chart") && byId("chart").firstChild) return;
     lastTv = key;
-    mountTvChart(byId("chart"), { coin, interval });
+    mountTvChart(byId("chart"), {
+      coin: m ? m.coin : coin,
+      interval,
+      kind: m ? m.kind : "perp",
+      base: m && m.base,
+      quote: m && m.quote,
+    });
   }
 
   function useBookPrice(px) {
@@ -242,15 +291,17 @@ export function createTradeView(app) {
     const px = sizePx();
     const ntl = Number.isFinite(sz) && Number.isFinite(px) ? orderValue(sz, px) : NaN;
     const w = withdrawable();
-    const power = buyingPower(w, leverage);
+    const lev = isSpot() ? 1 : leverage;
+    const power = buyingPower(w, lev);
     setText("ticket-avail", Number.isFinite(w) ? fmtUsd(power) + " USDC" : "— USDC");
     const pos = currentPos();
     const posSz = pos ? num(pos.szi) : 0;
-    setText("ticket-pos", pos && posSz ? fmtQty(Math.abs(posSz)) + " " + coin : "0.00000 " + coin);
-    const liq = estimateLiqPx(mark(), leverage, side === "buy");
+    const unitName = (currentMarket() && currentMarket().base) || coin;
+    setText("ticket-pos", pos && posSz ? fmtQty(Math.abs(posSz)) + " " + unitName : "0.00000 " + unitName);
+    const liq = isSpot() ? NaN : estimateLiqPx(mark(), leverage, side === "buy");
     setText("sum-liq", Number.isFinite(liq) ? fmtPx(liq) : "—");
     setText("sum-value", Number.isFinite(ntl) ? fmtUsd(ntl) : "—");
-    setText("sum-margin", Number.isFinite(ntl) ? fmtUsd(marginRequired(ntl, leverage)) : "—");
+    setText("sum-margin", isSpot() ? "—" : Number.isFinite(ntl) ? fmtUsd(marginRequired(ntl, leverage)) : "—");
     const slip = estimateSlippage(orderType === "market" ? mark() : num(fieldValue("ticket-price")), mid(), orderType === "market" || orderType === "stop-market");
     setText("sum-slip-est", "Est. " + (slip * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%");
     const fees = extras.userFees;
@@ -263,15 +314,16 @@ export function createTradeView(app) {
     if (minNote) minNote.classList.toggle("hidden", !Number.isFinite(ntl) || ntl >= 10 || !(sz > 0));
     if (mkt) {
       const unitCoin = byId("unit-coin");
-      if (unitCoin) unitCoin.textContent = mkt.coin;
+      if (unitCoin) unitCoin.textContent = mkt.base || mkt.coin;
     }
+    renderTicketKind();
     renderTicketButton();
   }
 
   function applyPct(pct) {
     const mkt = currentMarket();
     const sz = sizeFromAvailablePct(
-      buyingPower(withdrawable(), leverage),
+      buyingPower(withdrawable(), isSpot() ? 1 : leverage),
       sizePx() || mark(),
       pct,
       mkt ? mkt.szDecimals : 5
@@ -289,6 +341,17 @@ export function createTradeView(app) {
     if (box) box.value = String(Math.round(pct));
     if (range) range.value = String(Math.round(pct));
     updateEstimate();
+  }
+
+  function renderTicketKind() {
+    const spot = isSpot();
+    const buy = byId("side-buy");
+    const sell = byId("side-sell");
+    if (buy) buy.textContent = spot ? "Buy" : "Buy / Long";
+    if (sell) sell.textContent = spot ? "Sell" : "Sell / Short";
+    byId("lev-row")?.classList.toggle("hidden", spot);
+    const levEl = byId("market-chip-lev");
+    if (levEl) levEl.classList.toggle("hidden", spot);
   }
 
   function setSide(next) {
@@ -519,18 +582,184 @@ export function createTradeView(app) {
     }
   }
 
-  function renderMarketSelect() {
-    const sel = byId("market-select");
-    if (!sel) return;
-    const preferred = ["BTC", "ETH", "SOL", "HYPE"];
-    const ordered = markets.slice().sort((a, b) => {
-      const ia = preferred.indexOf(a.coin);
-      const ib = preferred.indexOf(b.coin);
-      if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-      return 0;
+  function renderMarketChip() {
+    const m = currentMarket();
+    const pair = byId("market-chip-pair");
+    const levEl = byId("market-chip-lev");
+    if (pair) pair.textContent = m ? m.pair : coin;
+    if (levEl) {
+      levEl.textContent = Math.round(leverage) + "x";
+      levEl.classList.toggle("hidden", !!(m && m.kind === "spot"));
+    }
+  }
+
+  function closePicker() {
+    pickerOpen = false;
+    const el = byId("market-picker");
+    const chip = byId("market-chip");
+    if (el) {
+      el.classList.add("hidden");
+      el.setAttribute("hidden", "");
+    }
+    if (chip) chip.setAttribute("aria-expanded", "false");
+  }
+
+  function openPicker() {
+    pickerOpen = true;
+    favs = loadFavs();
+    const el = byId("market-picker");
+    const chip = byId("market-chip");
+    if (el) {
+      el.classList.remove("hidden");
+      el.removeAttribute("hidden");
+    }
+    if (chip) chip.setAttribute("aria-expanded", "true");
+    renderPicker();
+    const search = byId("mp-search");
+    if (search) {
+      search.value = pickerQuery;
+      search.focus();
+    }
+  }
+
+  function togglePicker() {
+    if (pickerOpen) closePicker();
+    else openPicker();
+  }
+
+  function renderPicker() {
+    const body = byId("mp-body");
+    if (!body) return;
+    document.querySelectorAll("[data-mp-tab]").forEach((btn) => {
+      btn.setAttribute("aria-selected", btn.getAttribute("data-mp-tab") === pickerTab ? "true" : "false");
     });
-    clear(sel);
-    ordered.forEach((m) => sel.appendChild(h("option", { value: m.coin, selected: m.coin === coin }, m.coin)));
+    document.querySelectorAll("[data-mp-sort]").forEach((btn) => {
+      const key = btn.getAttribute("data-mp-sort");
+      if (key === pickerSort) btn.setAttribute("aria-sort", pickerDir === "asc" ? "asc" : "desc");
+      else btn.removeAttribute("aria-sort");
+    });
+    pickerRows = filterMarkets(markets, {
+      tab: pickerTab,
+      query: pickerQuery,
+      favs,
+      sortKey: pickerSort,
+      sortDir: pickerDir,
+    });
+    if (pickerHi >= pickerRows.length) pickerHi = Math.max(0, pickerRows.length - 1);
+    clear(body);
+    if (!pickerRows.length) {
+      body.appendChild(
+        h("tr", null, h("td", { class: "px-3 py-6 text-center text-mist-400", colSpan: "6" }, "No markets match."))
+      );
+      return;
+    }
+    pickerRows.forEach((m, i) => {
+      const ch = change24h(m.markPx, m.prevDayPx);
+      const abs = changeAbs(m.markPx, m.prevDayPx);
+      const chCls = Number.isFinite(ch) && ch > 0 ? "mp-chg up" : Number.isFinite(ch) && ch < 0 ? "mp-chg down" : "mp-muted";
+      const chTxt = Number.isFinite(ch)
+        ? (Number.isFinite(abs) ? fmtPx(abs, true) + " / " : "") +
+          (ch >= 0 ? "+" : "") +
+          (ch * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+          "%"
+        : "—";
+      const fund = funding8h(m.funding);
+      const fundTxt =
+        m.kind === "perp" && Number.isFinite(fund)
+          ? (fund * 100).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + "%"
+          : "—";
+      const oiNtl = Number(m.openInterest) * Number(m.markPx);
+      const starred = favs.indexOf(m.id) !== -1;
+      const tr = h(
+        "tr",
+        {
+          class: "mp-row" + (i === pickerHi ? " is-on" : ""),
+          dataset: { mid: m.id },
+          onClick: () => selectPickerRow(m.id),
+          onMouseEnter: () => {
+            pickerHi = i;
+            syncPickerHighlight();
+          },
+        },
+        h(
+          "td",
+          null,
+          h(
+            "div",
+            { class: "mp-mkt" },
+            h(
+              "button",
+              {
+                type: "button",
+                class: "mp-star" + (starred ? " on" : ""),
+                title: starred ? "Unfavorite" : "Favorite",
+                onClick: (ev) => {
+                  ev.stopPropagation();
+                  favs = toggleFav(m.id);
+                  renderPicker();
+                },
+              },
+              starred ? "★" : "☆"
+            ),
+            h("span", { class: "mp-pair" }, m.pair),
+            h("span", { class: "mp-badge" + (m.kind === "perp" ? " perp" : "") }, m.kind === "perp" ? "PERP" : "SPOT")
+          )
+        ),
+        h("td", null, Number.isFinite(num(m.markPx)) ? fmtPx(m.markPx) : "—"),
+        h("td", { class: chCls }, chTxt),
+        h("td", { class: Number.isFinite(fund) && fund < 0 ? "mp-chg down" : Number.isFinite(fund) && fund > 0 ? "mp-chg up" : "mp-muted" }, fundTxt),
+        h("td", null, compactUsd(m.dayNtlVlm)),
+        h("td", null, m.kind === "perp" && Number.isFinite(oiNtl) ? compactUsd(oiNtl) : "—")
+      );
+      body.appendChild(tr);
+    });
+    syncPickerHighlight();
+  }
+
+  function syncPickerHighlight() {
+    const body = byId("mp-body");
+    if (!body) return;
+    Array.prototype.forEach.call(body.children, (tr, i) => {
+      tr.classList.toggle("is-on", i === pickerHi);
+      if (i === pickerHi && typeof tr.scrollIntoView === "function") {
+        tr.scrollIntoView({ block: "nearest" });
+      }
+    });
+  }
+
+  function selectPickerRow(id) {
+    closePicker();
+    setMarket(id);
+  }
+
+  function onPickerKey(ev) {
+    if (!pickerOpen) return;
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      closePicker();
+      return;
+    }
+    if (ev.key === "ArrowDown") {
+      ev.preventDefault();
+      pickerHi = Math.min(pickerRows.length - 1, pickerHi + 1);
+      syncPickerHighlight();
+      return;
+    }
+    if (ev.key === "ArrowUp") {
+      ev.preventDefault();
+      pickerHi = Math.max(0, pickerHi - 1);
+      syncPickerHighlight();
+      return;
+    }
+    if (ev.key === "Enter" && pickerRows[pickerHi]) {
+      ev.preventDefault();
+      selectPickerRow(pickerRows[pickerHi].id);
+    }
+  }
+
+  function renderMarketSelect() {
+    renderMarketChip();
+    if (pickerOpen) renderPicker();
   }
 
   function syncLeverageFromPos() {
@@ -544,6 +773,7 @@ export function createTradeView(app) {
       leverage = Math.min(leverage, Number(mkt.maxLeverage));
     }
     setText("lev-label", Math.round(leverage) + "x");
+    renderMarketChip();
     byId("mode-isolated")?.setAttribute("aria-pressed", isCross ? "false" : "true");
     byId("mode-cross")?.setAttribute("aria-pressed", isCross ? "true" : "false");
     const range = byId("lev-range");
@@ -561,6 +791,7 @@ export function createTradeView(app) {
       ticketMessage("Enable trading first.", "err");
       return;
     }
+    if (isSpot()) return;
     const mkt = currentMarket();
     if (!mkt) return;
     const v = num(fieldValue("lev-input")) || num(byId("lev-range") && byId("lev-range").value);
@@ -575,6 +806,7 @@ export function createTradeView(app) {
       });
       leverage = Math.round(v);
       setText("lev-label", leverage + "x");
+      renderMarketChip();
       byId("lev-pop")?.classList.add("hidden");
       ticketMessage("Leverage updated.", "ok");
       updateEstimate();
@@ -679,8 +911,12 @@ export function createTradeView(app) {
   }
 
   function assetForCoin(c) {
-    const m = marketByCoin[c];
-    return m ? m.asset : null;
+    const hit =
+      marketById["perp:" + c] ||
+      markets.find((x) => x.coin === c && x.kind === "perp") ||
+      marketById["spot:" + c] ||
+      markets.find((x) => x.coin === c);
+    return hit ? hit.asset : null;
   }
 
   function renderOrders() {
@@ -955,7 +1191,12 @@ export function createTradeView(app) {
       book = bookLevels(data);
       renderBook();
     });
-    unsubCtx = socket.subscribe({ type: "activeAssetCtx", coin }, (data) => {
+    const m = currentMarket();
+    const ctxSub =
+      m && m.kind === "spot"
+        ? { type: "activeSpotAssetCtx", coin }
+        : { type: "activeAssetCtx", coin };
+    unsubCtx = socket.subscribe(ctxSub, (data) => {
       const c = data && data.ctx ? data.ctx : data;
       if (!c) return;
       ctx = {
@@ -995,30 +1236,34 @@ export function createTradeView(app) {
   }
 
   async function setMarket(next) {
-    if (!next || !marketByCoin[next]) {
-      if (markets.length && !marketByCoin[next]) next = markets[0].coin;
-    }
-    coin = next || "BTC";
-    const sel = byId("market-select");
-    if (sel) sel.value = coin;
-    setText("trade-coin", coin);
+    let m =
+      marketById[next] ||
+      markets.find((x) => x.id === next) ||
+      markets.find((x) => x.kind === "perp" && x.coin === next) ||
+      markets.find((x) => x.coin === next) ||
+      null;
+    if (!m && markets.length) m = markets.find((x) => x.coin === "BTC" && x.kind === "perp") || markets[0];
+    if (!m) return;
+    marketId = m.id;
+    coin = m.coin;
+    renderMarketChip();
     setUnit(unit === "usdc" ? "usdc" : "coin");
-    const m = currentMarket();
     ctx = {
-      markPx: m && m.markPx,
-      midPx: m && m.midPx,
-      funding: m && m.funding,
-      oraclePx: m && m.oraclePx,
-      dayNtlVlm: m && m.dayNtlVlm,
-      openInterest: m && m.openInterest,
-      prevDayPx: m && m.prevDayPx,
+      markPx: m.markPx,
+      midPx: m.midPx,
+      funding: m.funding,
+      oraclePx: m.oraclePx,
+      dayNtlVlm: m.dayNtlVlm,
+      openInterest: m.openInterest,
+      prevDayPx: m.prevDayPx,
     };
     syncLeverageFromPos();
+    renderTicketKind();
     renderStats();
     updateEstimate();
     ensureChart();
     subscribeMarket();
-    const snap = await hlInfo({ type: "l2Book", coin }).catch(() => null);
+    const snap = await hlInfo({ type: "l2Book", coin: m.coin }).catch(() => null);
     if (snap) {
       book = bookLevels(snap);
       renderBook();
@@ -1038,7 +1283,35 @@ export function createTradeView(app) {
   function bind() {
     if (bound) return;
     bound = true;
-    byId("market-select")?.addEventListener("change", (ev) => setMarket(ev.target.value));
+    byId("market-chip")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      togglePicker();
+    });
+    byId("market-picker")?.addEventListener("click", (ev) => ev.stopPropagation());
+    byId("mp-search")?.addEventListener("input", (ev) => {
+      pickerQuery = ev.target.value;
+      pickerHi = 0;
+      renderPicker();
+    });
+    document.querySelectorAll("[data-mp-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pickerTab = btn.getAttribute("data-mp-tab");
+        pickerHi = 0;
+        renderPicker();
+      });
+    });
+    document.querySelectorAll("[data-mp-sort]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-mp-sort");
+        if (pickerSort === key) pickerDir = pickerDir === "desc" ? "asc" : "desc";
+        else {
+          pickerSort = key;
+          pickerDir = key === "change" || key === "funding" ? "desc" : "desc";
+        }
+        renderPicker();
+      });
+    });
+    document.addEventListener("keydown", onPickerKey);
     document.querySelectorAll("[data-interval]").forEach((btn) => {
       btn.addEventListener("click", () => setInterval_(btn.getAttribute("data-interval")));
     });
@@ -1060,6 +1333,7 @@ export function createTradeView(app) {
     document.addEventListener("click", () => {
       byId("pro-menu")?.classList.add("hidden");
       byId("lev-pop")?.classList.add("hidden");
+      closePicker();
     });
     byId("ticket-mid-btn")?.addEventListener("click", () => {
       const input = byId("ticket-price");
@@ -1119,11 +1393,14 @@ export function createTradeView(app) {
 
   async function initMarkets() {
     markets = await app.loadMarkets();
-    marketByCoin = {};
+    marketById = {};
     markets.forEach((m) => {
-      marketByCoin[m.coin] = m;
+      marketById[m.id] = m;
     });
-    if (!marketByCoin[coin] && markets.length) coin = markets[0].coin;
+    if (!marketById[marketId]) {
+      const btc = markets.find((m) => m.kind === "perp" && m.coin === "BTC");
+      marketId = btc ? btc.id : markets[0] && markets[0].id;
+    }
     renderMarketSelect();
   }
 
