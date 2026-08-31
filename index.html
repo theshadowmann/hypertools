@@ -228,14 +228,6 @@
               </svg>
               <span id="market-chip-lev" class="lev-badge">20x</span>
             </button>
-            <div class="iv-bar" role="group" aria-label="Chart interval">
-              <button type="button" data-interval="1m" class="iv-btn">1m</button>
-              <button type="button" data-interval="5m" class="iv-btn">5m</button>
-              <button type="button" data-interval="15m" class="iv-btn" aria-pressed="true">15m</button>
-              <button type="button" data-interval="1h" class="iv-btn">1h</button>
-              <button type="button" data-interval="4h" class="iv-btn">4h</button>
-              <button type="button" data-interval="1d" class="iv-btn">1d</button>
-            </div>
           </div>
           <div class="stats-metrics" id="stats-perp">
             <div class="stat"><span class="stat-k">Mark</span><span id="stat-mark" class="stat-v">—</span></div>
@@ -251,6 +243,15 @@
             <div class="stat"><span class="stat-k">% Chance</span><span id="stat-chance" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">Price (Yes)</span><span id="stat-yes" class="stat-v">—</span></div>
           </div>
+        </div>
+
+        <div class="trade-iv" role="group" aria-label="Chart interval">
+          <button type="button" data-interval="1m" class="iv-btn">1m</button>
+          <button type="button" data-interval="5m" class="iv-btn">5m</button>
+          <button type="button" data-interval="15m" class="iv-btn" aria-pressed="true">15m</button>
+          <button type="button" data-interval="1h" class="iv-btn">1h</button>
+          <button type="button" data-interval="4h" class="iv-btn">4h</button>
+          <button type="button" data-interval="1d" class="iv-btn">1d</button>
         </div>
 
         <div id="market-picker" class="market-picker hidden" role="dialog" aria-label="Markets" hidden>

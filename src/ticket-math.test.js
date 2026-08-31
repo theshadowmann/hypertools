@@ -120,6 +120,8 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="market-chip"');
     expect(html).toContain('id="market-picker"');
     expect(html).toContain("Favorites");
+    expect(html).toContain('class="trade-iv"');
+    expect(html).toContain('data-interval="15m"');
     expect(html).toContain('data-mp-tab="outcome"');
     expect(html).toContain("8h Funding");
   });
