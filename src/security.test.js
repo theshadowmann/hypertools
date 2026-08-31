@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { getAgent, rememberAgent, wipeAgents } from "./agent-store.js";
-import { HL_API, HL_EXCHANGE, HL_INFO, HL_WS } from "./hosts.js";
+import { HL_API, HL_APP, HL_COIN_ICON_BASE, HL_EXCHANGE, HL_INFO, HL_WS } from "./hosts.js";
 import { assertHlTypedData, guardProvider } from "./wallet-guard.js";
 
 const USER = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -16,6 +16,8 @@ describe("hosts", () => {
     expect(HL_INFO).toBe("https://api.hyperliquid.xyz/info");
     expect(HL_EXCHANGE).toBe("https://api.hyperliquid.xyz/exchange");
     expect(HL_WS).toBe("wss://api.hyperliquid.xyz/ws");
+    expect(HL_APP).toBe("https://app.hyperliquid.xyz");
+    expect(HL_COIN_ICON_BASE).toBe("https://app.hyperliquid.xyz/coins/");
   });
 });
 
@@ -28,6 +30,8 @@ describe("CSP", () => {
     expect(csp).toMatch(/frame-src https:\/\/www\.tradingview-widget\.com/);
     expect(csp).toMatch(/frame-ancestors 'none'/);
     expect(csp).toMatch(/connect-src 'self' https:\/\/api\.hyperliquid\.xyz wss:\/\/api\.hyperliquid\.xyz/);
+    expect(csp).toMatch(/img-src 'self' data: https:\/\/app\.hyperliquid\.xyz/);
+    expect(csp).not.toMatch(/img-src[^;]*\*/);
     expect(csp).not.toMatch(/cdnjs|jsdelivr|unpkg|googleapis/);
   });
 });

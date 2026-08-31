@@ -1,3 +1,4 @@
+import { HL_COIN_ICON_BASE } from "./hosts.js";
 import { change24h } from "./ticket-math.js";
 
 export const FAV_KEY = "ht.fav.markets";
@@ -23,7 +24,24 @@ export function displayPair(base, quote) {
   const b = String(base || "").trim();
   const q = String(quote || "USDC").trim();
   if (!b) return q;
-  return b + "-" + q;
+  return b + "/" + q;
+}
+
+const COIN_ICON_RE = /^[A-Za-z0-9]+$/;
+
+/** Official app.hyperliquid.xyz coin SVG. k-prefixed perps (kPEPE) use the un-k'd icon. */
+export function coinIconUrl(symbol) {
+  let name = String(symbol || "").trim();
+  if (!COIN_ICON_RE.test(name)) return null;
+  if (/^k[A-Z]/.test(name)) name = name.slice(1);
+  if (!COIN_ICON_RE.test(name)) return null;
+  return HL_COIN_ICON_BASE + name + ".svg";
+}
+
+export function iconSymbol(market) {
+  if (!market) return "";
+  if (market.kind === "spot" && market.base) return market.base;
+  return market.coin || market.base || "";
 }
 
 /** Hourly funding from Info ctx → 8h rate Hyperliquid shows in the picker. */

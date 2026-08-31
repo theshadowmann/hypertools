@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  coinIconUrl,
   compactUsd,
   displayPair,
   filterMarkets,
   funding8h,
+  iconSymbol,
   loadFavs,
   parsePerpMarkets,
   parseSpotMarkets,
@@ -38,14 +40,14 @@ const spot = parseSpotMarkets([
 describe("parse markets", () => {
   it("builds perp rows from metaAndAssetCtxs", () => {
     expect(perps[0].id).toBe("perp:BTC");
-    expect(perps[0].pair).toBe("BTC-USDC");
+    expect(perps[0].pair).toBe("BTC/USDC");
     expect(perps[0].kind).toBe("perp");
     expect(perps[0].asset).toBe(0);
   });
 
   it("builds spot rows with 10000+index asset ids", () => {
     expect(spot[0].id).toBe("spot:PURR/USDC");
-    expect(spot[0].pair).toBe("PURR-USDC");
+    expect(spot[0].pair).toBe("PURR/USDC");
     expect(spot[0].base).toBe("PURR");
     expect(spot[0].asset).toBe(SPOT_ASSET_OFFSET);
     expect(spot[0].funding).toBeNull();
@@ -85,7 +87,17 @@ describe("funding and display", () => {
 
   it("formats compact USD from live-scale notionals", () => {
     expect(compactUsd(2.21e9)).toBe("$2.21B");
-    expect(displayPair("PURR", "USDC")).toBe("PURR-USDC");
+    expect(displayPair("PURR", "USDC")).toBe("PURR/USDC");
+  });
+
+  it("builds official Hyperliquid coin icon URLs only", () => {
+    expect(coinIconUrl("HYPE")).toBe("https://app.hyperliquid.xyz/coins/HYPE.svg");
+    expect(coinIconUrl("kPEPE")).toBe("https://app.hyperliquid.xyz/coins/PEPE.svg");
+    expect(coinIconUrl("PURR/USDC")).toBeNull();
+    expect(coinIconUrl("../HYPE")).toBeNull();
+    expect(coinIconUrl("javascript:alert(1)")).toBeNull();
+    expect(iconSymbol({ kind: "spot", base: "HYPE", coin: "HYPE/USDC" })).toBe("HYPE");
+    expect(iconSymbol({ kind: "perp", coin: "BTC" })).toBe("BTC");
   });
 });
 

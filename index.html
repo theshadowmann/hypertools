@@ -220,7 +220,11 @@
         <div class="trade-stats">
           <div class="stats-left">
             <button type="button" id="market-chip" class="market-chip" aria-haspopup="dialog" aria-expanded="false" aria-controls="market-picker">
-              <span id="market-chip-pair">BTC-USDC</span>
+              <img id="market-chip-icon" class="coin-icon" alt="" width="20" height="20" hidden />
+              <span id="market-chip-pair">BTC/USDC</span>
+              <svg class="chip-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               <span id="market-chip-lev" class="lev-badge">20x</span>
             </button>
             <div class="iv-bar" role="group" aria-label="Chart interval">
@@ -354,6 +358,7 @@
               </div>
             </div>
 
+            <div class="ticket-scroll">
             <div class="avail-row">
               <div>
                 <span class="ticket-label">Available to Trade</span>
@@ -375,7 +380,7 @@
 
             <div id="ticket-amount-wrap" class="ticket-field">
               <div class="field-head">
-                <label for="ticket-size" class="ticket-label">Amount</label>
+                <label for="ticket-size" class="ticket-label">Size</label>
                 <span class="unit-toggle">
                   <button type="button" id="unit-coin" class="unit-btn" aria-pressed="true">BTC</button>
                   <button type="button" id="unit-usdc" class="unit-btn" aria-pressed="false">USDC</button>
@@ -443,15 +448,17 @@
               </div>
             </div>
 
+            </div>
+            <div class="ticket-foot">
             <button type="submit" id="ticket-submit" class="ticket-submit buy">Connect wallet</button>
             <p id="ticket-status" class="ticket-status" role="status"></p>
             <p id="ticket-min" class="hidden ticket-warn">Hyperliquid rejects orders under $10 notional.</p>
 
             <div class="summary">
-              <div class="sum-row"><span>Liquidation Price</span><span id="sum-liq">—</span></div>
+              <div id="sum-liq-row" class="sum-row"><span>Liquidation Price</span><span id="sum-liq">—</span></div>
               <div class="sum-row"><span>Order Value</span><span id="sum-value">—</span></div>
-              <div class="sum-row"><span>Margin Required</span><span id="sum-margin">—</span></div>
-              <div class="sum-row">
+              <div id="sum-margin-row" class="sum-row"><span>Margin Required</span><span id="sum-margin">—</span></div>
+              <div id="sum-slip-row" class="sum-row">
                 <span>Slippage</span>
                 <span class="sum-slip">
                   <span id="sum-slip-est">Est. 0.00%</span>
@@ -462,6 +469,7 @@
                 </span>
               </div>
               <div class="sum-row"><span>Fees</span><span id="sum-fees">—</span></div>
+            </div>
             </div>
           </form>
         </div>

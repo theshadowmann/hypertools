@@ -98,6 +98,12 @@ describe("ticket DOM", () => {
     expect(ticket).toContain("Sell / Short");
     expect(ticket).toContain("ticket-pct");
     expect(ticket).toContain("ticket-slip");
+    expect(ticket).toContain("ticket-scroll");
+    expect(ticket).toContain("ticket-foot");
+    expect(ticket).toContain('id="sum-liq-row"');
+    expect(ticket).toContain('id="sum-margin-row"');
+    expect(html).toContain('id="market-chip-icon"');
+    expect(html).toContain("chip-chevron");
   });
 
   it("uses word nav Trade / Portfolio, not a pill slider", () => {

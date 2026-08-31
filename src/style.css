@@ -101,6 +101,9 @@ body {
 .trade-ticket {
   grid-column: 3;
   grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
   background: var(--pane);
 }
@@ -128,19 +131,40 @@ body {
 .market-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   height: 28px;
-  padding: 0 8px 0 2px;
+  padding: 0 4px 0 0;
   border: 0;
   background: none;
   color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
 }
 .market-chip:hover { color: #fff; }
 .market-chip[aria-expanded="true"] { color: var(--green); }
+.market-chip-pair,
+#market-chip-pair {
+  font-weight: 800;
+  color: inherit;
+}
+.chip-chevron {
+  display: block;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.coin-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #161a1e;
+  flex-shrink: 0;
+}
+.coin-icon[hidden] { display: none; }
+.mp-icon { width: 16px; height: 16px; }
 .lev-badge {
   display: inline-flex;
   align-items: center;
@@ -482,9 +506,34 @@ body {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  flex: 1;
   height: 100%;
+  min-height: 0;
   padding: 8px 10px 8px;
   overflow: hidden;
+}
+.ticket > .ls-tabs,
+.ticket > .type-row,
+.ticket > .lev-row {
+  flex-shrink: 0;
+}
+.ticket-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 6px;
+}
+.ticket-foot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 6px;
+  background: var(--pane);
 }
 .ls-tabs {
   display: grid;
@@ -507,6 +556,31 @@ body {
 .ls-tab.short[aria-pressed="true"] {
   color: var(--red);
   box-shadow: inset 0 -2px 0 var(--red);
+}
+.ls-tabs.spot-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  border-bottom: 0;
+  padding-bottom: 4px;
+}
+.ls-tabs.spot-sides .ls-tab {
+  height: 32px;
+  border-radius: 4px;
+  background: #1c2127;
+  color: var(--muted);
+  box-shadow: none;
+  font-weight: 700;
+}
+.ls-tabs.spot-sides .ls-tab[aria-pressed="true"] {
+  background: var(--green);
+  color: #04150e;
+  box-shadow: none;
+}
+.ls-tabs.spot-sides .ls-tab.short[aria-pressed="true"] {
+  background: var(--red-fill);
+  color: #fff;
+  box-shadow: none;
 }
 
 .type-row { display: flex; gap: 0; }
@@ -696,7 +770,37 @@ body {
 .pct-suffix { font-size: 12px; color: var(--muted); }
 
 .chk-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #c5c9ce; }
+.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #c5c9ce; cursor: pointer; }
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1px solid #6b7280;
+  border-radius: 2px;
+  background-color: var(--bg);
+  background-image: none;
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+}
+input[type="checkbox"]:checked {
+  background-color: var(--bg);
+  border-color: var(--green);
+}
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 5px;
+  height: 8px;
+  border: solid var(--green);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 
 .ticket-submit {
   height: 36px;
@@ -718,7 +822,6 @@ body {
 .ticket-warn { font-size: 11px; color: #d4b106; margin: 0; }
 
 .summary {
-  margin-top: auto;
   padding-top: 6px;
   border-top: 1px solid var(--line);
   display: flex;
@@ -726,6 +829,7 @@ body {
   gap: 4px;
   flex-shrink: 0;
 }
+.sum-row.hidden { display: none; }
 .sum-row {
   display: flex;
   justify-content: space-between;
@@ -793,7 +897,7 @@ body {
   .trade-stats, .trade-chart, .trade-ticket, .trade-bottom { grid-column: 1; }
   .trade-stats { grid-row: 1; }
   .trade-chart { grid-row: 2; }
-  .trade-ticket { grid-row: 3; overflow: visible; }
+  .trade-ticket { grid-row: 3; overflow: hidden; min-height: 480px; }
   .trade-bottom { grid-row: 4; }
   .market-picker { right: 0; left: 0; bottom: auto; height: min(70vh, 520px); }
 }

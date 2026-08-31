@@ -43,12 +43,15 @@ import {
 import { mountTvChart } from "./tv-chart.js";
 import {
   changeAbs,
+  coinIconUrl,
   compactUsd,
   filterMarkets,
   funding8h,
+  iconSymbol,
   loadFavs,
   toggleFav,
 } from "./markets.js";
+import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
 import {
   aggregateLevels,
   bookPrecisions,
@@ -474,14 +477,7 @@ export function createTradeView(app) {
   }
 
   function renderTicketKind() {
-    const spot = isSpot();
-    const buy = byId("side-buy");
-    const sell = byId("side-sell");
-    if (buy) buy.textContent = spot ? "Buy" : "Buy / Long";
-    if (sell) sell.textContent = spot ? "Sell" : "Sell / Short";
-    byId("lev-row")?.classList.toggle("hidden", spot);
-    const levEl = byId("market-chip-lev");
-    if (levEl) levEl.classList.toggle("hidden", spot);
+    applyTicketKind(document, isSpot());
   }
 
   function setSide(next) {
@@ -717,6 +713,7 @@ export function createTradeView(app) {
     const pair = byId("market-chip-pair");
     const levEl = byId("market-chip-lev");
     if (pair) pair.textContent = m ? m.pair : coin;
+    setCoinIcon(byId("market-chip-icon"), coinIconUrl(iconSymbol(m) || coin));
     if (levEl) {
       levEl.textContent = Math.round(leverage) + "x";
       levEl.classList.toggle("hidden", !!(m && m.kind === "spot"));
@@ -831,6 +828,23 @@ export function createTradeView(app) {
               },
               starred ? "★" : "☆"
             ),
+            coinIconUrl(iconSymbol(m))
+              ? h("img", {
+                  class: "coin-icon mp-icon",
+                  alt: "",
+                  hidden: true,
+                  width: "16",
+                  height: "16",
+                  onError: (ev) => {
+                    ev.currentTarget.hidden = true;
+                    ev.currentTarget.removeAttribute("src");
+                  },
+                  onLoad: (ev) => {
+                    ev.currentTarget.hidden = false;
+                  },
+                  src: coinIconUrl(iconSymbol(m)),
+                })
+              : null,
             h("span", { class: "mp-pair" }, m.pair),
             h("span", { class: "mp-badge" + (m.kind === "perp" ? " perp" : "") }, m.kind === "perp" ? "PERP" : "SPOT")
           )
