@@ -3,48 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="HyperTools — Hyperliquid trading terminal. Live perp chart and order book. Connect MetaMask or Rabby to place market and limit orders from your wallet. Account overview for perps, spot, and staking." />
-  <meta name="theme-color" content="#05070a" />
+  <meta name="description" content="HyperTools — Hyperliquid trading terminal. Live perp chart and order book. Connect MetaMask or Rabby to place market and limit orders from your wallet. Portfolio overview for perps, spot, and staking." />
+  <meta name="theme-color" content="#0a0c0e" />
   <title>HyperTools — Hyperliquid Trading Terminal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </head>
 <body class="font-sans antialiased bg-ink-950 text-mist-200 min-h-screen">
 
-  <header class="sticky top-0 z-50 border-b border-white/5 bg-ink-950/80 backdrop-blur-md">
-    <div class="mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-3 px-3 sm:px-4">
-      <div class="flex min-w-0 items-center gap-3 sm:gap-5">
-        <a href="/" id="wordmark" class="flex shrink-0 items-center gap-2.5" aria-label="HyperTools trading terminal">
-          <span class="flex h-7 w-7 items-end justify-center gap-0.5 rounded-md bg-accent-muted ring-1 ring-accent-line" aria-hidden="true">
-            <span class="mb-1.5 h-2.5 w-1 rounded-sm bg-accent"></span>
-            <span class="mb-1.5 h-4 w-1 rounded-sm bg-accent/70"></span>
+  <header class="sticky top-0 z-50 border-b border-white/5 bg-ink-950">
+    <div class="mx-auto flex h-12 max-w-[1600px] items-center justify-between gap-3 px-3 sm:px-4">
+      <div class="flex min-w-0 items-center gap-5">
+        <a href="/trade" id="wordmark" class="flex shrink-0 items-center gap-2" aria-label="HyperTools trading terminal">
+          <span class="flex h-6 w-6 items-end justify-center gap-0.5" aria-hidden="true">
+            <span class="mb-0.5 h-2 w-1 rounded-sm bg-buy"></span>
+            <span class="mb-0.5 h-3.5 w-1 rounded-sm bg-buy/70"></span>
           </span>
-          <span class="text-[15px] font-semibold tracking-tight text-white">HyperTools</span>
+          <span class="text-[14px] font-semibold tracking-tight text-white">HyperTools</span>
         </a>
-        <nav class="flex items-center gap-1 rounded-lg bg-ink-900 p-0.5 ring-1 ring-white/10" aria-label="Primary">
-          <a href="/" id="nav-account" class="nav-tab rounded-md px-2.5 py-1 text-xs font-medium text-mist-300 hover:text-white sm:px-3 sm:text-sm" aria-current="page">Account</a>
-          <a href="/trade" id="nav-trade" class="nav-tab rounded-md px-2.5 py-1 text-xs font-medium text-mist-300 hover:text-white sm:px-3 sm:text-sm">Trade</a>
+        <nav class="flex items-center gap-5" aria-label="Primary">
+          <a href="/trade" id="nav-trade" class="nav-word" aria-current="page">Trade</a>
+          <a href="/" id="nav-portfolio" class="nav-word">Portfolio</a>
         </nav>
       </div>
 
       <div class="flex min-w-0 items-center gap-2 sm:gap-3">
-        <span class="hidden items-center rounded-full border border-warn/30 bg-warn/muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-warn sm:inline-flex">
-          Mainnet
-        </span>
-        <span id="live-chip" class="hidden items-center rounded-full border border-accent/30 bg-accent-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent">
-          Live
-        </span>
-
         <div id="nav-disconnected" class="relative flex items-center">
           <button
             id="btn-nav-connect"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg bg-accent px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-accent-dim"
+            class="btn-connect"
           >
             Connect to trade
           </button>
           <div
             id="nav-wallet-menu"
-            class="absolute right-0 top-full z-50 mt-2 hidden min-w-[13rem] overflow-hidden rounded-lg border border-white/10 bg-ink-850 py-1 shadow-card"
+            class="absolute right-0 top-full z-50 mt-2 hidden min-w-[13rem] overflow-hidden rounded border border-white/10 bg-ink-850 py-1 shadow-card"
             role="menu"
             hidden
           ></div>
@@ -55,14 +48,14 @@
           <button
             id="btn-refresh"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-xs font-medium text-mist-300 transition hover:border-white/20 hover:text-white sm:text-sm"
+            class="inline-flex h-8 items-center justify-center rounded border border-white/10 px-3 text-xs font-medium text-mist-300 transition hover:border-white/20 hover:text-white sm:text-sm"
           >
             Refresh
           </button>
           <button
             id="btn-disconnect"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-xs font-medium text-mist-300 transition hover:border-danger/40 hover:text-danger sm:text-sm"
+            class="inline-flex h-8 items-center justify-center rounded border border-white/10 px-3 text-xs font-medium text-mist-300 transition hover:border-sell/40 hover:text-sell sm:text-sm"
           >
             Disconnect
           </button>
@@ -118,11 +111,11 @@
                 type="submit"
                 class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-white/10 px-4 text-sm font-semibold text-white transition hover:border-accent/40 hover:bg-accent-muted"
               >
-                Load account
+                Load portfolio
               </button>
             </form>
             <p id="paste-error" class="mt-2 hidden text-sm text-danger" role="alert"></p>
-            <p class="mt-2 text-xs text-mist-400">Orders need a connected wallet. A pasted address loads the account.</p>
+            <p class="mt-2 text-xs text-mist-400">Orders need a connected wallet. A pasted address loads the portfolio.</p>
           </div>
         </div>
 
@@ -156,7 +149,7 @@
 
         <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Account</h2>
+            <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Portfolio</h2>
             <p id="dash-subtitle" class="mt-1 font-mono text-sm text-mist-400"></p>
           </div>
           <p id="dash-updated" class="text-xs text-mist-400"></p>
@@ -172,7 +165,7 @@
             <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
           </div>
           <div class="h-64 animate-pulse rounded-xl bg-ink-800"></div>
-          <p class="text-center text-sm text-mist-400">Loading Hyperliquid account…</p>
+          <p class="text-center text-sm text-mist-400">Loading Hyperliquid portfolio…</p>
         </div>
 
         <div id="dash-content" class="hidden space-y-10">
@@ -222,37 +215,42 @@
     </section>
 
     <section id="trade" class="hidden bg-ink-950">
-      <div class="trade-shell mx-auto max-w-[1600px]">
+      <div class="trade-shell">
 
-        <div class="trade-top flex flex-wrap items-center">
-          <label class="sr-only" for="market-select">Market</label>
-          <select id="market-select" class="h-7 rounded border border-white/10 bg-ink-950 px-1.5 font-mono text-[13px] text-white focus:border-white/25 focus:outline-none">
-            <option value="BTC">BTC</option>
-          </select>
-          <p id="trade-coin" class="text-[13px] font-semibold tracking-tight text-white">BTC-USD</p>
-          <div class="flex items-center rounded border border-white/10 bg-ink-950 p-0.5" role="group" aria-label="Chart interval">
-            <button type="button" data-interval="1m" class="iv-btn">1m</button>
-            <button type="button" data-interval="5m" class="iv-btn">5m</button>
-            <button type="button" data-interval="15m" class="iv-btn" aria-pressed="true">15m</button>
-            <button type="button" data-interval="1h" class="iv-btn">1h</button>
-            <button type="button" data-interval="4h" class="iv-btn">4h</button>
-            <button type="button" data-interval="1d" class="iv-btn">1d</button>
+        <div class="trade-stats">
+          <div class="stats-left">
+            <label class="sr-only" for="market-select">Market</label>
+            <select id="market-select" class="market-select">
+              <option value="BTC">BTC</option>
+            </select>
+            <p id="trade-coin" class="stats-coin">BTC</p>
+            <div class="iv-bar" role="group" aria-label="Chart interval">
+              <button type="button" data-interval="1m" class="iv-btn">1m</button>
+              <button type="button" data-interval="5m" class="iv-btn">5m</button>
+              <button type="button" data-interval="15m" class="iv-btn" aria-pressed="true">15m</button>
+              <button type="button" data-interval="1h" class="iv-btn">1h</button>
+              <button type="button" data-interval="4h" class="iv-btn">4h</button>
+              <button type="button" data-interval="1d" class="iv-btn">1d</button>
+            </div>
           </div>
-          <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-0.5 font-mono text-[11px] tabular text-mist-400">
-            <span>Mid <span id="trade-mid" class="text-white">—</span></span>
-            <span>Mark <span id="trade-mark" class="text-white">—</span></span>
-            <span>Funding <span id="trade-funding" class="text-white">—</span></span>
+          <div class="stats-metrics">
+            <div class="stat"><span class="stat-k">Mark</span><span id="stat-mark" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Oracle</span><span id="stat-oracle" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">24h Change</span><span id="stat-change" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">24h Volume</span><span id="stat-volume" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Open Interest</span><span id="stat-oi" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Funding</span><span id="stat-funding" class="stat-v">—</span></div>
           </div>
         </div>
 
         <div class="trade-chart">
-          <div id="chart"></div>
+          <div id="chart" class="tv-host"></div>
         </div>
 
         <div class="trade-book">
           <div class="book-title">
-            <p class="text-[10px] font-semibold uppercase tracking-wider text-mist-400">Order book</p>
-            <p class="text-[10px] text-mist-300">Click price</p>
+            <p>Order book</p>
+            <p>Click price</p>
           </div>
           <div class="book-cols">
             <span>Price</span>
@@ -262,123 +260,175 @@
           <div id="book-asks" class="book-asks"></div>
           <div id="book-spread" class="book-spread">
             <span>Spread</span>
-            <span id="book-spread-val" class="text-white">—</span>
+            <span>—</span>
           </div>
           <div id="book-bids" class="book-bids"></div>
         </div>
 
         <div class="trade-ticket">
-          <div class="border-b border-white/5 px-3 py-1.5">
-            <p class="text-[10px] font-semibold uppercase tracking-wider text-mist-400">Order</p>
-          </div>
-          <p id="ticket-lock" class="ticket-lock hidden"></p>
-          <form id="ticket-form" class="flex flex-col gap-2.5 p-3">
-            <div class="side-toggle">
-              <button type="button" id="side-buy" class="side-buy" aria-pressed="true">Buy</button>
-              <button type="button" id="side-sell" class="side-sell" aria-pressed="false">Sell</button>
+          <form id="ticket-form" class="ticket">
+            <div class="ls-tabs" role="tablist" aria-label="Side">
+              <button type="button" id="side-buy" class="ls-tab" aria-pressed="true">Buy / Long</button>
+              <button type="button" id="side-sell" class="ls-tab" aria-pressed="false">Sell / Short</button>
             </div>
 
-            <div class="seg" role="group" aria-label="Order type">
-              <button type="button" data-otype="limit" aria-pressed="true">Limit</button>
-              <button type="button" data-otype="market" aria-pressed="false">Market</button>
+            <div class="type-row">
+              <button type="button" data-otype="market" class="type-btn" aria-pressed="false">Market</button>
+              <button type="button" data-otype="limit" class="type-btn" aria-pressed="true">Limit</button>
+              <div class="pro-wrap">
+                <button type="button" id="pro-toggle" class="type-btn pro-btn" aria-pressed="false">Pro</button>
+                <div id="pro-menu" class="pro-menu hidden" role="menu">
+                  <button type="button" data-otype="scale" role="menuitem">Scale order</button>
+                  <button type="button" data-otype="twap" role="menuitem">TWAP</button>
+                  <button type="button" data-otype="stop-limit" role="menuitem">Stop Limit</button>
+                  <button type="button" data-otype="stop-market" role="menuitem">Stop Market</button>
+                </div>
+              </div>
             </div>
 
-            <div class="ticket-field">
-              <div class="flex items-center justify-between">
-                <label for="ticket-size" class="ticket-label">Size</label>
-                <span class="flex">
-                  <button type="button" data-pct="25" class="ticket-pct">25%</button>
-                  <button type="button" data-pct="50" class="ticket-pct">50%</button>
-                  <button type="button" data-pct="75" class="ticket-pct">75%</button>
-                  <button type="button" data-pct="100" class="ticket-pct">100%</button>
+            <div class="lev-row">
+              <button type="button" id="lev-toggle" class="lev-btn"><span id="lev-label">20x</span></button>
+              <div class="margin-mode">
+                <button type="button" id="mode-isolated" class="mode-btn" aria-pressed="false">Isolated</button>
+                <button type="button" id="mode-cross" class="mode-btn" aria-pressed="true">Cross</button>
+              </div>
+              <div id="lev-pop" class="lev-pop hidden">
+                <label class="ticket-label" for="lev-range">Leverage</label>
+                <div class="lev-pop-row">
+                  <input id="lev-range" type="range" min="1" max="50" value="20" />
+                  <input id="lev-input" class="pct-box" type="text" inputmode="numeric" value="20" />
+                </div>
+                <button type="button" id="lev-apply" class="lev-apply">Update leverage</button>
+              </div>
+            </div>
+
+            <div class="avail-row">
+              <div>
+                <span class="ticket-label">Available to Trade</span>
+                <p id="ticket-avail" class="avail-v">— USDC</p>
+              </div>
+              <div class="avail-right">
+                <span class="ticket-label">Current Position</span>
+                <p id="ticket-pos" class="avail-v">—</p>
+              </div>
+            </div>
+
+            <div id="ticket-price-wrap" class="ticket-field">
+              <div class="field-head">
+                <label for="ticket-price" class="ticket-label">Price</label>
+                <button type="button" id="ticket-mid-btn" class="mid-btn">Mid</button>
+              </div>
+              <input id="ticket-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
+            </div>
+
+            <div id="ticket-amount-wrap" class="ticket-field">
+              <div class="field-head">
+                <label for="ticket-size" class="ticket-label">Amount</label>
+                <span class="unit-toggle">
+                  <button type="button" id="unit-coin" class="unit-btn" aria-pressed="true">BTC</button>
+                  <button type="button" id="unit-usdc" class="unit-btn" aria-pressed="false">USDC</button>
+                  <button type="button" id="ticket-max" class="max-btn">MAX</button>
                 </span>
               </div>
               <input id="ticket-size" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
             </div>
 
-            <div id="ticket-price-wrap" class="ticket-field">
-              <label for="ticket-price" class="ticket-label">Price</label>
-              <input id="ticket-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
-            </div>
-
-            <div id="ticket-tif-wrap" class="seg" role="group" aria-label="Time in force">
-              <button type="button" data-tif="Gtc" aria-pressed="true">GTC</button>
-              <button type="button" data-tif="Ioc" aria-pressed="false">IOC</button>
-              <button type="button" data-tif="Alo" aria-pressed="false">ALO</button>
-            </div>
-            <input type="hidden" id="ticket-tif" value="Gtc" />
-
-            <button type="button" id="ticket-advanced-toggle" class="ticket-more">Stop / TWAP</button>
-            <div id="ticket-advanced" class="hidden space-y-2">
-              <div class="seg" role="group" aria-label="Advanced order type">
-                <button type="button" data-otype="stop" aria-pressed="false">Stop</button>
-                <button type="button" data-otype="twap" aria-pressed="false">TWAP</button>
+            <div id="ticket-scale-wrap" class="hidden pro-fields">
+              <div class="ticket-field">
+                <label for="ticket-start" class="ticket-label">Start price</label>
+                <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
               </div>
-              <div id="ticket-stop-wrap" class="hidden space-y-2">
-                <div class="ticket-field">
-                  <label for="ticket-trigger" class="ticket-label">Trigger</label>
-                  <input id="ticket-trigger" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <div class="ticket-field">
-                    <label for="ticket-tpsl" class="ticket-label">Stop / take</label>
-                    <select id="ticket-tpsl" class="ticket-input">
-                      <option value="sl">Stop loss</option>
-                      <option value="tp">Take profit</option>
-                    </select>
-                  </div>
-                  <label class="mt-5 flex items-center gap-2 text-xs text-mist-300">
-                    <input id="ticket-stop-market" type="checkbox" checked class="rounded border-white/20 bg-ink-850" />
-                    Market trigger
-                  </label>
-                </div>
+              <div class="ticket-field">
+                <label for="ticket-end" class="ticket-label">End price</label>
+                <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
               </div>
-              <div id="ticket-twap-wrap" class="hidden space-y-2">
-                <div class="ticket-field">
-                  <label for="ticket-minutes" class="ticket-label">Minutes</label>
-                  <input id="ticket-minutes" type="number" min="5" step="1" value="30" class="ticket-input" />
-                </div>
-                <label class="flex items-center gap-2 text-xs text-mist-300">
-                  <input id="ticket-random" type="checkbox" class="rounded border-white/20 bg-ink-850" />
-                  Randomize slices
-                </label>
+              <div class="ticket-field">
+                <label for="ticket-count" class="ticket-label">Orders</label>
+                <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" />
               </div>
             </div>
 
-            <label class="flex items-center gap-2 text-xs text-mist-300">
-              <input id="ticket-reduce" type="checkbox" class="rounded border-white/20 bg-ink-850" />
-              Reduce only
-            </label>
-
-            <div class="meta-row">
-              <span id="ticket-mid">Mid —</span>
-              <span id="ticket-mark">Mark —</span>
+            <div id="ticket-twap-wrap" class="hidden pro-fields">
+              <div class="ticket-field">
+                <label for="ticket-minutes" class="ticket-label">Minutes</label>
+                <input id="ticket-minutes" type="number" min="5" step="1" value="30" class="ticket-input" />
+              </div>
+              <label class="chk"><input id="ticket-random" type="checkbox" /> Randomize slices</label>
             </div>
-            <div class="meta-row">
-              <span id="ticket-notional">Est. —</span>
-              <span id="ticket-avail">Avail. —</span>
-            </div>
-            <p id="ticket-min" class="hidden text-[11px] text-warn">Hyperliquid rejects orders under $10 notional.</p>
 
-            <button type="button" id="ticket-enable" class="ticket-enable hidden">
-              Enable trading
-            </button>
-            <button type="submit" id="ticket-submit" class="ticket-submit buy" disabled>
-              Buy BTC
-            </button>
+            <div id="ticket-stop-wrap" class="hidden pro-fields">
+              <div class="ticket-field">
+                <label for="ticket-trigger" class="ticket-label">Trigger</label>
+                <input id="ticket-trigger" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+              </div>
+              <div id="ticket-stop-limit-price" class="ticket-field hidden">
+                <label for="ticket-stop-limit" class="ticket-label">Limit price</label>
+                <input id="ticket-stop-limit" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <input id="ticket-pct" type="range" min="0" max="100" step="1" value="0" class="pct-slider" />
+              <div class="pct-ticks" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <input id="ticket-pct-box" class="pct-box" type="text" inputmode="numeric" value="0" aria-label="Percent of available" />
+              <span class="pct-suffix">%</span>
+            </div>
+
+            <div class="chk-row">
+              <label class="chk"><input id="ticket-reduce" type="checkbox" /> Reduce Only</label>
+              <label class="chk"><input id="ticket-tpsl" type="checkbox" /> Take Profit / Stop Loss</label>
+            </div>
+            <div id="ticket-tpsl-wrap" class="hidden pro-fields">
+              <div class="ticket-field">
+                <label for="ticket-tp" class="ticket-label">Take profit</label>
+                <input id="ticket-tp" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+              </div>
+              <div class="ticket-field">
+                <label for="ticket-sl" class="ticket-label">Stop loss</label>
+                <input id="ticket-sl" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+              </div>
+            </div>
+
+            <button type="submit" id="ticket-submit" class="ticket-submit buy">Connect wallet</button>
             <p id="ticket-status" class="ticket-status" role="status"></p>
+            <p id="ticket-min" class="hidden ticket-warn">Hyperliquid rejects orders under $10 notional.</p>
+
+            <div class="summary">
+              <div class="sum-row"><span>Liquidation Price</span><span id="sum-liq">—</span></div>
+              <div class="sum-row"><span>Order Value</span><span id="sum-value">—</span></div>
+              <div class="sum-row"><span>Margin Required</span><span id="sum-margin">—</span></div>
+              <div class="sum-row">
+                <span>Slippage</span>
+                <span class="sum-slip">
+                  <span id="sum-slip-est">Est. 0.00%</span>
+                  <span class="sum-slash">/</span>
+                  <span>Max</span>
+                  <input id="ticket-slip" type="text" inputmode="decimal" value="8" aria-label="Max slippage percent" />
+                  <span>%</span>
+                </span>
+              </div>
+              <div class="sum-row"><span>Fees</span><span id="sum-fees">—</span></div>
+            </div>
           </form>
         </div>
 
         <div class="trade-bottom">
-          <div class="flex gap-0.5 border-b border-white/5 px-1 py-1">
-            <button type="button" data-bottom-tab="positions" class="rounded px-3 py-1.5 text-xs font-medium text-white bg-white/10">Positions</button>
-            <button type="button" data-bottom-tab="orders" class="rounded px-3 py-1.5 text-xs font-medium text-mist-400">Open orders</button>
-            <button type="button" data-bottom-tab="fills" class="rounded px-3 py-1.5 text-xs font-medium text-mist-400">Fills</button>
+          <div class="hist-tabs" role="tablist">
+            <button type="button" data-bottom-tab="balances" class="hist-tab" aria-selected="true">Balances</button>
+            <button type="button" data-bottom-tab="positions" class="hist-tab" aria-selected="false">Positions</button>
+            <button type="button" data-bottom-tab="orders" class="hist-tab" aria-selected="false">Open Orders</button>
+            <button type="button" data-bottom-tab="twap" class="hist-tab" aria-selected="false">TWAP</button>
+            <button type="button" data-bottom-tab="funding" class="hist-tab" aria-selected="false">Funding History</button>
+            <button type="button" data-bottom-tab="history" class="hist-tab" aria-selected="false">Order History</button>
           </div>
-          <div id="trade-positions" class="max-h-[22vh] overflow-auto"></div>
-          <div id="trade-orders" class="hidden max-h-[22vh] overflow-auto"></div>
-          <div id="trade-fills" class="hidden max-h-[22vh] overflow-auto"></div>
+          <div id="trade-balances" class="hist-body"></div>
+          <div id="trade-positions" class="hist-body hidden"></div>
+          <div id="trade-orders" class="hist-body hidden"></div>
+          <div id="trade-twap" class="hist-body hidden"></div>
+          <div id="trade-funding" class="hist-body hidden"></div>
+          <div id="trade-history" class="hist-body hidden"></div>
         </div>
       </div>
     </section>
@@ -389,7 +439,7 @@
       <div class="grid gap-10 md:grid-cols-12">
         <div class="md:col-span-7">
           <p class="text-sm font-semibold text-white">HyperTools</p>
-          <p class="mt-2 text-sm text-mist-400">Hyperliquid trading terminal: live chart, order book, and market/limit orders from a connected wallet. Account overview for balances, positions, and staking.</p>
+          <p class="mt-2 text-sm text-mist-400">Hyperliquid trading terminal: live chart, order book, and market/limit orders from a connected wallet. Portfolio overview for balances, positions, and staking.</p>
 
           <div class="mt-6 space-y-3 text-xs leading-relaxed text-mist-400">
             <p>
@@ -404,7 +454,7 @@
             </p>
             <p>
               <strong class="text-mist-300">Live data, still estimates.</strong>
-              Account figures are fetched from Hyperliquid’s public Info API. They can be stale, incomplete,
+              Portfolio figures are fetched from Hyperliquid’s public Info API. They can be stale, incomplete,
               or disagree with the official UI. Liquidation prices are reported by the venue; a JSON null is
               shown as an em dash, not zero. If a number here disagrees with Hyperliquid, trust Hyperliquid.
             </p>
@@ -414,7 +464,7 @@
               <span class="font-mono">eth_requestAccounts</span>. Enable trading signs official
               Hyperliquid EIP-712 messages (approveBuilderFee, approveAgent). Orders are L1 actions
               signed by the agent key in this tab’s memory — wiped on Disconnect, never written to
-              localStorage, never sent to a server. Paste an address to load an account.
+              localStorage, never sent to a server. Paste an address to load a portfolio.
             </p>
             <p>
               <strong class="text-mist-300">Do your own research.</strong>

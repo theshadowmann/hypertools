@@ -130,6 +130,27 @@ export function candlesToBars(rows) {
   return out;
 }
 
+export async function loadTradeExtras(address) {
+  const startTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const results = await Promise.allSettled([
+    hlInfo({ type: "historicalOrders", user: address }),
+    hlInfo({ type: "userFunding", user: address, startTime }),
+    hlInfo({ type: "twapHistory", user: address }),
+    hlInfo({ type: "userFees", user: address }),
+    hlInfo({ type: "userTwapSliceFills", user: address }),
+  ]);
+  function val(i) {
+    return results[i].status === "fulfilled" ? results[i].value : null;
+  }
+  return {
+    historicalOrders: Array.isArray(val(0)) ? val(0) : [],
+    fundingHistory: Array.isArray(val(1)) ? val(1) : [],
+    twapHistory: Array.isArray(val(2)) ? val(2) : [],
+    twapFills: Array.isArray(val(4)) ? val(4) : [],
+    userFees: val(3) && typeof val(3) === "object" ? val(3) : null,
+  };
+}
+
 export function bookLevels(snapshot) {
   const levels = snapshot && snapshot.levels;
   const bids = (levels && levels[0]) || [];

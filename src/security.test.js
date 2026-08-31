@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { getAgent, rememberAgent, wipeAgents } from "./agent-store.js";
 import { HL_API, HL_EXCHANGE, HL_INFO, HL_WS } from "./hosts.js";
@@ -5,6 +8,7 @@ import { assertHlTypedData, guardProvider } from "./wallet-guard.js";
 
 const USER = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const AGENT = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("hosts", () => {
   it("pins official Hyperliquid mainnet URLs", () => {
@@ -12,6 +16,19 @@ describe("hosts", () => {
     expect(HL_INFO).toBe("https://api.hyperliquid.xyz/info");
     expect(HL_EXCHANGE).toBe("https://api.hyperliquid.xyz/exchange");
     expect(HL_WS).toBe("wss://api.hyperliquid.xyz/ws");
+  });
+});
+
+describe("CSP", () => {
+  it("allowlists TradingView without opening script-src to the web", () => {
+    const json = JSON.parse(readFileSync(join(root, "staticwebapp.config.json"), "utf8"));
+    const csp = json.globalHeaders["Content-Security-Policy"];
+    expect(csp).toMatch(/script-src 'self' https:\/\/s\.tradingview\.com/);
+    expect(csp).not.toMatch(/script-src[^;]*\*/);
+    expect(csp).toMatch(/frame-src https:\/\/s\.tradingview\.com https:\/\/www\.tradingview\.com/);
+    expect(csp).toMatch(/frame-ancestors 'none'/);
+    expect(csp).toMatch(/connect-src 'self' https:\/\/api\.hyperliquid\.xyz wss:\/\/api\.hyperliquid\.xyz/);
+    expect(csp).not.toMatch(/cdnjs|jsdelivr|unpkg|googleapis/);
   });
 });
 

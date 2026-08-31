@@ -3,6 +3,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
 import { getAgent, rememberAgent } from "./agent-store.js";
 import { HL_API } from "./hosts.js";
+import { DEFAULT_MAX_SLIPPAGE } from "./ticket-math.js";
 import {
   AGENT_NAME,
   BUILDER_ADDRESS,
@@ -146,6 +147,9 @@ export async function placePerpOrder({
   triggerPx,
   tpsl,
   triggerIsMarket,
+  maxSlippage,
+  extraOrders,
+  grouping,
   onStatus,
 }) {
   assertCanTrade(source);
@@ -154,7 +158,7 @@ export async function placePerpOrder({
   const isBuy = side === "buy";
   let px = price;
   if (type === "market") {
-    px = slippagePrice(mid, isBuy, 0.05);
+    px = slippagePrice(mid, isBuy, Number(maxSlippage) > 0 ? Number(maxSlippage) : DEFAULT_MAX_SLIPPAGE);
     onStatus && onStatus("Signing market order…");
   } else if (type === "stop") {
     onStatus && onStatus("Signing stop order…");
@@ -175,7 +179,9 @@ export async function placePerpOrder({
     tpsl,
     triggerIsMarket,
   });
-  const payload = sealOrderPayload(buildOrderPayload(wire));
+  const payload = sealOrderPayload(
+    buildOrderPayload(extraOrders && extraOrders.length ? [wire].concat(extraOrders) : wire, grouping || "na")
+  );
   const exch = agentExchange(agent);
   const result = await exch.order(payload);
   const err = explainExchangeError(result);
@@ -236,6 +242,34 @@ export async function cancelTwap({ source, address, asset, twapId, onStatus }) {
   onStatus && onStatus("Signing TWAP cancel…");
   const exch = agentExchange(agent);
   const result = await exch.twapCancel({ a: asset, t: twapId });
+  const err = explainExchangeError(result);
+  if (err) throw new Error(err);
+  return result;
+}
+
+export async function placeScaleOrders({ source, address, orders, onStatus }) {
+  assertCanTrade(source);
+  const agent = await requireReadyAgent(address);
+  onStatus && onStatus("Signing scale orders…");
+  const payload = sealOrderPayload(buildOrderPayload(orders, "na"));
+  const result = await agentExchange(agent).order(payload);
+  const err = explainExchangeError(result);
+  if (err) throw new Error(err);
+  if (!orderSucceeded(result) && result.status !== "ok") {
+    throw new Error("Hyperliquid did not accept the order.");
+  }
+  return result;
+}
+
+export async function setLeverage({ source, address, asset, isCross, leverage, onStatus }) {
+  assertCanTrade(source);
+  const agent = await requireReadyAgent(address);
+  onStatus && onStatus("Updating leverage…");
+  const result = await agentExchange(agent).updateLeverage({
+    asset,
+    isCross: !!isCross,
+    leverage: Math.max(1, Math.round(Number(leverage) || 1)),
+  });
   const err = explainExchangeError(result);
   if (err) throw new Error(err);
   return result;

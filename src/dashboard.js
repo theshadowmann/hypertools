@@ -95,12 +95,12 @@ function renderOverview(el, perps, spotBalances) {
       ((mu / accountValue) * 100).toLocaleString("en-US", {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
-      }) + "% of account value";
+      }) + "% of portfolio value";
   }
 
   const cards = [
     {
-      label: "Account value",
+      label: "Portfolio value",
       value: fmtUsd(accountValue),
       hint: "Perps equity + spot USDC",
       extra: "",

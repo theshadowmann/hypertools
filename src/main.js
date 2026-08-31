@@ -21,14 +21,13 @@ const state = {
   data: null,
   loading: false,
   error: null,
-  view: "account",
+  view: "portfolio",
 };
 
 const el = {
   landing: document.getElementById("landing"),
   dashboard: document.getElementById("dashboard"),
   trade: document.getElementById("trade"),
-  liveChip: document.getElementById("live-chip"),
   navDisc: document.getElementById("nav-disconnected"),
   navConn: document.getElementById("nav-connected"),
   navAddress: document.getElementById("nav-address"),
@@ -50,7 +49,7 @@ const el = {
   spotRoot: document.getElementById("spot-root"),
   spotCount: document.getElementById("spot-count"),
   stakingRoot: document.getElementById("staking-root"),
-  navAccount: document.getElementById("nav-account"),
+  navPortfolio: document.getElementById("nav-portfolio"),
   navTrade: document.getElementById("nav-trade"),
 };
 
@@ -67,6 +66,7 @@ const app = {
   reloadAccount: () => {
     if (state.address) return refreshAccount(state.address);
   },
+  connectFromNav: () => connectFromNav(),
 };
 
 async function getTrade() {
@@ -82,13 +82,13 @@ function viewFromLocation() {
   if (path === "/trade" || window.location.hash === "#trade" || window.location.hash === "#/trade") {
     return "trade";
   }
-  return "account";
+  return "portfolio";
 }
 
 function setView(view, push) {
-  state.view = view === "trade" ? "trade" : "account";
+  state.view = view === "trade" ? "trade" : "portfolio";
   if (push) {
-    const url = state.view === "trade" ? "/trade" : "/";
+    const url = state.view === "trade" ? "/trade" : "/portfolio";
     if (window.location.pathname !== url) {
       history.pushState({ view: state.view }, "", url);
     }
@@ -157,7 +157,7 @@ async function refreshAccount(address) {
   state.loading = true;
   state.error = null;
   renderChrome();
-  if (state.view === "account") {
+  if (state.view === "portfolio") {
     el.loading.classList.remove("hidden");
     el.dashContent.classList.add("hidden");
     el.errorBanner.classList.add("hidden");
@@ -178,7 +178,7 @@ async function refreshAccount(address) {
     state.error =
       "Hyperliquid Info API request failed: " +
       ((err && err.message) || String(err)) +
-      ". If this is CORS, your browser blocked the public API; we will not fake account data.";
+      ". If this is CORS, your browser blocked the public API; we will not fake portfolio data.";
   }
   state.loading = false;
   renderChrome();
@@ -214,7 +214,7 @@ function disconnect() {
   state.loading = false;
   renderChrome();
   if (tradeView) tradeView.onAccount();
-  if (state.view === "account") window.scrollTo({ top: 0, behavior: "smooth" });
+  if (state.view === "portfolio") window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function connectWallet(provider) {
@@ -246,12 +246,10 @@ function renderChrome() {
   el.navDisc.classList.toggle("hidden", connected);
   el.navConn.classList.toggle("hidden", !connected);
   el.navConn.classList.toggle("flex", connected);
-  el.liveChip.classList.toggle("hidden", !connected && !onTrade);
-  el.liveChip.classList.toggle("inline-flex", connected || onTrade);
   const footer = document.querySelector("footer");
   if (footer) footer.classList.toggle("hidden", onTrade);
-  if (el.navAccount) {
-    el.navAccount.setAttribute("aria-current", onTrade ? "false" : "page");
+  if (el.navPortfolio) {
+    el.navPortfolio.setAttribute("aria-current", onTrade ? "false" : "page");
   }
   if (el.navTrade) {
     el.navTrade.setAttribute("aria-current", onTrade ? "page" : "false");
@@ -300,7 +298,7 @@ function showNavWalletMenu(targets) {
 function connectFromNav() {
   const targets = walletTargets(discoveredList);
   if (!targets.length) {
-    if (state.view !== "account") setView("account", true);
+    if (state.view !== "portfolio") setView("portfolio", true);
     const section = document.getElementById("connect");
     if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
@@ -330,13 +328,12 @@ document.getElementById("btn-disconnect").addEventListener("click", disconnect);
 
 document.getElementById("wordmark").addEventListener("click", (ev) => {
   ev.preventDefault();
-  setView("account", true);
-  if (!state.address) window.scrollTo({ top: 0, behavior: "smooth" });
+  setView("trade", true);
 });
 
-el.navAccount.addEventListener("click", (ev) => {
+el.navPortfolio.addEventListener("click", (ev) => {
   ev.preventDefault();
-  setView("account", true);
+  setView("portfolio", true);
 });
 el.navTrade.addEventListener("click", (ev) => {
   ev.preventDefault();

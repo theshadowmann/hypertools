@@ -5,11 +5,11 @@ export default {
     extend: {
       colors: {
         ink: {
-          950: "#05070a",
-          900: "#0b1018",
-          850: "#10161f",
-          800: "#161d28",
-          700: "#1e2734",
+          950: "#0a0c0e",
+          900: "#111315",
+          850: "#161a1e",
+          800: "#1c2127",
+          700: "#242a31",
           600: "#2a3444",
         },
         mist: {
@@ -19,24 +19,24 @@ export default {
           100: "#f1f5f9",
         },
         accent: {
-          DEFAULT: "#2dd4bf",
-          dim: "#14b8a6",
-          muted: "rgba(45, 212, 191, 0.12)",
-          line: "rgba(45, 212, 191, 0.28)",
+          DEFAULT: "#00c853",
+          dim: "#00b34a",
+          muted: "rgba(0, 200, 83, 0.12)",
+          line: "rgba(0, 200, 83, 0.28)",
         },
         buy: {
-          DEFAULT: "#0ecb81",
-          dim: "#0bb36f",
-          muted: "rgba(14, 203, 129, 0.12)",
+          DEFAULT: "#00c853",
+          dim: "#00b34a",
+          muted: "rgba(0, 200, 83, 0.12)",
         },
         sell: {
-          DEFAULT: "#f6465d",
-          dim: "#dc3349",
-          muted: "rgba(246, 70, 93, 0.12)",
+          DEFAULT: "#e57373",
+          dim: "#c62828",
+          muted: "rgba(229, 115, 115, 0.12)",
         },
         danger: {
-          DEFAULT: "#f6465d",
-          muted: "rgba(246, 70, 93, 0.12)",
+          DEFAULT: "#e57373",
+          muted: "rgba(229, 115, 115, 0.12)",
         },
         warn: {
           DEFAULT: "#fbbf24",
@@ -48,7 +48,7 @@ export default {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 80px rgba(45, 212, 191, 0.08)",
+        glow: "0 0 80px rgba(0, 200, 83, 0.08)",
         card: "0 1px 0 rgba(255,255,255,0.04), 0 18px 40px rgba(0,0,0,0.35)",
       },
     },

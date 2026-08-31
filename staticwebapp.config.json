@@ -4,7 +4,7 @@
     "exclude": ["/assets/*", "*.css", "*.js", "*.png", "*.svg", "*.webp"]
   },
   "globalHeaders": {
-    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.hyperliquid.xyz wss://api.hyperliquid.xyz; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' https://s.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://s.tradingview.com https://www.tradingview.com; font-src 'self'; connect-src 'self' https://api.hyperliquid.xyz wss://api.hyperliquid.xyz https://s.tradingview.com https://www.tradingview.com; frame-src https://s.tradingview.com https://www.tradingview.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Frame-Options": "DENY"
