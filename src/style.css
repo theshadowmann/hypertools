@@ -1124,6 +1124,13 @@ input[type="checkbox"] {
 }
 .bal-pnl.up { color: var(--green); }
 .bal-pnl.down { color: var(--red); }
+.out-table td.out-empty,
+.out-table td[colspan] {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px 12px;
+  font-variant-numeric: normal;
+}
 .out-mkt-btn {
   border: 0;
   background: none;

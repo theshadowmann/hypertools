@@ -1299,6 +1299,24 @@ export function createTradeView(app) {
     });
   }
 
+  function outcomesHead() {
+    return h(
+      "thead",
+      null,
+      h(
+        "tr",
+        null,
+        h("th", null, "Market"),
+        h("th", null, "Size"),
+        h("th", null, "Available Size"),
+        h("th", null, "Position Value"),
+        h("th", null, "Entry Price"),
+        h("th", null, "Mark Price"),
+        h("th", null, "PNL (ROE %)")
+      )
+    );
+  }
+
   function renderOutcomes() {
     const root = byId("trade-outcomes");
     if (!root) return;
@@ -1307,8 +1325,13 @@ export function createTradeView(app) {
     document.querySelectorAll("[data-out-side]").forEach((btn) => {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-out-side") === outcomeSideFilter ? "true" : "false");
     });
+    const emptyBody = h(
+      "tr",
+      null,
+      h("td", { colSpan: "7", class: "out-empty" }, "No outcomes yet")
+    );
     if (!app.state.address) {
-      root.appendChild(emptyNote("No outcomes yet"));
+      root.appendChild(h("table", { class: "bal-table out-table" }, outcomesHead(), h("tbody", null, emptyBody)));
       return;
     }
     const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
@@ -1317,7 +1340,7 @@ export function createTradeView(app) {
       rows = rows.filter((r) => r.side === outcomeSideFilter);
     }
     if (!rows.length) {
-      root.appendChild(emptyNote("No outcomes yet"));
+      root.appendChild(h("table", { class: "bal-table out-table" }, outcomesHead(), h("tbody", null, emptyBody)));
       return;
     }
     const body = rows.map((p) => {
@@ -1357,26 +1380,7 @@ export function createTradeView(app) {
       );
     });
     root.appendChild(
-      h(
-        "table",
-        { class: "bal-table out-table" },
-        h(
-          "thead",
-          null,
-          h(
-            "tr",
-            null,
-            h("th", null, "Market"),
-            h("th", null, "Size"),
-            h("th", null, "Available Size"),
-            h("th", null, "Position Value"),
-            h("th", null, "Entry Price"),
-            h("th", null, "Mark Price"),
-            h("th", null, "PNL (ROE %)")
-          )
-        ),
-        h("tbody", null, ...body)
-      )
+      h("table", { class: "bal-table out-table" }, outcomesHead(), h("tbody", null, ...body))
     );
   }
 

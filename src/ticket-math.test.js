@@ -134,6 +134,11 @@ describe("ticket DOM", () => {
     expect(html).toMatch(/data-bottom-tab="positions"[\s\S]*data-bottom-tab="outcomes"[\s\S]*data-bottom-tab="orders"/);
     expect(html).toContain('id="trade-outcomes"');
     expect(html).toContain(">Outcomes<");
+    const tradeJs = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(tradeJs).toContain('"No outcomes yet"');
+    expect(tradeJs).toContain('"Available Size"');
+    expect(tradeJs).toContain('"PNL (ROE %)"');
+    expect(tradeJs).toContain("jumpToOutcome");
   });
 
   it("puts Order Book and Trades as word tabs in the book column", () => {
