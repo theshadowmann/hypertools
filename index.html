@@ -280,21 +280,41 @@
         </div>
 
         <div class="trade-book">
-          <div class="book-title">
-            <p>Order book</p>
-            <p>Click price</p>
+          <div class="book-head">
+            <div class="book-tabs" role="tablist" aria-label="Book">
+              <button type="button" data-book-tab="book" class="book-tab" aria-selected="true">Order Book</button>
+              <button type="button" data-book-tab="trades" class="book-tab" aria-selected="false">Trades</button>
+            </div>
+            <div id="book-tools" class="book-tools">
+              <label class="sr-only" for="book-prec">Price precision</label>
+              <select id="book-prec" class="book-dd" title="Price precision"></select>
+              <label class="sr-only" for="book-unit">Size unit</label>
+              <select id="book-unit" class="book-dd" title="Size unit">
+                <option value="usdc" selected>USDC</option>
+                <option value="coin">Coin</option>
+              </select>
+            </div>
           </div>
-          <div class="book-cols">
-            <span>Price</span>
-            <span>Size</span>
-            <span>Total</span>
+          <div id="book-pane" class="book-pane">
+            <div class="book-cols">
+              <span>Price</span>
+              <span id="book-sz-h">Size (USDC)</span>
+              <span id="book-tot-h">Total (USDC)</span>
+            </div>
+            <div id="book-asks" class="book-asks"></div>
+            <div id="book-spread" class="book-spread">
+              <span>—</span>
+            </div>
+            <div id="book-bids" class="book-bids"></div>
           </div>
-          <div id="book-asks" class="book-asks"></div>
-          <div id="book-spread" class="book-spread">
-            <span>Spread</span>
-            <span>—</span>
+          <div id="trades-pane" class="trades-pane hidden">
+            <div class="book-cols trades-cols">
+              <span>Price</span>
+              <span>Size</span>
+              <span>Time</span>
+            </div>
+            <div id="trades-body" class="trades-body"></div>
           </div>
-          <div id="book-bids" class="book-bids"></div>
         </div>
 
         <div class="trade-ticket">

@@ -111,4 +111,24 @@ describe("ticket DOM", () => {
     expect(html).toContain("Favorites");
     expect(html).toContain("8h Funding");
   });
+
+  it("puts Order Book and Trades as word tabs in the book column", () => {
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    const start = html.indexOf('class="trade-book"');
+    const end = html.indexOf('class="trade-ticket"');
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const pane = html.slice(start, end);
+    expect(pane).toContain('data-book-tab="book"');
+    expect(pane).toContain(">Order Book<");
+    expect(pane).toContain('data-book-tab="trades"');
+    expect(pane).toContain(">Trades<");
+    expect(pane).toContain('id="book-prec"');
+    expect(pane).toContain('id="book-unit"');
+    expect(pane).toContain("Size (USDC)");
+    expect(pane).toContain('id="trades-pane"');
+    expect(pane).not.toMatch(/role="slider"/);
+    expect(pane).not.toMatch(/pill/);
+    expect(html.split('data-book-tab="trades"').length - 1).toBe(1);
+  });
 });

@@ -49,6 +49,18 @@ import {
   loadFavs,
   toggleFav,
 } from "./markets.js";
+import {
+  aggregateLevels,
+  bookPrecisions,
+  defaultPrecision,
+  formatBookPx,
+  formatPrec,
+  formatSpreadLabel,
+  formatTradeTime,
+  mergeTrades,
+  tradeHashHref,
+  tradeIsBuy,
+} from "./book.js";
 
 function byId(id) {
   return document.getElementById(id);
@@ -77,10 +89,16 @@ export function createTradeView(app) {
   let interval = "15m";
   let unsubBook = null;
   let unsubCtx = null;
+  let unsubTrades = null;
   let unsubOrders = null;
   let unsubFills = null;
   let unsubTwap = null;
   let book = { bids: [], asks: [], time: 0 };
+  let trades = [];
+  let bookTab = "book";
+  let bookPrec = null;
+  let bookUnit = "usdc";
+  let marketGen = 0;
   let ctx = { markPx: null, midPx: null, funding: null, oraclePx: null, dayNtlVlm: null, openInterest: null, prevDayPx: null };
   let side = "buy";
   let orderType = "limit";
@@ -197,9 +215,74 @@ export function createTradeView(app) {
 
   function useBookPrice(px) {
     const input = byId("ticket-price");
-    if (input) input.value = String(px);
+    const n = num(px);
+    if (input && Number.isFinite(n)) {
+      const step = Number(bookPrec);
+      const decimals =
+        Number.isFinite(step) && step > 0
+          ? step >= 1
+            ? 0
+            : Math.min(8, Math.max(0, Math.round(-Math.log10(step) + 1e-9)))
+          : undefined;
+      input.value = decimals == null ? String(n) : n.toFixed(decimals);
+    }
     if (orderType === "market") setOrderType("limit");
     updateEstimate();
+  }
+
+  function coinLabel() {
+    const m = currentMarket();
+    if (m && m.kind === "spot" && m.base) return m.base;
+    if (m && m.coin) return m.coin;
+    return coin || "Coin";
+  }
+
+  function syncBookPrecOptions() {
+    const sel = byId("book-prec");
+    if (!sel) return;
+    const steps = bookPrecisions(mark());
+    const keep = steps.find((s) => s === bookPrec);
+    if (!keep) bookPrec = defaultPrecision(mark());
+    const same =
+      sel.options.length === steps.length &&
+      Array.prototype.every.call(sel.options, (o, i) => Number(o.value) === steps[i]);
+    if (same) {
+      sel.value = String(bookPrec);
+      return;
+    }
+    clear(sel);
+    steps.forEach((s) => {
+      const opt = document.createElement("option");
+      opt.value = String(s);
+      opt.textContent = formatPrec(s);
+      if (s === bookPrec) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.value = String(bookPrec);
+  }
+
+  function syncBookUnitLabel() {
+    const sel = byId("book-unit");
+    if (!sel) return;
+    const coinOpt = sel.querySelector('option[value="coin"]');
+    if (coinOpt) coinOpt.textContent = coinLabel();
+    if (sel.value !== bookUnit) sel.value = bookUnit;
+  }
+
+  function setBookTab(tab) {
+    bookTab = tab === "trades" ? "trades" : "book";
+    document.querySelectorAll("[data-book-tab]").forEach((btn) => {
+      btn.setAttribute("aria-selected", btn.getAttribute("data-book-tab") === bookTab ? "true" : "false");
+    });
+    byId("book-pane")?.classList.toggle("hidden", bookTab !== "book");
+    byId("trades-pane")?.classList.toggle("hidden", bookTab !== "trades");
+    byId("book-tools")?.classList.toggle("hidden", bookTab !== "book");
+  }
+
+  function displaySize(lv) {
+    const sz = num(lv.sz) || 0;
+    const px = num(lv.px) || 0;
+    return bookUnit === "usdc" ? sz * px : sz;
   }
 
   function bookRow(level, c, kind, maxCum) {
@@ -213,24 +296,35 @@ export function createTradeView(app) {
         onClick: () => useBookPrice(level.px),
       },
       h("span", { class: "depth", style: { width: width.toFixed(1) + "%" } }),
-      h("span", { class: "px" }, fmtPx(level.px, false)),
-      h("span", { class: "sz" }, fmtQty(level.sz)),
+      h("span", { class: "px" }, formatBookPx(level.px, bookPrec)),
+      h("span", { class: "sz" }, fmtQty(displaySize(level))),
       h("span", { class: "sum" }, fmtQty(c))
     );
   }
 
   function renderBook() {
+    syncBookPrecOptions();
+    syncBookUnitLabel();
+    const name = coinLabel();
+    if (bookUnit === "usdc") {
+      setText("book-sz-h", "Size (USDC)");
+      setText("book-tot-h", "Total (USDC)");
+    } else {
+      setText("book-sz-h", "Size (" + name + ")");
+      setText("book-tot-h", "Total (" + name + ")");
+    }
     const asksEl = byId("book-asks");
     const bidsEl = byId("book-bids");
     if (!asksEl || !bidsEl) return;
-    const asks = (book.asks || []).slice();
-    const bids = (book.bids || []).slice();
-    const askView = asks.slice(0, 14).reverse();
-    const bidView = bids.slice(0, 14);
+    const step = Number(bookPrec) > 0 ? Number(bookPrec) : defaultPrecision(mark());
+    const asks = aggregateLevels(book.asks || [], step, "ask");
+    const bids = aggregateLevels(book.bids || [], step, "bid");
+    const askView = asks.slice(0, 18).reverse();
+    const bidView = bids.slice(0, 18);
     function cum(rows) {
       let s = 0;
       return rows.map((r) => {
-        s += num(r.sz) || 0;
+        s += displaySize(r);
         return s;
       });
     }
@@ -239,13 +333,10 @@ export function createTradeView(app) {
     const maxCum = Math.max(askCum[0] || 0, bidCum[bidCum.length - 1] || 0, 1);
     const bestAsk = asks[0] && num(asks[0].px);
     const bestBid = bids[0] && num(bids[0].px);
-    let spread = "—";
-    if (Number.isFinite(bestAsk) && Number.isFinite(bestBid)) spread = fmtPx(bestAsk - bestBid, false);
     const spreadEl = byId("book-spread");
     if (spreadEl) {
       clear(spreadEl);
-      spreadEl.appendChild(h("span", { class: "text-mist-400" }, "Spread " + spread));
-      spreadEl.appendChild(h("span", { class: "text-white" }, Number.isFinite(mid()) ? fmtPx(mid(), false) : "—"));
+      spreadEl.appendChild(h("span", null, formatSpreadLabel(bestBid, bestAsk)));
     }
     clear(asksEl);
     clear(bidsEl);
@@ -255,6 +346,46 @@ export function createTradeView(app) {
     }
     askView.forEach((lv, i) => asksEl.appendChild(bookRow(lv, askCum[i], "ask", maxCum)));
     bidView.forEach((lv, i) => bidsEl.appendChild(bookRow(lv, bidCum[i], "bid", maxCum)));
+  }
+
+  function renderTrades() {
+    const body = byId("trades-body");
+    if (!body) return;
+    clear(body);
+    if (!trades.length) {
+      body.appendChild(note("Waiting for live trades…", "px-3 py-6 text-center text-[11px] text-mist-400"));
+      return;
+    }
+    trades.forEach((t) => {
+      const buy = tradeIsBuy(t.side);
+      const href = tradeHashHref(t.hash);
+      body.appendChild(
+        h(
+          "div",
+          { class: "trade-row" },
+          h("span", { class: "px " + (buy ? "buy" : "sell") }, formatBookPx(t.px)),
+          h("span", { class: "sz" }, fmtQty(t.sz)),
+          h(
+            "span",
+            { class: "tm" },
+            formatTradeTime(t.time),
+            href
+              ? h(
+                  "a",
+                  {
+                    class: "hash",
+                    href,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    title: "Explorer",
+                  },
+                  "↗"
+                )
+              : null
+          )
+        )
+      );
+    });
   }
 
   function renderStats() {
@@ -1182,31 +1313,52 @@ export function createTradeView(app) {
   }
 
   function subscribeMarket() {
+    const gen = ++marketGen;
+    const c = coin;
     if (unsubBook) unsubBook();
     if (unsubCtx) unsubCtx();
-    unsubBook = unsubCtx = null;
+    if (unsubTrades) unsubTrades();
+    unsubBook = unsubCtx = unsubTrades = null;
     book = { bids: [], asks: [], time: 0 };
+    trades = [];
+    bookPrec = null;
     renderBook();
-    unsubBook = socket.subscribe({ type: "l2Book", coin }, (data) => {
+    renderTrades();
+    unsubBook = socket.subscribe({ type: "l2Book", coin: c }, (data) => {
+      if (gen !== marketGen) return;
       book = bookLevels(data);
       renderBook();
     });
+    unsubTrades = socket.subscribe({ type: "trades", coin: c }, (data) => {
+      if (gen !== marketGen) return;
+      const incoming = Array.isArray(data) ? data : data ? [data] : [];
+      trades = mergeTrades(trades, incoming);
+      renderTrades();
+    });
+    hlInfo({ type: "recentTrades", coin: c })
+      .then((rows) => {
+        if (gen !== marketGen || !Array.isArray(rows)) return;
+        trades = mergeTrades(trades, rows);
+        renderTrades();
+      })
+      .catch(() => {});
     const m = currentMarket();
     const ctxSub =
       m && m.kind === "spot"
-        ? { type: "activeSpotAssetCtx", coin }
-        : { type: "activeAssetCtx", coin };
+        ? { type: "activeSpotAssetCtx", coin: c }
+        : { type: "activeAssetCtx", coin: c };
     unsubCtx = socket.subscribe(ctxSub, (data) => {
-      const c = data && data.ctx ? data.ctx : data;
-      if (!c) return;
+      if (gen !== marketGen) return;
+      const ctxRow = data && data.ctx ? data.ctx : data;
+      if (!ctxRow) return;
       ctx = {
-        markPx: c.markPx,
-        midPx: c.midPx,
-        funding: c.funding,
-        oraclePx: c.oraclePx,
-        dayNtlVlm: c.dayNtlVlm,
-        openInterest: c.openInterest,
-        prevDayPx: c.prevDayPx,
+        markPx: ctxRow.markPx,
+        midPx: ctxRow.midPx,
+        funding: ctxRow.funding,
+        oraclePx: ctxRow.oraclePx,
+        dayNtlVlm: ctxRow.dayNtlVlm,
+        openInterest: ctxRow.openInterest,
+        prevDayPx: ctxRow.prevDayPx,
       };
       renderStats();
       updateEstimate();
@@ -1276,7 +1428,6 @@ export function createTradeView(app) {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-interval") === interval ? "true" : "false");
     });
     ensureChart();
-    subscribeMarket();
   }
 
   let bound = false;
@@ -1315,6 +1466,19 @@ export function createTradeView(app) {
     document.querySelectorAll("[data-interval]").forEach((btn) => {
       btn.addEventListener("click", () => setInterval_(btn.getAttribute("data-interval")));
     });
+    document.querySelectorAll("[data-book-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => setBookTab(btn.getAttribute("data-book-tab")));
+    });
+    byId("book-prec")?.addEventListener("change", (ev) => {
+      const v = num(ev.target.value);
+      if (Number.isFinite(v) && v > 0) bookPrec = v;
+      renderBook();
+    });
+    byId("book-unit")?.addEventListener("change", (ev) => {
+      bookUnit = ev.target.value === "coin" ? "coin" : "usdc";
+      renderBook();
+    });
+    setBookTab(bookTab);
     byId("side-buy")?.addEventListener("click", () => setSide("buy"));
     byId("side-sell")?.addEventListener("click", () => setSide("sell"));
     document.querySelectorAll("[data-otype]").forEach((btn) => {

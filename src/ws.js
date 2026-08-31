@@ -10,6 +10,37 @@ function channelOf(sub) {
   return sub.type;
 }
 
+export function matchSubscription(msg, sub) {
+  if (!msg || !sub) return false;
+  const ch = msg.channel;
+  if (ch === "subscriptionResponse" || ch === "pong") return false;
+  if (
+    ch !== channelOf(sub) &&
+    !(sub.type === "l2Book" && ch === "l2Book") &&
+    !(sub.type === "activeSpotAssetCtx" && ch === "activeSpotAssetCtx") &&
+    !(sub.type === "activeAssetCtx" && ch === "activeAssetCtx")
+  ) {
+    return false;
+  }
+  const data = msg.data;
+  if (sub.coin && data) {
+    if (data.coin && data.coin !== sub.coin) return false;
+    if (data.s && data.s !== sub.coin) return false;
+    if (Array.isArray(data) && data[0]) {
+      const rowCoin = data[0].coin || data[0].s;
+      if (rowCoin && rowCoin !== sub.coin) return false;
+    }
+  }
+  if (sub.interval && data) {
+    const iv = data.i || (Array.isArray(data) && data[0] && data[0].i);
+    if (iv && iv !== sub.interval) return false;
+  }
+  if (sub.user && data && data.user && String(data.user).toLowerCase() !== String(sub.user).toLowerCase()) {
+    return false;
+  }
+  return true;
+}
+
 export function createHlWs() {
   let ws = null;
   const want = new Map();
@@ -24,24 +55,7 @@ export function createHlWs() {
   }
 
   function match(msg, sub) {
-    if (!msg || !sub) return false;
-    const ch = msg.channel;
-    if (ch === "subscriptionResponse" || ch === "pong") return false;
-    if (ch !== channelOf(sub) && !(sub.type === "l2Book" && ch === "l2Book") && !(sub.type === "activeSpotAssetCtx" && ch === "activeSpotAssetCtx") && !(sub.type === "activeAssetCtx" && ch === "activeAssetCtx")) return false;
-    const data = msg.data;
-    if (sub.coin && data) {
-      if (data.coin && data.coin !== sub.coin) return false;
-      if (data.s && data.s !== sub.coin) return false;
-      if (Array.isArray(data) && data[0] && data[0].s && data[0].s !== sub.coin) return false;
-    }
-    if (sub.interval && data) {
-      const iv = data.i || (Array.isArray(data) && data[0] && data[0].i);
-      if (iv && iv !== sub.interval) return false;
-    }
-    if (sub.user && data && data.user && String(data.user).toLowerCase() !== String(sub.user).toLowerCase()) {
-      return false;
-    }
-    return true;
+    return matchSubscription(msg, sub);
   }
 
   function connect() {
