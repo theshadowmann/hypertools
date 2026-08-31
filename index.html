@@ -267,7 +267,14 @@
                 <tr>
                   <th>Market</th>
                   <th><button type="button" data-mp-sort="price">Last Price</button></th>
-                  <th><button type="button" data-mp-sort="change">24h Change</button></th>
+                  <th>
+                    <button type="button" data-mp-sort="change" aria-sort="desc">
+                      24h Change
+                      <svg class="mp-sort-chevron" viewBox="0 0 10 10" width="8" height="8" aria-hidden="true">
+                        <path d="M2 3.2 L5 6.8 L8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </th>
                   <th><button type="button" data-mp-sort="funding">8h Funding</button></th>
                   <th><button type="button" data-mp-sort="volume">Volume</button></th>
                   <th><button type="button" data-mp-sort="oi">Open Interest</button></th>

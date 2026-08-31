@@ -261,6 +261,10 @@ body {
 .mp-table th:first-child,
 .mp-table td:first-child { text-align: left; }
 .mp-table th button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
   border: 0;
   background: none;
   color: inherit;
@@ -270,8 +274,16 @@ body {
   cursor: pointer;
   padding: 0;
 }
-.mp-table th button[aria-sort="desc"] { color: #fff; }
-.mp-table th button[aria-sort="asc"] { color: #fff; }
+.mp-sort-chevron {
+  display: none;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+.mp-table th button[aria-sort] { color: #fff; }
+.mp-table th button[aria-sort] .mp-sort-chevron { display: block; }
+.mp-table th button[aria-sort="asc"] .mp-sort-chevron { transform: rotate(180deg); }
 .mp-row {
   cursor: pointer;
 }

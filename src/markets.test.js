@@ -1,9 +1,13 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   coinIconUrl,
   compactUsd,
   displayPair,
   filterMarkets,
+  formatPickerChange,
   funding8h,
   iconSymbol,
   loadFavs,
@@ -12,6 +16,8 @@ import {
   SPOT_ASSET_OFFSET,
   toggleFav,
 } from "./markets.js";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const perps = parsePerpMarkets([
   {
@@ -77,6 +83,31 @@ describe("picker filter", () => {
     expect(desc[0].coin).toBe("BTC");
     const asc = filterMarkets(perps, { tab: "perps", sortKey: "change", sortDir: "asc" });
     expect(asc[0].coin).toBe("ETH");
+  });
+
+  it("formats live 24h change as signed price / pct", () => {
+    expect(formatPickerChange("100000", "90000")).toEqual({
+      text: "+$10,000.00 / +11.11%",
+      cls: "mp-chg up",
+    });
+    expect(formatPickerChange("3000", "3100")).toEqual({
+      text: "-$100.00 / -3.23%",
+      cls: "mp-chg down",
+    });
+    expect(formatPickerChange("1", "0")).toEqual({ text: "—", cls: "mp-muted" });
+  });
+});
+
+describe("picker 24h sort chrome", () => {
+  it("puts a chevron on 24h Change and defaults to greatest-first", () => {
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    const trade = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(html).toMatch(/data-mp-sort="change"[^>]*aria-sort="desc"/);
+    expect(html).toMatch(/class="mp-sort-chevron"/);
+    expect(trade).toMatch(/let pickerSort = "change"/);
+    expect(trade).toMatch(/let pickerDir = "desc"/);
+    expect(css).toMatch(/button\[aria-sort="asc"\] \.mp-sort-chevron/);
   });
 });
 

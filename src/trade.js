@@ -42,10 +42,10 @@ import {
 } from "./ticket-math.js";
 import { mountTvChart } from "./tv-chart.js";
 import {
-  changeAbs,
   coinIconUrl,
   compactUsd,
   filterMarkets,
+  formatPickerChange,
   funding8h,
   iconSymbol,
   loadFavs,
@@ -120,7 +120,7 @@ export function createTradeView(app) {
   let pickerOpen = false;
   let pickerTab = "all";
   let pickerQuery = "";
-  let pickerSort = "volume";
+  let pickerSort = "change";
   let pickerDir = "desc";
   let pickerHi = 0;
   let pickerRows = [];
@@ -783,15 +783,7 @@ export function createTradeView(app) {
       return;
     }
     pickerRows.forEach((m, i) => {
-      const ch = change24h(m.markPx, m.prevDayPx);
-      const abs = changeAbs(m.markPx, m.prevDayPx);
-      const chCls = Number.isFinite(ch) && ch > 0 ? "mp-chg up" : Number.isFinite(ch) && ch < 0 ? "mp-chg down" : "mp-muted";
-      const chTxt = Number.isFinite(ch)
-        ? (Number.isFinite(abs) ? fmtPx(abs, true) + " / " : "") +
-          (ch >= 0 ? "+" : "") +
-          (ch * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-          "%"
-        : "—";
+      const chCell = formatPickerChange(m.markPx, m.prevDayPx);
       const fund = funding8h(m.funding);
       const fundTxt =
         m.kind === "perp" && Number.isFinite(fund)
@@ -852,7 +844,7 @@ export function createTradeView(app) {
           )
         ),
         h("td", null, Number.isFinite(num(m.markPx)) ? fmtPx(m.markPx) : "—"),
-        h("td", { class: chCls }, chTxt),
+        h("td", { class: chCell.cls }, chCell.text),
         h("td", { class: Number.isFinite(fund) && fund < 0 ? "mp-chg down" : Number.isFinite(fund) && fund > 0 ? "mp-chg up" : "mp-muted" }, fundTxt),
         h("td", null, compactUsd(m.dayNtlVlm)),
         h("td", null, m.kind === "perp" && Number.isFinite(oiNtl) ? compactUsd(oiNtl) : "—")

@@ -1,3 +1,4 @@
+import { fmtPx } from "./format.js";
 import { HL_COIN_ICON_BASE } from "./hosts.js";
 import { change24h } from "./ticket-math.js";
 
@@ -152,6 +153,25 @@ export function changeAbs(mark, prevDay) {
   const p = Number(prevDay);
   if (!Number.isFinite(m) || !Number.isFinite(p)) return NaN;
   return m - p;
+}
+
+/** Live picker cell: `+$1.23 / +1.23%` green, or red with minus. No fabricated values. */
+export function formatPickerChange(mark, prevDay) {
+  const ch = change24h(mark, prevDay);
+  const abs = changeAbs(mark, prevDay);
+  if (!Number.isFinite(ch)) return { text: "—", cls: "mp-muted" };
+  const pct =
+    (ch > 0 ? "+" : "") +
+    (ch * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+    "%";
+  let pxPart = "";
+  if (Number.isFinite(abs)) {
+    const mag = fmtPx(Math.abs(abs), true);
+    const sign = abs > 0 ? "+" : abs < 0 ? "-" : "";
+    pxPart = sign + mag + " / ";
+  }
+  const cls = ch > 0 ? "mp-chg up" : ch < 0 ? "mp-chg down" : "mp-muted";
+  return { text: pxPart + pct, cls };
 }
 
 export function sortMarkets(rows, sortKey, sortDir) {
