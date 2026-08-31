@@ -639,7 +639,7 @@ export function createTradeView(app) {
             '" data-coin="' +
             escapeHtml(o.coin) +
             '">Cancel</button>'
-          : '<span class="text-mist-400">Read-only</span>') +
+          : "") +
         "</td></tr>"
       );
     });
