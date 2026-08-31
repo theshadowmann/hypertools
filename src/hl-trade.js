@@ -150,6 +150,7 @@ export async function placePerpOrder({
   maxSlippage,
   extraOrders,
   grouping,
+  asset,
   onStatus,
 }) {
   assertCanTrade(source);
@@ -167,7 +168,7 @@ export async function placePerpOrder({
   }
 
   const wire = buildOrderWire({
-    asset: market.asset,
+    asset: Number.isInteger(Number(asset)) ? Number(asset) : market.asset,
     isBuy,
     size,
     price: px,

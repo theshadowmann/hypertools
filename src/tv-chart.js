@@ -1,5 +1,6 @@
 import { clear } from "./dom.js";
 import { tvInterval, tvSymbol } from "./ticket-math.js";
+import { mountHlChart } from "./hl-chart.js";
 
 /** Official TradingView Advanced Chart iframe widget. Not user-configurable. */
 export const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
@@ -54,4 +55,16 @@ export function mountTvChart(container, { coin, interval, kind, base, quote }) {
   });
   wrap.appendChild(script);
   container.appendChild(wrap);
+}
+
+/** TV when a Hyperliquid symbol exists; otherwise live HL candles for that coin (never a fake BTC chart). */
+export function mountChart(container, opts) {
+  if (!container) return;
+  const o = opts || {};
+  const symbol = tvSymbol(o.coin, o.kind, o.base, o.quote);
+  if (symbol) {
+    mountTvChart(container, o);
+    return;
+  }
+  mountHlChart(container, o);
 }

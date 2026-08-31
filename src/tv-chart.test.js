@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { mountTvChart, TV_SCRIPT } from "./tv-chart.js";
+import { mountChart, mountTvChart, TV_SCRIPT } from "./tv-chart.js";
+import { drawCandles } from "./hl-chart.js";
+import { candleSnapshotBody, candlesToBars, hlCandleInterval } from "./api.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -31,6 +33,34 @@ describe("TradingView embed", () => {
     expect(host.querySelector("script")).toBeNull();
     expect(host.textContent).toMatch(/No TradingView symbol/);
     expect(host.innerHTML).not.toContain("BTCUSDC");
+  });
+
+  it("falls back to a Hyperliquid candle canvas for outcome coins", () => {
+    const host = document.createElement("div");
+    host.style.height = "200px";
+    mountChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
+    expect(host.querySelector("script")).toBeNull();
+    expect(host.innerHTML).not.toContain("BTCUSDC");
+    expect(host.innerHTML).not.toContain("HYPERLIQUID:BTC");
+    expect(host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
+  });
+});
+
+describe("Hyperliquid candles", () => {
+  it("requests candleSnapshot for the given coin, not a substitute ticker", () => {
+    const body = candleSnapshotBody("#12100", "15m");
+    expect(body.type).toBe("candleSnapshot");
+    expect(body.req.coin).toBe("#12100");
+    expect(body.req.interval).toBe("15m");
+    expect(hlCandleInterval("1h")).toBe("1h");
+    const bars = candlesToBars([
+      { t: 1_700_000_000_000, o: "0.40", h: "0.45", l: "0.39", c: "0.42", v: "10" },
+    ]);
+    expect(bars).toHaveLength(1);
+    expect(bars[0].close).toBe(0.42);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext && canvas.getContext("2d");
+    if (ctx) expect(() => drawCandles(ctx, bars, 320, 180)).not.toThrow();
   });
 });
 

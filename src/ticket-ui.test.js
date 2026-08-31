@@ -44,4 +44,25 @@ describe("spot vs perp ticket chrome", () => {
     expect(document.querySelector(".ls-tabs").classList.contains("spot-sides")).toBe(false);
     expect(document.getElementById("market-chip-lev").classList.contains("hidden")).toBe(false);
   });
+
+  it("shows Yes/No odds, Limit dropdown, TIF, and payout on an outcome market", () => {
+    mount();
+    applyTicketKind(document, "outcome");
+    expect(document.getElementById("lev-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("sum-liq-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("sum-margin-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("sum-slip-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("side-buy").textContent).toBe("Buy");
+    expect(document.getElementById("side-sell").textContent).toBe("Sell");
+    expect(document.querySelector(".ls-tabs").classList.contains("spot-sides")).toBe(false);
+    expect(document.querySelector(".ls-tabs").classList.contains("outcome-sides")).toBe(true);
+    expect(document.getElementById("outcome-legs").classList.contains("hidden")).toBe(false);
+    expect(document.getElementById("outcome-otype").classList.contains("hidden")).toBe(false);
+    expect(document.getElementById("outcome-tif-wrap").classList.contains("hidden")).toBe(false);
+    expect(document.getElementById("sum-payout-row").classList.contains("hidden")).toBe(false);
+    expect(document.querySelector(".type-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("ticket-chk-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("ticket-price-k").textContent).toBe("Price (USDC)");
+    expect(document.getElementById("ticket-submit")).toBeTruthy();
+  });
 });

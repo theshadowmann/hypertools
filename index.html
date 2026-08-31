@@ -365,6 +365,10 @@
             <div class="ls-tabs" role="tablist" aria-label="Side">
               <button type="button" id="side-buy" class="ls-tab" aria-pressed="true">Buy / Long</button>
               <button type="button" id="side-sell" class="ls-tab" aria-pressed="false">Sell / Short</button>
+              <select id="outcome-otype" class="otype-dd hidden" aria-label="Order type">
+                <option value="limit" selected>Limit</option>
+                <option value="market">Market</option>
+              </select>
             </div>
 
             <div class="type-row">
@@ -379,6 +383,17 @@
                   <button type="button" data-otype="stop-market" role="menuitem">Stop Market</button>
                 </div>
               </div>
+            </div>
+
+            <div id="outcome-legs" class="outcome-legs hidden" role="group" aria-label="Outcome side">
+              <button type="button" id="leg-yes" class="outcome-leg" aria-pressed="true">
+                <span class="outcome-leg-name">Yes</span>
+                <span id="leg-yes-odds" class="outcome-leg-odds">—</span>
+              </button>
+              <button type="button" id="leg-no" class="outcome-leg" aria-pressed="false">
+                <span class="outcome-leg-name">No</span>
+                <span id="leg-no-odds" class="outcome-leg-odds">—</span>
+              </button>
             </div>
 
             <div id="lev-row" class="lev-row">
@@ -403,7 +418,7 @@
                 <span class="ticket-label">Available to Trade</span>
                 <p id="ticket-avail" class="avail-v">— USDC</p>
               </div>
-              <div class="avail-right">
+              <div id="ticket-pos-wrap" class="avail-right">
                 <span class="ticket-label">Current Position</span>
                 <p id="ticket-pos" class="avail-v">—</p>
               </div>
@@ -411,7 +426,7 @@
 
             <div id="ticket-price-wrap" class="ticket-field">
               <div class="field-head">
-                <label for="ticket-price" class="ticket-label">Price</label>
+                <label for="ticket-price" id="ticket-price-k" class="ticket-label">Price</label>
                 <button type="button" id="ticket-mid-btn" class="mid-btn">Mid</button>
               </div>
               <input id="ticket-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
@@ -472,7 +487,7 @@
               <span class="pct-suffix">%</span>
             </div>
 
-            <div class="chk-row">
+            <div id="ticket-chk-row" class="chk-row">
               <label class="chk"><input id="ticket-reduce" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Reduce Only</label>
               <label class="chk"><input id="ticket-tpsl" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Take Profit / Stop Loss</label>
             </div>
@@ -489,6 +504,13 @@
 
             </div>
             <div class="ticket-foot">
+            <div id="outcome-tif-wrap" class="tif-ctl hidden">
+              <span>TIF</span>
+              <select id="ticket-tif" aria-label="Time in force">
+                <option value="Gtc" selected>GTC</option>
+                <option value="Ioc">IOC</option>
+              </select>
+            </div>
             <button type="submit" id="ticket-submit" class="ticket-submit buy">Connect wallet</button>
             <p id="ticket-status" class="ticket-status" role="status"></p>
             <p id="ticket-min" class="hidden ticket-warn">Hyperliquid rejects orders under $10 notional.</p>
@@ -496,6 +518,7 @@
             <div class="summary">
               <div id="sum-liq-row" class="sum-row"><span>Liquidation Price</span><span id="sum-liq">—</span></div>
               <div class="sum-row"><span>Order Value</span><span id="sum-value">—</span></div>
+              <div id="sum-payout-row" class="sum-row hidden"><span id="sum-payout-k">Payout if Yes</span><span id="sum-payout">—</span></div>
               <div id="sum-margin-row" class="sum-row"><span>Margin Required</span><span id="sum-margin">—</span></div>
               <div id="sum-slip-row" class="sum-row">
                 <span>Slippage</span>

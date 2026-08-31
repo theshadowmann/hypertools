@@ -5,10 +5,15 @@ import {
   encodeOutcomeCoin,
   formatChancePct,
   formatOutcomeCountdown,
+  formatOutcomeOdds,
   formatOutcomeTitle,
   isOutcomeCoin,
   lookupUnderlyingPx,
   outcomeCategories,
+  outcomeLegAsset,
+  outcomeLegBalance,
+  outcomeLegCoin,
+  outcomePayout,
   outcomePositionsFromSpot,
   outcomeVenueBadge,
   parseOutcomeExpiryMs,
@@ -171,5 +176,22 @@ describe("outcome picker fields", () => {
     expect(btc.underlying).toBe("BTC");
     expect(btc.underlyingPx).toBe("79000");
     expect(btc.expiryMs).toBe(Date.UTC(2026, 9, 1, 0, 0));
+  });
+});
+
+describe("Yes/No odds and wire ids", () => {
+  it("formats 1/price odds and maps legs onto # / + / asset ids", () => {
+    expect(formatOutcomeOdds(0.42)).toBe("2.4x");
+    expect(formatOutcomeOdds(0.5)).toBe("2.0x");
+    expect(formatOutcomeOdds(null)).toBe("—");
+    expect(outcomePayout(10)).toBe(10);
+    expect(Number.isFinite(outcomePayout(0))).toBe(false);
+    const rows = parseOutcomeMarkets(meta, { "#12100": "0.42", "#12101": "0.58" }, {});
+    const btc = rows.find((m) => m.outcomeId === 1210);
+    expect(outcomeLegCoin(btc, 0)).toBe("#12100");
+    expect(outcomeLegCoin(btc, 1)).toBe("#12101");
+    expect(outcomeLegAsset(btc, 0)).toBe(100_012_100);
+    expect(outcomeLegAsset(btc, 1)).toBe(100_012_101);
+    expect(outcomeLegBalance(btc, 1)).toBe("+12101");
   });
 });

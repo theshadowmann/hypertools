@@ -40,7 +40,7 @@ import {
   orderValue,
   sizeFromAvailablePct,
 } from "./ticket-math.js";
-import { mountTvChart } from "./tv-chart.js";
+import { mountChart } from "./tv-chart.js";
 import {
   coinIconUrl,
   compactUsd,
@@ -56,7 +56,12 @@ import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import {
   formatChancePct,
   formatOutcomeCountdown,
+  formatOutcomeOdds,
   isOutcomeCoin,
+  outcomeLegAsset,
+  outcomeLegBalance,
+  outcomeLegCoin,
+  outcomePayout,
   outcomePositionsFromSpot,
   outcomeVenueBadge,
 } from "./outcomes.js";
@@ -133,6 +138,7 @@ export function createTradeView(app) {
   let pickerRows = [];
   let favs = loadFavs();
   let pageKind = "trade";
+  let outcomeLeg = 0;
   let bookSnapshotDone = false;
   let tradesSnapshotDone = false;
   let paneTimer = null;
@@ -162,6 +168,10 @@ export function createTradeView(app) {
   function syncBookColumn() {
     const shell = document.querySelector(".trade-shell");
     if (!shell) return;
+    if (pageKind === "outcome" || isOutcome()) {
+      shell.classList.remove("no-book");
+      return;
+    }
     const live = hasBookDepth() || trades.length > 0;
     if (live) {
       shell.classList.remove("no-book");
@@ -206,12 +216,11 @@ export function createTradeView(app) {
     const m = currentMarket();
     const fromCtx = num(ctx.midPx) || num(ctx.markPx);
     if (Number.isFinite(fromCtx) && fromCtx > 0) return fromCtx;
+    const mids = app.state.data && app.state.data.mids;
+    if (mids && coin && num(mids[coin]) > 0) return num(mids[coin]);
+    if (m && isOutcome() && outcomeLeg === 1 && num(m.noMarkPx) > 0) return num(m.noMarkPx);
     if (m && num(m.midPx) > 0) return num(m.midPx);
     if (m && num(m.markPx) > 0) return num(m.markPx);
-    const mids = app.state.data && app.state.data.mids;
-    if (mids && mids[coin]) return num(mids[coin]);
-    const mkt = currentMarket();
-    if (mkt && mids && mids[mkt.coin]) return num(mids[mkt.coin]);
     return NaN;
   }
 
@@ -219,6 +228,9 @@ export function createTradeView(app) {
     const m = currentMarket();
     const fromCtx = num(ctx.markPx);
     if (Number.isFinite(fromCtx) && fromCtx > 0) return fromCtx;
+    const mids = app.state.data && app.state.data.mids;
+    if (mids && coin && num(mids[coin]) > 0) return num(mids[coin]);
+    if (m && isOutcome() && outcomeLeg === 1 && num(m.noMarkPx) > 0) return num(m.noMarkPx);
     if (m && num(m.markPx) > 0) return num(m.markPx);
     return mid();
   }
@@ -228,7 +240,7 @@ export function createTradeView(app) {
       const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
       if (side === "sell") {
         const m = currentMarket();
-        const key = m && m.kind === "outcome" ? m.balanceCoin : m && m.base;
+        const key = m && m.kind === "outcome" ? outcomeLegBalance(m, outcomeLeg) : m && m.base;
         const row = spot.find((b) => b && m && String(b.coin) === String(key));
         const px = sizePx() || mark();
         const qty = row ? Math.max(0, num(row.total) - num(row.hold)) : 0;
@@ -244,10 +256,10 @@ export function createTradeView(app) {
     const m = currentMarket();
     if (m && (m.kind === "spot" || m.kind === "outcome")) {
       const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
-      const key = m.kind === "outcome" ? m.balanceCoin : m.base;
+      const key = m.kind === "outcome" ? outcomeLegBalance(m, outcomeLeg) : m.base;
       const row = spot.find((b) => b && String(b.coin) === String(key));
       const qty = row ? Math.max(0, num(row.total) - num(row.hold)) : 0;
-      return { coin: m.kind === "outcome" ? "Yes" : m.base, szi: qty, leverage: null };
+      return { coin: m.kind === "outcome" ? (outcomeLeg === 1 ? "No" : "Yes") : m.base, szi: qty, leverage: null };
     }
     const perps = (app.state.data && app.state.data.perps) || {};
     const rows = positionRows(perps.assetPositions || []);
@@ -275,13 +287,14 @@ export function createTradeView(app) {
 
   function ensureChart() {
     const m = currentMarket();
-    const key = (m ? m.id : coin) + "|" + interval;
+    const chartCoin = m && m.kind === "outcome" ? coin || outcomeLegCoin(m, outcomeLeg) : m ? m.coin : coin;
+    const key = (m ? m.id : coin) + "|" + chartCoin + "|" + interval;
     if (key === lastTv && byId("chart") && byId("chart").firstChild) return;
     lastTv = key;
-    mountTvChart(byId("chart"), {
-      coin: m ? m.coin : coin,
+    mountChart(byId("chart"), {
+      coin: chartCoin,
       interval,
-      kind: m ? m.kind : "perp",
+      kind: m ? m.kind : pageKind === "outcome" ? "outcome" : "perp",
       base: m && m.base,
       quote: m && m.quote,
     });
@@ -306,7 +319,7 @@ export function createTradeView(app) {
 
   function coinLabel() {
     const m = currentMarket();
-    if (m && m.kind === "outcome") return m.base || "Yes";
+    if (m && m.kind === "outcome") return outcomeLeg === 1 ? "No" : "Yes";
     if (m && m.kind === "spot" && m.base) return m.base;
     if (m && m.coin) return m.coin;
     return coin || "Coin";
@@ -557,10 +570,20 @@ export function createTradeView(app) {
       setText("sum-fees", "—");
     }
     const minNote = byId("ticket-min");
-    if (minNote) minNote.classList.toggle("hidden", !Number.isFinite(ntl) || ntl >= 10 || !(sz > 0));
+    if (minNote) minNote.classList.toggle("hidden", isOutcome() || !Number.isFinite(ntl) || ntl >= 10 || !(sz > 0));
     if (mkt) {
       const unitCoin = byId("unit-coin");
-      if (unitCoin) unitCoin.textContent = mkt.base || mkt.coin;
+      if (unitCoin) unitCoin.textContent = mkt.kind === "outcome" ? (outcomeLeg === 1 ? "No" : "Yes") : mkt.base || mkt.coin;
+    }
+    if (isOutcome() && mkt) {
+      const yesPx = num(mkt.markPx) || num((app.state.data && app.state.data.mids || {})[mkt.coin]);
+      const noPx = num(mkt.noMarkPx) || num((app.state.data && app.state.data.mids || {})[mkt.noCoin]);
+      setText("leg-yes-odds", formatOutcomeOdds(yesPx));
+      setText("leg-no-odds", formatOutcomeOdds(noPx));
+      const pay = outcomePayout(sz);
+      const legName = outcomeLeg === 1 ? "No" : "Yes";
+      setText("sum-payout-k", "Payout if " + legName);
+      setText("sum-payout", Number.isFinite(pay) ? fmtUsd(pay) : "—");
     }
     renderTicketKind();
     renderTicketButton();
@@ -590,7 +613,13 @@ export function createTradeView(app) {
   }
 
   function renderTicketKind() {
-    applyTicketKind(document, isCash());
+    applyTicketKind(document, isOutcome() ? "outcome" : isSpot() ? "spot" : "perp");
+    if (isOutcome()) {
+      const dd = byId("outcome-otype");
+      if (dd && (orderType === "market" || orderType === "limit") && dd.value !== orderType) dd.value = orderType;
+      byId("leg-yes")?.setAttribute("aria-pressed", outcomeLeg === 0 ? "true" : "false");
+      byId("leg-no")?.setAttribute("aria-pressed", outcomeLeg === 1 ? "true" : "false");
+    }
   }
 
   function setSide(next) {
@@ -603,7 +632,7 @@ export function createTradeView(app) {
     }
     if (sell) {
       sell.setAttribute("aria-pressed", side === "sell" ? "true" : "false");
-      sell.classList.toggle("short", side === "sell");
+      sell.classList.toggle("short", side === "sell" && !isOutcome());
     }
     const submit = byId("ticket-submit");
     if (submit) {
@@ -672,7 +701,8 @@ export function createTradeView(app) {
     }
     submit.disabled = ticketBusy;
     const verb = side === "buy" ? "Buy" : "Sell";
-    submit.textContent = isOutcome() ? verb + " Yes" : verb + " " + coin;
+    if (isOutcome()) submit.textContent = verb + " " + (outcomeLeg === 1 ? "No" : "Yes");
+    else submit.textContent = verb + " " + coin;
   }
 
   async function refreshEnabled() {
@@ -801,13 +831,19 @@ export function createTradeView(app) {
           price: orderType === "stop-limit" ? fieldValue("ticket-stop-limit") : fieldValue("ticket-price"),
           mid: mid(),
           type,
-          tif: orderType === "market" || orderType === "stop-market" ? "Ioc" : "Gtc",
+          tif:
+            orderType === "market" || orderType === "stop-market"
+              ? "Ioc"
+              : isOutcome()
+                ? byId("ticket-tif")?.value || "Gtc"
+                : "Gtc",
           triggerPx: fieldValue("ticket-trigger"),
           tpsl: "sl",
           triggerIsMarket: orderType !== "stop-limit",
           maxSlippage: maxSlippage(),
           extraOrders: tpsl,
           grouping: tpsl.length ? "normalTpsl" : "na",
+          asset: isOutcome() ? outcomeLegAsset(mkt, outcomeLeg) : mkt.asset,
         });
         ticketMessage("Order accepted.", "ok");
       }
@@ -1236,7 +1272,12 @@ export function createTradeView(app) {
               {
                 class: "border-t border-white/5 cursor-pointer hover:bg-white/5",
                 onClick: () => {
-                  if (p.marketId) setMarket(p.marketId);
+                  if (p.marketId) {
+                    const wantNo = p.side === "No";
+                    Promise.resolve(setMarket(p.marketId)).then(() => {
+                      if (wantNo) setOutcomeLeg(1);
+                    });
+                  }
                 },
               },
               h("td", { class: "px-2 py-1.5 font-normal text-mist-100" }, p.title),
@@ -1706,7 +1747,7 @@ export function createTradeView(app) {
       setCoinIcon(byId("market-chip-icon"), null);
       byId("market-chip-lev")?.classList.add("hidden");
       lastTv = "empty";
-      mountTvChart(byId("chart"), { coin: "", kind: pageKind === "outcome" ? "outcome" : "perp" });
+      mountChart(byId("chart"), { coin: "", kind: pageKind === "outcome" ? "outcome" : "perp" });
       book = { bids: [], asks: [], time: 0 };
       trades = [];
       bookSnapshotDone = true;
@@ -1716,15 +1757,22 @@ export function createTradeView(app) {
       renderTicketKind();
       return;
     }
+    if (m.kind === "outcome") {
+      if (marketId !== m.id) outcomeLeg = 0;
+      if (orderType !== "market" && orderType !== "limit") setOrderType("limit");
+    }
     marketId = m.id;
-    coin = m.coin;
+    coin = m.kind === "outcome" ? outcomeLegCoin(m, outcomeLeg) || m.coin : m.coin;
     renderMarketChip();
     setUnit(unit === "usdc" ? "usdc" : "coin");
+    const yesPx = num(m.markPx) || num(m.midPx);
+    const noPx = num(m.noMarkPx);
+    const seed = m.kind === "outcome" && outcomeLeg === 1 ? noPx : yesPx;
     ctx = {
-      markPx: m.markPx,
-      midPx: m.midPx,
+      markPx: seed,
+      midPx: seed,
       funding: m.funding,
-      oraclePx: m.oraclePx,
+      oraclePx: m.kind === "outcome" ? seed : m.oraclePx,
       dayNtlVlm: m.dayNtlVlm,
       openInterest: m.openInterest,
       prevDayPx: m.prevDayPx,
@@ -1736,11 +1784,54 @@ export function createTradeView(app) {
     ensureChart();
     subscribeMarket();
     const thisGen = marketGen;
-    const snap = await hlInfo({ type: "l2Book", coin: m.coin }).catch(() => null);
+    const snap = await hlInfo({ type: "l2Book", coin }).catch(() => null);
     if (thisGen !== marketGen) return;
     bookSnapshotDone = true;
     if (snap) book = bookLevels(snap);
     renderBook();
+  }
+
+  function setOutcomeLeg(next) {
+    const m = currentMarket();
+    const leg = next === 1 ? 1 : 0;
+    if (leg === outcomeLeg && coin === outcomeLegCoin(m, leg)) {
+      renderTicketKind();
+      updateEstimate();
+      return;
+    }
+    outcomeLeg = leg;
+    if (!m || m.kind !== "outcome") {
+      renderTicketKind();
+      updateEstimate();
+      return;
+    }
+    coin = outcomeLegCoin(m, outcomeLeg) || m.coin;
+    const px = outcomeLeg === 1 ? num(m.noMarkPx) : num(m.markPx) || num(m.midPx);
+    ctx = {
+      markPx: px,
+      midPx: px,
+      funding: null,
+      oraclePx: px,
+      dayNtlVlm: m.dayNtlVlm,
+      openInterest: m.openInterest,
+      prevDayPx: m.prevDayPx,
+    };
+    lastTv = "";
+    renderTicketKind();
+    renderStats();
+    updateEstimate();
+    ensureChart();
+    subscribeMarket();
+    hlInfo({ type: "l2Book", coin })
+      .then((snap) => {
+        if (snap) book = bookLevels(snap);
+        bookSnapshotDone = true;
+        renderBook();
+      })
+      .catch(() => {
+        bookSnapshotDone = true;
+        renderBook();
+      });
   }
 
   function setInterval_(next) {
@@ -1800,6 +1891,12 @@ export function createTradeView(app) {
     setBookTab(bookTab);
     byId("side-buy")?.addEventListener("click", () => setSide("buy"));
     byId("side-sell")?.addEventListener("click", () => setSide("sell"));
+    byId("leg-yes")?.addEventListener("click", () => setOutcomeLeg(0));
+    byId("leg-no")?.addEventListener("click", () => setOutcomeLeg(1));
+    byId("outcome-otype")?.addEventListener("change", (ev) => {
+      const v = ev.target.value === "market" ? "market" : "limit";
+      setOrderType(v);
+    });
     document.querySelectorAll("[data-otype]").forEach((btn) => {
       btn.addEventListener("click", (ev) => {
         ev.stopPropagation();

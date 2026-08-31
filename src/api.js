@@ -116,6 +116,39 @@ export function candleRange(interval) {
   return { startTime, endTime: now };
 }
 
+export function candleSnapshotBody(coin, interval) {
+  const range = candleRange(interval);
+  return {
+    type: "candleSnapshot",
+    req: {
+      coin: String(coin || ""),
+      interval: hlCandleInterval(interval),
+      startTime: range.startTime,
+      endTime: range.endTime,
+    },
+  };
+}
+
+export function hlCandleInterval(interval) {
+  return (
+    {
+      "1m": "1m",
+      "5m": "5m",
+      "15m": "15m",
+      "1h": "1h",
+      "4h": "4h",
+      "1d": "1d",
+    }[interval] || "15m"
+  );
+}
+
+export async function loadCandles(coin, interval) {
+  const c = String(coin || "");
+  if (!c) return [];
+  const rows = await hlInfo(candleSnapshotBody(c, interval));
+  return candlesToBars(rows);
+}
+
 export function candlesToBars(rows) {
   if (!Array.isArray(rows)) return [];
   const out = [];

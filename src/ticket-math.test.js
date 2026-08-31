@@ -85,16 +85,19 @@ describe("trade guards", () => {
 });
 
 describe("ticket DOM", () => {
-  it("does not show GTC / IOC / ALO in the order ticket", () => {
+  it("does not show a GTC / IOC / ALO segmented bar on the perp ticket", () => {
     const html = readFileSync(join(root, "index.html"), "utf8");
     const start = html.indexOf('id="ticket-form"');
     const end = html.indexOf('id="trade-balances"');
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const ticket = html.slice(start, end);
-    expect(ticket).not.toMatch(/\bGTC\b/i);
-    expect(ticket).not.toMatch(/\bIOC\b/i);
+    expect(ticket).not.toMatch(/data-tif/);
     expect(ticket).not.toMatch(/\bALO\b/i);
+    const withoutOutcomeTif = ticket.replace(/id="outcome-tif-wrap"[\s\S]*?<\/div>/, "");
+    expect(withoutOutcomeTif).not.toMatch(/\bGTC\b/i);
+    expect(withoutOutcomeTif).not.toMatch(/\bIOC\b/i);
+    expect(ticket).toContain('id="ticket-tif"');
     expect(ticket).toContain("Buy / Long");
     expect(ticket).toContain("Sell / Short");
     expect(ticket).toContain("ticket-pct");
@@ -124,6 +127,10 @@ describe("ticket DOM", () => {
     expect(html).toContain('data-interval="15m"');
     expect(html).toContain('data-mp-tab="outcome"');
     expect(html).toContain("8h Funding");
+    expect(html).toContain('id="outcome-legs"');
+    expect(html).toContain('id="leg-yes"');
+    expect(html).toContain('id="ticket-tif"');
+    expect(html).toContain("Payout if Yes");
   });
 
   it("puts Order Book and Trades as word tabs in the book column", () => {

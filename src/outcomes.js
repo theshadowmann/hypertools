@@ -142,6 +142,36 @@ export function formatChancePct(px) {
   return (n * 100).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
 }
 
+/** Decimal odds 1/price, e.g. 0.42 → "2.4x". Never invents a price. */
+export function formatOutcomeOdds(px) {
+  const n = Number(px);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  const odds = 1 / n;
+  return odds.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "x";
+}
+
+export function outcomeLegCoin(m, leg) {
+  if (!m) return "";
+  return Number(leg) === 1 ? m.noCoin || "" : m.coin || "";
+}
+
+export function outcomeLegAsset(m, leg) {
+  if (!m) return NaN;
+  return Number(leg) === 1 ? m.noAsset : m.asset;
+}
+
+export function outcomeLegBalance(m, leg) {
+  if (!m) return "";
+  return Number(leg) === 1 ? m.noBalanceCoin || "" : m.balanceCoin || "";
+}
+
+/** Each share pays $1 if that side wins. */
+export function outcomePayout(shares) {
+  const n = Number(shares);
+  if (!Number.isFinite(n) || n <= 0) return NaN;
+  return n;
+}
+
 /** Live venue strings only. Empty if the API omitted them. */
 export function outcomeVenueBadge(venue) {
   const v = String(venue || "")
