@@ -82,7 +82,13 @@ describe("type weight", () => {
     const html = readFileSync(join(root, "index.html"), "utf8");
     expect(css).toMatch(/\.nav-word \{[\s\S]*?font-weight: 500/);
     expect(css).toMatch(/\.nav-word\[aria-current="page"\] \{[\s\S]*?font-weight: 600/);
+    expect(css).toMatch(/#market-chip-pair \{[\s\S]*?font-size: 18px/);
     expect(css).toMatch(/#market-chip-pair \{[\s\S]*?font-weight: 600/);
+    expect(css).toMatch(/#market-chip-icon\.coin-icon \{[\s\S]*?width: 22px/);
+    expect(css).toMatch(/\.lev-badge \{[\s\S]*?font-size: 11px/);
+    expect(css).toMatch(/\.stat-k \{[^}]*font-size: 10px/);
+    expect(css).toMatch(/\.stat-v \{[^}]*font-size: 12px/);
+    expect(css).toMatch(/\.iv-btn \{[\s\S]*?font-size: 11px/);
     expect(css).not.toMatch(/-webkit-text-stroke/);
     expect(css).not.toMatch(/font-weight:\s*(700|800|900)/);
     expect(css).toMatch(/\.stat-k \{[^}]*font-weight: 400/);

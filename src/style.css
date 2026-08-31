@@ -74,8 +74,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  height: 32px;
-  min-height: 32px;
+  height: 36px;
+  min-height: 36px;
   padding: 0 8px;
   border-bottom: 1px solid var(--line);
   border-right: 1px solid var(--line);
@@ -184,7 +184,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  height: 32px;
   padding: 0 4px 0 0;
   border: 0;
   background: none;
@@ -198,11 +198,17 @@ body {
 .market-chip:hover { color: #fff; }
 .market-chip[aria-expanded="true"] { color: var(--green); }
 #market-chip-pair {
+  font-size: 18px;
   font-weight: 600;
+  line-height: 1.15;
   color: inherit;
   max-width: min(42vw, 520px);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+#market-chip-icon.coin-icon {
+  width: 22px;
+  height: 22px;
 }
 .chip-chevron {
   display: block;
@@ -234,7 +240,7 @@ body {
 
 .market-picker {
   position: absolute;
-  top: 32px;
+  top: 36px;
   left: 0;
   right: 300px;
   bottom: 26vh;
