@@ -137,6 +137,7 @@ export function createTradeView(app) {
       wickUpColor: "#0ecb81",
       wickDownColor: "#f6465d",
     });
+    chart.applyOptions({ layout: { attributionLogo: false } });
     resizeObs = new ResizeObserver(() => {
       if (chart && el.clientWidth) {
         chart.resize(el.clientWidth, Math.max(el.clientHeight || 0, 1));
@@ -340,18 +341,15 @@ export function createTradeView(app) {
 
   function renderTicketLock() {
     const lock = byId("ticket-lock");
-    const form = byId("ticket-form");
     const enableBtn = byId("ticket-enable");
     const submit = byId("ticket-submit");
-    if (!lock || !form) return;
+    if (!lock) return;
     if (canTrade()) {
       lock.classList.add("hidden");
-      form.classList.remove("pointer-events-none", "opacity-40");
       if (enableBtn) enableBtn.classList.toggle("hidden", enabled);
       if (submit) submit.disabled = !enabled || ticketBusy;
     } else {
       lock.classList.remove("hidden");
-      form.classList.add("pointer-events-none", "opacity-40");
       if (app.state.source === "paste") {
         lock.textContent = "Connect a wallet to place or cancel orders. This pasted address can load the account.";
       } else {

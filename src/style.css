@@ -97,13 +97,14 @@ body {
   padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #94a3b8;
+  color: #64748b;
   border-radius: 3px;
   line-height: 1;
 }
 .iv-btn[aria-pressed="true"] {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.14);
+  font-weight: 650;
 }
 
 .book-title {
@@ -204,8 +205,14 @@ body {
   font-weight: 650;
   letter-spacing: 0.02em;
   background: transparent;
-  color: #64748b;
-  border: 1px solid var(--line);
+}
+.side-buy {
+  color: var(--buy);
+  border: 1px solid rgba(14, 203, 129, 0.4);
+}
+.side-sell {
+  color: var(--sell);
+  border: 1px solid rgba(246, 70, 93, 0.4);
 }
 .side-buy[aria-pressed="true"] {
   background: var(--buy);
