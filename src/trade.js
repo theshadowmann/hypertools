@@ -1118,7 +1118,7 @@ export function createTradeView(app) {
       h(
         "table",
         { class: "min-w-full text-xs" },
-        h("thead", { class: "text-[10px] uppercase tracking-wider text-mist-400" }, h("tr", null, ...ths(headers, "px-2 py-1.5 text-left font-medium"))),
+        h("thead", { class: "text-[10px] uppercase tracking-wider text-mist-400" }, h("tr", null, ...ths(headers, "px-2 py-1.5 text-left font-normal"))),
         h("tbody", null, ...rows)
       )
     );
@@ -1239,7 +1239,7 @@ export function createTradeView(app) {
                   if (p.marketId) setMarket(p.marketId);
                 },
               },
-              h("td", { class: "px-2 py-1.5 font-medium text-white" }, p.title),
+              h("td", { class: "px-2 py-1.5 font-normal text-mist-100" }, p.title),
               h("td", { class: "px-2 py-1.5 " + (p.side === "Yes" ? "text-buy" : "text-sell") }, p.side),
               h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(p.total)),
               h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(p.available)),
@@ -1266,7 +1266,7 @@ export function createTradeView(app) {
           return h(
             "tr",
             { class: "border-t border-white/5 cursor-pointer hover:bg-white/5", onClick: () => setMarket(p.coin) },
-            h("td", { class: "px-2 py-1.5 font-medium text-white" }, p.coin),
+            h("td", { class: "px-2 py-1.5 font-normal text-mist-100" }, p.coin),
             h("td", { class: "px-2 py-1.5 " + (szi >= 0 ? "text-buy" : "text-sell") }, szi >= 0 ? "Long" : "Short"),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(Math.abs(szi))),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtPx(p.entryPx)),

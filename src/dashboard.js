@@ -162,13 +162,13 @@ function renderPerps(el, assetPositions, mids) {
     return h(
       "tr",
       { class: "border-t border-white/5" },
-      h("td", { class: "px-3 py-2.5 font-medium text-white" }, p.coin || "—"),
+      h("td", { class: "px-3 py-2.5 font-normal text-mist-100" }, p.coin || "—"),
       h(
         "td",
         { class: "px-3 py-2.5" },
         h(
           "span",
-          { class: "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 " + sideCls },
+          { class: "inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider ring-1 " + sideCls },
           side
         )
       ),
@@ -221,8 +221,8 @@ function renderPerps(el, assetPositions, mids) {
         h(
           "div",
           { class: "mb-3 flex items-center justify-between" },
-          h("p", { class: "text-base font-semibold text-white" }, p.coin || "—"),
-          h("span", { class: "text-xs font-semibold uppercase tracking-wider " + sideCls }, side + " · " + levLabel(p.leverage))
+          h("p", { class: "text-base font-medium text-mist-100" }, p.coin || "—"),
+          h("span", { class: "text-xs font-medium uppercase tracking-wider " + sideCls }, side + " · " + levLabel(p.leverage))
         ),
         kvRow("Size", fmtQty(Math.abs(szi))),
         kvRow("Entry", fmtPx(p.entryPx)),
@@ -257,7 +257,7 @@ function renderSpot(el, balances) {
     return h(
       "tr",
       { class: "border-t border-white/5" },
-      h("td", { class: "px-3 py-2.5 font-medium text-white" }, b.coin || "—"),
+      h("td", { class: "px-3 py-2.5 font-normal text-mist-100" }, b.coin || "—"),
       h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtQty(b.total)),
       h("td", { class: "px-3 py-2.5 font-mono text-sm tabular text-mist-300" }, fmtQty(b.hold)),
       h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, Number.isFinite(avail) ? fmtQty(avail) : "—")
@@ -290,7 +290,7 @@ function renderSpot(el, balances) {
       h(
         "article",
         { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card sm:hidden" },
-        h("p", { class: "font-semibold text-white" }, b.coin || "—"),
+        h("p", { class: "font-medium text-mist-100" }, b.coin || "—"),
         h(
           "div",
           { class: "mt-2 grid grid-cols-3 gap-2 text-xs" },

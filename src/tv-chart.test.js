@@ -45,3 +45,23 @@ describe("chart chrome", () => {
     expect(css).toMatch(/\.trade-chart \{[^}]*border-right: 1px solid var\(--line\)/);
   });
 });
+
+describe("type weight", () => {
+  it("keeps trade chrome at 400–600 with no fake-bold", () => {
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    expect(css).toMatch(/\.nav-word \{[\s\S]*?font-weight: 500/);
+    expect(css).toMatch(/\.nav-word\[aria-current="page"\] \{[\s\S]*?font-weight: 600/);
+    expect(css).toMatch(/#market-chip-pair \{[\s\S]*?font-weight: 600/);
+    expect(css).not.toMatch(/-webkit-text-stroke/);
+    expect(css).not.toMatch(/font-weight:\s*(700|800|900)/);
+    expect(css).toMatch(/\.stat-k \{[^}]*font-weight: 400/);
+    expect(css).toMatch(/\.stat-v \{[^}]*font-weight: 500/);
+    expect(css).toMatch(/\.ticket-label \{[^}]*font-weight: 400/);
+    expect(css).toMatch(/\.book-cols \{[\s\S]*?font-weight: 400/);
+    expect(css).toMatch(/\.book-row \{[\s\S]*?font-weight: 400/);
+    expect(css).toMatch(/\.hist-tab \{[\s\S]*?font-weight: 400/);
+    expect(css).toMatch(/\.ticket-submit \{[\s\S]*?font-weight: 600/);
+    expect(html).not.toMatch(/font-(extrabold|black|bold)\b/);
+  });
+});

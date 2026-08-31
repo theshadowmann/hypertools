@@ -60,5 +60,5 @@ export function dashedEmpty(message) {
 }
 
 export function ths(labels, thClass) {
-  return labels.map((label) => h("th", { class: thClass || "px-3 py-2 text-left font-medium" }, label));
+  return labels.map((label) => h("th", { class: thClass || "px-3 py-2 text-left font-normal text-mist-400" }, label));
 }

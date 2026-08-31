@@ -73,7 +73,7 @@
         <p class="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
           Hyperliquid trading terminal
         </p>
-        <h1 class="max-w-3xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
+        <h1 class="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
           Chart, order book, and perps orders from your wallet.
         </h1>
         <p class="mt-5 max-w-xl text-base leading-relaxed text-mist-400 sm:text-lg">
@@ -85,7 +85,7 @@
           <div id="wallet-buttons" class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"></div>
 
           <div id="no-wallet" class="hidden rounded-xl border border-white/10 bg-ink-850/80 p-5">
-            <p class="text-sm font-semibold text-white">Install MetaMask or Rabby to trade</p>
+            <p class="text-sm font-medium text-mist-200">Install MetaMask or Rabby to trade</p>
             <p class="mt-1.5 text-sm leading-relaxed text-mist-400">
               No wallet in this browser. Install one to place orders, or paste an address to load balances and positions.
             </p>
@@ -110,7 +110,7 @@
               />
               <button
                 type="submit"
-                class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-white/10 px-4 text-sm font-semibold text-white transition hover:border-accent/40 hover:bg-accent-muted"
+                class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-white/10 px-4 text-sm font-medium text-mist-100 transition hover:border-accent/40 hover:bg-accent-muted"
               >
                 Load portfolio
               </button>
@@ -150,7 +150,7 @@
 
         <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Portfolio</h2>
+            <h2 class="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Portfolio</h2>
             <p id="dash-subtitle" class="mt-1 font-mono text-sm text-mist-400"></p>
           </div>
           <p id="dash-updated" class="text-xs text-mist-400"></p>
@@ -172,7 +172,7 @@
         <div id="dash-content" class="hidden space-y-10">
 
           <div class="flex gap-3 rounded-lg border border-warn/20 bg-warn/muted px-4 py-3 text-sm text-amber-100/90" role="note">
-            <span class="mt-0.5 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider text-warn">Note</span>
+            <span class="mt-0.5 shrink-0 font-mono text-[10px] font-medium uppercase tracking-wider text-warn">Note</span>
             <p>
               Not financial advice. Not affiliated with Hyperliquid. Figures come from the public Info API
               and can lag. Liquidation prices are venue-reported (shown as “—” when the API returns null).
@@ -185,7 +185,7 @@
           <section>
             <div class="mb-4 flex items-end justify-between gap-3">
               <div>
-                <h3 class="text-lg font-semibold tracking-tight text-white">Perp positions</h3>
+                <h3 class="text-lg font-medium tracking-tight text-mist-100">Perp positions</h3>
                 <p class="mt-1 text-xs text-mist-400">Entry, mark, liq, leverage, uPnL</p>
               </div>
               <p id="perps-count" class="text-xs font-medium uppercase tracking-wider text-mist-400"></p>
@@ -196,7 +196,7 @@
           <section>
             <div class="mb-4 flex items-end justify-between gap-3">
               <div>
-                <h3 class="text-lg font-semibold tracking-tight text-white">Spot balances</h3>
+                <h3 class="text-lg font-medium tracking-tight text-mist-100">Spot balances</h3>
                 <p class="mt-1 text-xs text-mist-400">Dust (total ≈ 0) is hidden. Available = total − hold.</p>
               </div>
               <p id="spot-count" class="text-xs font-medium uppercase tracking-wider text-mist-400"></p>
@@ -206,7 +206,7 @@
 
           <section>
             <div class="mb-4">
-              <h3 class="text-lg font-semibold tracking-tight text-white">Staking</h3>
+              <h3 class="text-lg font-medium tracking-tight text-mist-100">Staking</h3>
               <p class="mt-1 text-xs text-mist-400">HYPE delegated to validators. Names from validator summaries.</p>
             </div>
             <div id="staking-root"></div>
@@ -542,7 +542,7 @@
     <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <div class="grid gap-10 md:grid-cols-12">
         <div class="md:col-span-7">
-          <p class="text-sm font-semibold text-white">HyperTools</p>
+          <p class="text-sm font-medium text-mist-100">HyperTools</p>
           <p class="mt-2 text-sm text-mist-400">Hyperliquid trading terminal: live chart, order book, and market/limit orders from a connected wallet. Portfolio overview for balances, positions, and staking.</p>
 
           <div class="mt-6 space-y-3 text-xs leading-relaxed text-mist-400">
