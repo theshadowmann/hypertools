@@ -1,4 +1,7 @@
 import { defineConfig } from "vite";
+import swa from "./staticwebapp.config.json" with { type: "json" };
+
+const csp = swa.globalHeaders["Content-Security-Policy"];
 
 export default defineConfig({
   root: ".",
@@ -13,10 +16,12 @@ export default defineConfig({
   server: {
     port: 4173,
     host: true,
+    headers: { "Content-Security-Policy": csp },
   },
   preview: {
     port: 4173,
     host: true,
+    headers: { "Content-Security-Policy": csp },
   },
   test: {
     environment: "node",
