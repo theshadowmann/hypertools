@@ -263,7 +263,7 @@ export function createTradeView(app) {
     const w = withdrawable();
     setText(
       "ticket-avail",
-      Number.isFinite(w) ? "Avail. " + fmtUsd(w) : app.state.address ? "Avail. —" : "Connect to see margin"
+      Number.isFinite(w) ? "Avail. " + fmtUsd(w) : app.state.address ? "Avail. —" : "Connect wallet for margin"
     );
     const minNote = byId("ticket-min");
     if (minNote) {
@@ -337,7 +337,7 @@ export function createTradeView(app) {
       lock.classList.remove("hidden");
       form.classList.add("pointer-events-none", "opacity-40");
       if (app.state.source === "paste") {
-        lock.textContent = "Pasted addresses are look-up only. Connect a wallet to place or cancel orders.";
+        lock.textContent = "Connect a wallet to place or cancel orders. This pasted address can load the account.";
       } else {
         lock.textContent = "Connect a wallet to place Hyperliquid perps orders.";
       }
@@ -495,7 +495,7 @@ export function createTradeView(app) {
     const root = byId("trade-positions");
     if (!root) return;
     if (!app.state.address) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect or paste an address to load positions.</p>';
+      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect a wallet to trade, or paste an address to load positions.</p>';
       return;
     }
     const perps = (app.state.data && app.state.data.perps) || {};
@@ -566,7 +566,7 @@ export function createTradeView(app) {
     const root = byId("trade-orders");
     if (!root) return;
     if (!app.state.address) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect or paste an address to load open orders.</p>';
+      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect a wallet to trade, or paste an address to load open orders.</p>';
       return;
     }
     const orders = (app.state.data && app.state.data.openOrders) || [];
@@ -667,7 +667,7 @@ export function createTradeView(app) {
     const root = byId("trade-fills");
     if (!root) return;
     if (!app.state.address) {
-      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect or paste an address to load fills.</p>';
+      root.innerHTML = '<p class="px-3 py-6 text-center text-sm text-mist-400">Connect a wallet to trade, or paste an address to load fills.</p>';
       return;
     }
     const fills = ((app.state.data && app.state.data.fills) || []).slice(0, 30);

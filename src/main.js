@@ -114,6 +114,7 @@ function renderWalletButtons() {
         icon +
         "Connect " +
         name +
+        " to trade" +
         "</button>";
     });
     el.noWallet.classList.add("hidden");
@@ -122,7 +123,7 @@ function renderWalletButtons() {
     html =
       '<button type="button" data-fallback="1" class="wallet-connect-btn inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim">Connect ' +
       escapeHtml(label) +
-      "</button>";
+      " to trade</button>";
     el.noWallet.classList.add("hidden");
   } else {
     el.noWallet.classList.remove("hidden");
@@ -274,6 +275,7 @@ function showNavWalletMenu(targets) {
         '" class="block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-white/5 hover:text-white" role="menuitem">' +
         "Connect " +
         escapeHtml(t.name) +
+        " to trade" +
         "</button>"
       );
     })

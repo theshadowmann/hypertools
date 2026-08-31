@@ -16,7 +16,7 @@
   <header class="sticky top-0 z-50 border-b border-white/5 bg-ink-950/80 backdrop-blur-md">
     <div class="mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-3 px-3 sm:px-4">
       <div class="flex min-w-0 items-center gap-3 sm:gap-5">
-        <a href="/" id="wordmark" class="flex shrink-0 items-center gap-2.5" aria-label="HyperTools home">
+        <a href="/" id="wordmark" class="flex shrink-0 items-center gap-2.5" aria-label="HyperTools trading terminal">
           <span class="flex h-7 w-7 items-end justify-center gap-0.5 rounded-md bg-accent-muted ring-1 ring-accent-line" aria-hidden="true">
             <span class="mb-1.5 h-2.5 w-1 rounded-sm bg-accent"></span>
             <span class="mb-1.5 h-4 w-1 rounded-sm bg-accent/70"></span>
@@ -43,7 +43,7 @@
             type="button"
             class="inline-flex h-9 items-center justify-center rounded-lg bg-accent px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-accent-dim"
           >
-            Connect wallet
+            Connect to trade
           </button>
           <div
             id="nav-wallet-menu"
@@ -81,23 +81,23 @@
 
       <div class="relative mx-auto max-w-6xl px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
         <p class="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
-          Hyperliquid perps
+          Hyperliquid trading terminal
         </p>
         <h1 class="max-w-3xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
-          Trade Hyperliquid perps from a connected wallet.
+          Chart, order book, and perps orders from your wallet.
         </h1>
         <p class="mt-5 max-w-xl text-base leading-relaxed text-mist-400 sm:text-lg">
-          Live candlestick chart and L2 book. Market and limit orders signed in the browser.
-          Connect MetaMask or Rabby to trade. Paste an address to look up an account without trading.
+          Live candlesticks and L2 book. Place market and limit orders with MetaMask or Rabby.
+          Paste an address to load balances, positions, and staking.
         </p>
 
         <div id="connect" class="scroll-mt-20 mt-10 max-w-xl space-y-5">
           <div id="wallet-buttons" class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"></div>
 
           <div id="no-wallet" class="hidden rounded-xl border border-white/10 bg-ink-850/80 p-5">
-            <p class="text-sm font-semibold text-white">Install MetaMask or Rabby</p>
+            <p class="text-sm font-semibold text-white">Install MetaMask or Rabby to trade</p>
             <p class="mt-1.5 text-sm leading-relaxed text-mist-400">
-              No injected wallet detected. Install one to place orders, or paste any Hyperliquid address to view an account.
+              No wallet in this browser. Install one to place orders, or paste an address to load balances and positions.
             </p>
             <div class="mt-4 flex flex-wrap gap-3">
               <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" class="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-ink-950 transition hover:bg-accent-dim">MetaMask</a>
@@ -122,11 +122,11 @@
                 type="submit"
                 class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-white/10 px-4 text-sm font-semibold text-white transition hover:border-accent/40 hover:bg-accent-muted"
               >
-                View account
+                Load account
               </button>
             </form>
             <p id="paste-error" class="mt-2 hidden text-sm text-danger" role="alert"></p>
-            <p class="mt-2 text-xs text-mist-400">Pasted addresses stay look-up only. Orders require a connected wallet and an on-wallet signature.</p>
+            <p class="mt-2 text-xs text-mist-400">Orders need a connected wallet. A pasted address loads the account.</p>
           </div>
         </div>
 
@@ -386,7 +386,7 @@
       <div class="grid gap-10 md:grid-cols-12">
         <div class="md:col-span-7">
           <p class="text-sm font-semibold text-white">HyperTools</p>
-          <p class="mt-2 text-sm text-mist-400">Hyperliquid trading terminal — live chart, order book, and wallet-signed perps orders.</p>
+          <p class="mt-2 text-sm text-mist-400">Hyperliquid trading terminal: live chart, order book, and market/limit orders from a connected wallet. Account overview for balances, positions, and staking.</p>
 
           <div class="mt-6 space-y-3 text-xs leading-relaxed text-mist-400">
             <p>
@@ -407,10 +407,10 @@
             </p>
             <p>
               <strong class="text-mist-300">Wallet trading.</strong>
-              Connecting requests <span class="font-mono">eth_requestAccounts</span>. Placing or canceling
-              an order asks the wallet to sign a Hyperliquid action (agent approval, builder fee, or the
-              order itself). Agent keys stay in this browser’s localStorage. Private keys are never sent
-              to a server. Pasted addresses cannot trade.
+              Connect a wallet to place and cancel Hyperliquid perps orders. Connecting requests
+              <span class="font-mono">eth_requestAccounts</span>; each place or cancel asks the wallet
+              to sign (agent approval, builder fee, or the order). Agent keys stay in this browser’s
+              localStorage. Private keys are not sent to a server. Paste an address to load an account.
             </p>
             <p>
               <strong class="text-mist-300">Do your own research.</strong>

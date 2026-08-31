@@ -138,7 +138,7 @@ export function buildOrderPayload(orders, grouping = "na") {
 
 export function assertCanTrade(source) {
   if (source !== "wallet") {
-    throw new Error("Connect a wallet to trade. Pasted addresses are look-up only.");
+    throw new Error("Connect a wallet to place orders.");
   }
 }
 
