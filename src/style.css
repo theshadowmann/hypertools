@@ -149,6 +149,9 @@ body {
   font-weight: 900;
   color: inherit;
   -webkit-text-stroke: 0.35px currentColor;
+  max-width: min(42vw, 520px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chip-chevron {
   display: block;
@@ -323,7 +326,19 @@ body {
   line-height: 1;
 }
 .mp-star.on { color: var(--green); }
-.mp-pair { font-weight: 650; color: #fff; }
+.tv-skip {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.mp-badge.out { color: #7dd3c0; background: rgba(125, 211, 192, 0.12); }
+.mp-mkt { min-width: 0; }
+.mp-pair { overflow: hidden; text-overflow: ellipsis; }
 .mp-badge {
   font-size: 9px;
   font-weight: 700;

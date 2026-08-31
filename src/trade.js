@@ -125,14 +125,29 @@ export function createTradeView(app) {
   let pickerHi = 0;
   let pickerRows = [];
   let favs = loadFavs();
+  let pageKind = "trade";
 
   function currentMarket() {
     return marketById[marketId] || markets.find((m) => m.id === marketId) || null;
   }
 
+  function isOutcome() {
+    const m = currentMarket();
+    return !!(m && m.kind === "outcome");
+  }
+
   function isSpot() {
     const m = currentMarket();
     return !!(m && m.kind === "spot");
+  }
+
+  function isCash() {
+    return isSpot() || isOutcome();
+  }
+
+  function visibleMarkets() {
+    if (pageKind === "outcome") return markets.filter((m) => m.kind === "outcome");
+    return markets.filter((m) => m.kind !== "outcome");
   }
 
   function mid() {
@@ -157,11 +172,12 @@ export function createTradeView(app) {
   }
 
   function withdrawable() {
-    if (isSpot()) {
+    if (isCash()) {
       const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
       if (side === "sell") {
         const m = currentMarket();
-        const row = spot.find((b) => b && m && String(b.coin) === m.base);
+        const key = m && m.kind === "outcome" ? m.balanceCoin : m && m.base;
+        const row = spot.find((b) => b && m && String(b.coin) === String(key));
         const px = sizePx() || mark();
         const qty = row ? Math.max(0, num(row.total) - num(row.hold)) : 0;
         return Number.isFinite(px) && px > 0 ? qty * px : qty;
@@ -174,11 +190,12 @@ export function createTradeView(app) {
 
   function currentPos() {
     const m = currentMarket();
-    if (m && m.kind === "spot") {
+    if (m && (m.kind === "spot" || m.kind === "outcome")) {
       const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
-      const row = spot.find((b) => b && String(b.coin) === m.base);
+      const key = m.kind === "outcome" ? m.balanceCoin : m.base;
+      const row = spot.find((b) => b && String(b.coin) === String(key));
       const qty = row ? Math.max(0, num(row.total) - num(row.hold)) : 0;
-      return { coin: m.base, szi: qty, leverage: null };
+      return { coin: m.kind === "outcome" ? "Yes" : m.base, szi: qty, leverage: null };
     }
     const perps = (app.state.data && app.state.data.perps) || {};
     const rows = positionRows(perps.assetPositions || []);
@@ -237,6 +254,7 @@ export function createTradeView(app) {
 
   function coinLabel() {
     const m = currentMarket();
+    if (m && m.kind === "outcome") return m.base || "Yes";
     if (m && m.kind === "spot" && m.base) return m.base;
     if (m && m.coin) return m.coin;
     return coin || "Coin";
@@ -426,17 +444,17 @@ export function createTradeView(app) {
     const px = sizePx();
     const ntl = Number.isFinite(sz) && Number.isFinite(px) ? orderValue(sz, px) : NaN;
     const w = withdrawable();
-    const lev = isSpot() ? 1 : leverage;
+    const lev = isCash() ? 1 : leverage;
     const power = buyingPower(w, lev);
     setText("ticket-avail", Number.isFinite(w) ? fmtUsd(power) + " USDC" : "— USDC");
     const pos = currentPos();
     const posSz = pos ? num(pos.szi) : 0;
     const unitName = (currentMarket() && currentMarket().base) || coin;
     setText("ticket-pos", pos && posSz ? fmtQty(Math.abs(posSz)) + " " + unitName : "0.00000 " + unitName);
-    const liq = isSpot() ? NaN : estimateLiqPx(mark(), leverage, side === "buy");
+    const liq = isCash() ? NaN : estimateLiqPx(mark(), leverage, side === "buy");
     setText("sum-liq", Number.isFinite(liq) ? fmtPx(liq) : "—");
     setText("sum-value", Number.isFinite(ntl) ? fmtUsd(ntl) : "—");
-    setText("sum-margin", isSpot() ? "—" : Number.isFinite(ntl) ? fmtUsd(marginRequired(ntl, leverage)) : "—");
+    setText("sum-margin", isCash() ? "—" : Number.isFinite(ntl) ? fmtUsd(marginRequired(ntl, leverage)) : "—");
     const slip = estimateSlippage(orderType === "market" ? mark() : num(fieldValue("ticket-price")), mid(), orderType === "market" || orderType === "stop-market");
     setText("sum-slip-est", "Est. " + (slip * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%");
     const fees = extras.userFees;
@@ -458,7 +476,7 @@ export function createTradeView(app) {
   function applyPct(pct) {
     const mkt = currentMarket();
     const sz = sizeFromAvailablePct(
-      buyingPower(withdrawable(), isSpot() ? 1 : leverage),
+      buyingPower(withdrawable(), isCash() ? 1 : leverage),
       sizePx() || mark(),
       pct,
       mkt ? mkt.szDecimals : 5
@@ -479,7 +497,7 @@ export function createTradeView(app) {
   }
 
   function renderTicketKind() {
-    applyTicketKind(document, isSpot());
+    applyTicketKind(document, isCash());
   }
 
   function setSide(next) {
@@ -718,7 +736,7 @@ export function createTradeView(app) {
     setCoinIcon(byId("market-chip-icon"), coinIconUrl(iconSymbol(m) || coin));
     if (levEl) {
       levEl.textContent = Math.round(leverage) + "x";
-      levEl.classList.toggle("hidden", !!(m && m.kind === "spot"));
+      levEl.classList.toggle("hidden", isCash());
     }
   }
 
@@ -767,7 +785,7 @@ export function createTradeView(app) {
       if (key === pickerSort) btn.setAttribute("aria-sort", pickerDir === "asc" ? "asc" : "desc");
       else btn.removeAttribute("aria-sort");
     });
-    pickerRows = filterMarkets(markets, {
+    pickerRows = filterMarkets(visibleMarkets(), {
       tab: pickerTab,
       query: pickerQuery,
       favs,
@@ -778,7 +796,7 @@ export function createTradeView(app) {
     clear(body);
     if (!pickerRows.length) {
       body.appendChild(
-        h("tr", null, h("td", { colSpan: "6" }, "No markets match."))
+        h("tr", null, h("td", { colSpan: "6" }, pageKind === "outcome" && !pickerQuery ? "No live outcome markets from Hyperliquid." : "No markets match."))
       );
       return;
     }
@@ -840,7 +858,7 @@ export function createTradeView(app) {
                 })
               : null,
             h("span", { class: "mp-pair" }, m.pair),
-            h("span", { class: "mp-badge" + (m.kind === "perp" ? " perp" : "") }, m.kind === "perp" ? "PERP" : "SPOT")
+            h("span", { class: "mp-badge" + (m.kind === "perp" ? " perp" : m.kind === "outcome" ? " out" : "") }, m.kind === "perp" ? "PERP" : m.kind === "outcome" ? "OUT" : "SPOT")
           )
         ),
         h("td", null, Number.isFinite(num(m.markPx)) ? fmtPx(m.markPx) : "—"),
@@ -929,7 +947,7 @@ export function createTradeView(app) {
       ticketMessage("Enable trading first.", "err");
       return;
     }
-    if (isSpot()) return;
+    if (isCash()) return;
     const mkt = currentMarket();
     if (!mkt) return;
     const v = num(fieldValue("lev-input")) || num(byId("lev-range") && byId("lev-range").value);
@@ -1371,6 +1389,7 @@ export function createTradeView(app) {
     bookPrec = null;
     renderBook();
     renderTrades();
+    if (!c) return;
     unsubBook = socket.subscribe({ type: "l2Book", coin: c }, (data) => {
       if (gen !== marketGen) return;
       book = bookLevels(data);
@@ -1391,7 +1410,7 @@ export function createTradeView(app) {
       .catch(() => {});
     const m = currentMarket();
     const ctxSub =
-      m && m.kind === "spot"
+      m && (m.kind === "spot" || m.kind === "outcome")
         ? { type: "activeSpotAssetCtx", coin: c }
         : { type: "activeAssetCtx", coin: c };
     unsubCtx = socket.subscribe(ctxSub, (data) => {
@@ -1435,14 +1454,33 @@ export function createTradeView(app) {
   }
 
   async function setMarket(next) {
+    const vis = visibleMarkets();
     let m =
-      marketById[next] ||
-      markets.find((x) => x.id === next) ||
-      markets.find((x) => x.kind === "perp" && x.coin === next) ||
-      markets.find((x) => x.coin === next) ||
+      (next && marketById[next]) ||
+      vis.find((x) => x.id === next) ||
+      vis.find((x) => x.coin === next) ||
       null;
-    if (!m && markets.length) m = markets.find((x) => x.coin === "BTC" && x.kind === "perp") || markets[0];
-    if (!m) return;
+    if (m && pageKind === "outcome" && m.kind !== "outcome") m = null;
+    if (m && pageKind !== "outcome" && m.kind === "outcome") m = null;
+    if (!m && vis.length) {
+      m = pageKind === "outcome" ? vis[0] : vis.find((x) => x.coin === "BTC" && x.kind === "perp") || vis[0];
+    }
+    if (!m) {
+      marketId = "";
+      coin = "";
+      const pair = byId("market-chip-pair");
+      if (pair) pair.textContent = pageKind === "outcome" ? "No outcomes" : "—";
+      setCoinIcon(byId("market-chip-icon"), null);
+      byId("market-chip-lev")?.classList.add("hidden");
+      lastTv = "empty";
+      mountTvChart(byId("chart"), { coin: "", kind: pageKind === "outcome" ? "outcome" : "perp" });
+      book = { bids: [], asks: [], time: 0 };
+      trades = [];
+      renderBook();
+      renderTrades();
+      renderTicketKind();
+      return;
+    }
     marketId = m.id;
     coin = m.coin;
     renderMarketChip();
@@ -1613,15 +1651,12 @@ export function createTradeView(app) {
     markets.forEach((m) => {
       marketById[m.id] = m;
     });
-    if (!marketById[marketId]) {
-      const btc = markets.find((m) => m.kind === "perp" && m.coin === "BTC");
-      marketId = btc ? btc.id : markets[0] && markets[0].id;
-    }
     renderMarketSelect();
   }
 
   return {
-    async show() {
+    async show(kind) {
+      pageKind = kind === "outcome" ? "outcome" : "trade";
       bind();
       if (!markets.length) {
         try {
@@ -1630,7 +1665,9 @@ export function createTradeView(app) {
           ticketMessage("Markets: " + userMessage(err), "err");
         }
       }
-      await setMarket(coin);
+      const vis = visibleMarkets();
+      const keep = vis.find((m) => m.id === marketId);
+      await setMarket(keep ? keep.id : vis[0] ? vis[0].id : null);
       subscribeUser();
       refreshEnabled();
       renderBottom();

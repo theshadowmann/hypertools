@@ -33,6 +33,7 @@ describe("CSP", () => {
     expect(csp).toMatch(/img-src 'self' data: https:\/\/app\.hyperliquid\.xyz/);
     expect(csp).not.toMatch(/img-src[^;]*\*/);
     expect(csp).not.toMatch(/cdnjs|jsdelivr|unpkg|googleapis/);
+    expect(json.navigationFallback.rewrite).toBe("/index.html");
   });
 });
 

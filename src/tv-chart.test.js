@@ -16,4 +16,12 @@ describe("TradingView embed", () => {
     expect(script.textContent).toContain('"interval":"15"');
     expect(host.innerHTML).not.toContain("<img");
   });
+
+  it("skips TradingView for outcome markets instead of embedding a BTC chart", () => {
+    const host = document.createElement("div");
+    mountTvChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
+    expect(host.querySelector("script")).toBeNull();
+    expect(host.textContent).toMatch(/No TradingView symbol/);
+    expect(host.innerHTML).not.toContain("BTCUSDC");
+  });
 });

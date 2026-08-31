@@ -4,10 +4,10 @@ export const PERP_ONLY_IDS = ["lev-row", "sum-liq-row", "sum-margin-row"];
  * Spot ticket: Buy/Sell only, no leverage / Isolated-Cross / liq / margin / slippage.
  * Perp ticket keeps Long/Short, Nx, Isolated/Cross, liq, margin, slippage.
  */
-export function applyTicketKind(doc, spot) {
+export function applyTicketKind(doc, cash) {
   const d = doc || (typeof document !== "undefined" ? document : null);
   if (!d) return;
-  const on = !!spot;
+  const on = !!cash;
   PERP_ONLY_IDS.forEach((id) => {
     d.getElementById(id)?.classList.toggle("hidden", on);
   });

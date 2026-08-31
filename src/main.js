@@ -51,6 +51,7 @@ const el = {
   stakingRoot: document.getElementById("staking-root"),
   navPortfolio: document.getElementById("nav-portfolio"),
   navTrade: document.getElementById("nav-trade"),
+  navOutcome: document.getElementById("nav-outcome"),
 };
 
 const socket = createHlWs();
@@ -79,23 +80,29 @@ async function getTrade() {
 
 function viewFromLocation() {
   const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-  if (path === "/trade" || window.location.hash === "#trade" || window.location.hash === "#/trade") {
-    return "trade";
-  }
+  const hash = window.location.hash || "";
+  if (path === "/trade" || hash === "#trade" || hash === "#/trade") return "trade";
+  if (path === "/outcome" || hash === "#outcome" || hash === "#/outcome") return "outcome";
   return "portfolio";
 }
 
+function deskUrl(view) {
+  if (view === "trade") return "/trade";
+  if (view === "outcome") return "/outcome";
+  return "/portfolio";
+}
+
 function setView(view, push) {
-  state.view = view === "trade" ? "trade" : "portfolio";
+  state.view = view === "trade" || view === "outcome" ? view : "portfolio";
   if (push) {
-    const url = state.view === "trade" ? "/trade" : "/portfolio";
+    const url = deskUrl(state.view);
     if (window.location.pathname !== url) {
       history.pushState({ view: state.view }, "", url);
     }
   }
   renderChrome();
-  if (state.view === "trade") {
-    getTrade().then((t) => t.show());
+  if (state.view === "trade" || state.view === "outcome") {
+    getTrade().then((t) => t.show(state.view));
   }
 }
 
@@ -239,20 +246,23 @@ async function connectWallet(provider) {
 
 function renderChrome() {
   const connected = !!state.address;
-  const onTrade = state.view === "trade";
-  el.landing.classList.toggle("hidden", connected || onTrade);
-  el.dashboard.classList.toggle("hidden", !connected || onTrade);
-  el.trade.classList.toggle("hidden", !onTrade);
+  const onDesk = state.view === "trade" || state.view === "outcome";
+  el.landing.classList.toggle("hidden", connected || onDesk);
+  el.dashboard.classList.toggle("hidden", !connected || onDesk);
+  el.trade.classList.toggle("hidden", !onDesk);
   el.navDisc.classList.toggle("hidden", connected);
   el.navConn.classList.toggle("hidden", !connected);
   el.navConn.classList.toggle("flex", connected);
   const footer = document.querySelector("footer");
-  if (footer) footer.classList.toggle("hidden", onTrade);
+  if (footer) footer.classList.toggle("hidden", onDesk);
   if (el.navPortfolio) {
-    el.navPortfolio.setAttribute("aria-current", onTrade ? "false" : "page");
+    el.navPortfolio.setAttribute("aria-current", state.view === "portfolio" ? "page" : "false");
   }
   if (el.navTrade) {
-    el.navTrade.setAttribute("aria-current", onTrade ? "page" : "false");
+    el.navTrade.setAttribute("aria-current", state.view === "trade" ? "page" : "false");
+  }
+  if (el.navOutcome) {
+    el.navOutcome.setAttribute("aria-current", state.view === "outcome" ? "page" : "false");
   }
   if (connected) {
     el.navAddress.textContent = truncAddr(state.address);
@@ -339,6 +349,12 @@ el.navTrade.addEventListener("click", (ev) => {
   ev.preventDefault();
   setView("trade", true);
 });
+if (el.navOutcome) {
+  el.navOutcome.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    setView("outcome", true);
+  });
+}
 
 if (el.navConnect) {
   el.navConnect.addEventListener("click", (ev) => {
@@ -362,4 +378,4 @@ renderWalletButtons();
 
 state.view = viewFromLocation();
 renderChrome();
-if (state.view === "trade") getTrade().then((t) => t.show());
+if (state.view === "trade" || state.view === "outcome") getTrade().then((t) => t.show(state.view));

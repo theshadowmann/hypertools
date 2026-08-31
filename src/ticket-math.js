@@ -8,8 +8,9 @@ function sanitizeTicker(s) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
-/** Official TradingView Hyperliquid symbols. Perps: HYPERLIQUID:BTCUSDC.P. Spot: HYPERLIQUID:PURRUSDC. */
+/** Official TradingView Hyperliquid symbols. Perps: HYPERLIQUID:BTCUSDC.P. Spot: HYPERLIQUID:PURRUSDC. Outcomes have no TV symbol — return null so we never embed a wrong BTC chart. */
 export function tvSymbol(coin, kind = "perp", base, quote) {
+  if (kind === "outcome") return null;
   if (kind === "spot") {
     const b = sanitizeTicker(base || coin);
     const q = sanitizeTicker(quote || "USDC");

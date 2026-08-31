@@ -8,6 +8,14 @@ export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 export function mountTvChart(container, { coin, interval, kind, base, quote }) {
   if (!container) return;
   clear(container);
+  const symbol = tvSymbol(coin, kind, base, quote);
+  if (!symbol) {
+    const note = document.createElement("p");
+    note.className = "tv-skip";
+    note.textContent = "No TradingView symbol for this market.";
+    container.appendChild(note);
+    return;
+  }
   const wrap = document.createElement("div");
   wrap.className = "tradingview-widget-container";
   wrap.style.height = "100%";
@@ -23,7 +31,7 @@ export function mountTvChart(container, { coin, interval, kind, base, quote }) {
   script.type = "text/javascript";
   script.textContent = JSON.stringify({
     autosize: true,
-    symbol: tvSymbol(coin, kind, base, quote),
+    symbol,
     interval: tvInterval(interval),
     timezone: "Etc/UTC",
     theme: "dark",

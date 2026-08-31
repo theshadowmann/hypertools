@@ -1,5 +1,6 @@
 import { HL_INFO, HL_EXCHANGE, HL_WS } from "./hosts.js";
 import { mergeMarkets, parsePerpMarkets, parseSpotMarkets } from "./markets.js";
+import { parseOutcomeMarkets } from "./outcomes.js";
 export { HL_INFO, HL_EXCHANGE, HL_WS };
 export const DUST = 1e-8;
 export const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -74,10 +75,15 @@ export async function loadMarkets() {
   const results = await Promise.allSettled([
     hlInfo({ type: "metaAndAssetCtxs" }),
     hlInfo({ type: "spotMetaAndAssetCtxs" }),
+    hlInfo({ type: "outcomeMeta" }),
+    hlInfo({ type: "allMids" }),
   ]);
   const perps = results[0].status === "fulfilled" ? parsePerpMarkets(results[0].value) : [];
   const spot = results[1].status === "fulfilled" ? parseSpotMarkets(results[1].value) : [];
-  const markets = mergeMarkets(perps, spot);
+  const outcomeMeta = results[2].status === "fulfilled" ? results[2].value : null;
+  const mids = results[3].status === "fulfilled" ? results[3].value : {};
+  const outcomes = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids) : [];
+  const markets = mergeMarkets(perps, spot, outcomes);
   if (!markets.length) throw new Error("Hyperliquid returned no markets");
   return markets;
 }

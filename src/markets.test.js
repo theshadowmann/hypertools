@@ -73,6 +73,13 @@ describe("picker filter", () => {
     expect(filterMarkets(all, { tab: "spot" }).every((m) => m.kind === "spot")).toBe(true);
   });
 
+  it("can restrict the picker to outcome rows only", () => {
+    const mixed = all.concat([{ id: "outcome:1:0", kind: "outcome", coin: "#10", pair: "BTC above 1?", markPx: "0.4" }]);
+    const rows = filterMarkets(mixed, { tab: "all", kinds: ["outcome"] });
+    expect(rows.every((m) => m.kind === "outcome")).toBe(true);
+    expect(filterMarkets(mixed, { tab: "outcome" }).map((m) => m.id)).toEqual(["outcome:1:0"]);
+  });
+
   it("favorites tab uses stored ids only", () => {
     const rows = filterMarkets(all, { tab: "favorites", favs: ["perp:ETH"] });
     expect(rows.map((m) => m.id)).toEqual(["perp:ETH"]);
@@ -158,6 +165,7 @@ describe("funding and display", () => {
     expect(coinIconUrl("javascript:alert(1)")).toBeNull();
     expect(iconSymbol({ kind: "spot", base: "HYPE", coin: "HYPE/USDC" })).toBe("HYPE");
     expect(iconSymbol({ kind: "perp", coin: "BTC" })).toBe("BTC");
+    expect(iconSymbol({ kind: "outcome", underlying: "BTC", coin: "#12100" })).toBe("BTC");
   });
 });
 

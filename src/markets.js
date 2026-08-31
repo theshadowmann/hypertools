@@ -42,6 +42,7 @@ export function coinIconUrl(symbol) {
 export function iconSymbol(market) {
   if (!market) return "";
   if (market.kind === "spot" && market.base) return market.base;
+  if (market.kind === "outcome") return market.underlying || "";
   return market.coin || market.base || "";
 }
 
@@ -137,15 +138,15 @@ export function parseSpotMarkets(payload) {
   return out;
 }
 
-export function mergeMarkets(perps, spot) {
-  const all = (perps || []).concat(spot || []);
+export function mergeMarkets(perps, spot, outcomes) {
+  const all = (perps || []).concat(spot || []).concat(outcomes || []);
   all.sort((a, b) => Number(b.dayNtlVlm || 0) - Number(a.dayNtlVlm || 0));
   return all;
 }
 
 export function marketSearchText(m) {
   if (!m) return "";
-  return [m.coin, m.base, m.quote, m.pair, m.id, m.kind].join(" ").toLowerCase();
+  return [m.coin, m.base, m.quote, m.pair, m.id, m.kind, m.description, m.underlying, m.venue].join(" ").toLowerCase();
 }
 
 export function changeAbs(mark, prevDay) {
@@ -209,10 +210,18 @@ export function sortMarkets(rows, sortKey, sortDir) {
   return list;
 }
 
-export function filterMarkets(markets, { tab = "all", query = "", favs = [], sortKey = "change", sortDir = "desc" } = {}) {
+export function filterMarkets(
+  markets,
+  { tab = "all", query = "", favs = [], sortKey = "change", sortDir = "desc", kinds } = {}
+) {
   let rows = markets || [];
+  if (Array.isArray(kinds) && kinds.length) {
+    const set = new Set(kinds);
+    rows = rows.filter((m) => set.has(m.kind));
+  }
   if (tab === "perps") rows = rows.filter((m) => m.kind === "perp");
   else if (tab === "spot") rows = rows.filter((m) => m.kind === "spot");
+  else if (tab === "outcome") rows = rows.filter((m) => m.kind === "outcome");
   else if (tab === "favorites") {
     const set = new Set(favs);
     rows = rows.filter((m) => set.has(m.id));

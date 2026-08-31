@@ -25,6 +25,7 @@ describe("TradingView Hyperliquid symbols", () => {
     expect(tvSymbol("")).toBe("HYPERLIQUID:BTCUSDC.P");
     expect(tvSymbol("PURR/USDC", "spot", "PURR", "USDC")).toBe("HYPERLIQUID:PURRUSDC");
     expect(tvSymbol("@1", "spot", "HFUN", "USDC")).toBe("HYPERLIQUID:HFUNUSDC");
+    expect(tvSymbol("#12100", "outcome")).toBeNull();
   });
 
   it("maps intervals to TradingView resolutions", () => {
@@ -108,11 +109,13 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="trade-balances"');
   });
 
-  it("uses word nav Trade / Portfolio, not a pill slider", () => {
+  it("uses word nav Trade / Portfolio / Outcome, not a pill slider", () => {
     const html = readFileSync(join(root, "index.html"), "utf8");
     expect(html).toContain('id="nav-trade"');
     expect(html).toContain('id="nav-portfolio"');
-    expect(html).toContain(">Portfolio<");
+    expect(html).toContain('id="nav-outcome"');
+    expect(html).toMatch(/id="nav-portfolio"[^>]*>Portfolio<\/a>\s*<a href="\/outcome" id="nav-outcome"/);
+    expect(html).toContain(">Outcome<");
     expect(html).not.toMatch(/<select[^>]*id="market-select"/);
     expect(html).toContain('id="market-chip"');
     expect(html).toContain('id="market-picker"');
