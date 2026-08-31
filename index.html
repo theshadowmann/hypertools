@@ -540,6 +540,7 @@
           <div class="hist-tabs" role="tablist">
             <button type="button" data-bottom-tab="balances" class="hist-tab" aria-selected="true">Balances</button>
             <button type="button" data-bottom-tab="positions" class="hist-tab" aria-selected="false">Positions</button>
+            <button type="button" data-bottom-tab="outcomes" class="hist-tab" aria-selected="false">Outcomes</button>
             <button type="button" data-bottom-tab="orders" class="hist-tab" aria-selected="false">Open Orders</button>
             <button type="button" data-bottom-tab="twap" class="hist-tab" aria-selected="false">TWAP</button>
             <button type="button" data-bottom-tab="funding" class="hist-tab" aria-selected="false">Funding History</button>
@@ -549,9 +550,15 @@
               <span class="chk-box" aria-hidden="true"></span>
               Hide Small Balances
             </label>
+            <div id="out-filter-wrap" class="hist-extra hidden" role="group" aria-label="Outcome filters">
+              <button type="button" data-out-side="all" class="out-filter" aria-pressed="true">All</button>
+              <button type="button" data-out-side="Yes" class="out-filter" aria-pressed="false">Yes</button>
+              <button type="button" data-out-side="No" class="out-filter" aria-pressed="false">No</button>
+            </div>
           </div>
           <div id="trade-balances" class="hist-body"></div>
           <div id="trade-positions" class="hist-body hidden"></div>
+          <div id="trade-outcomes" class="hist-body hidden"></div>
           <div id="trade-orders" class="hist-body hidden"></div>
           <div id="trade-twap" class="hist-body hidden"></div>
           <div id="trade-funding" class="hist-body hidden"></div>

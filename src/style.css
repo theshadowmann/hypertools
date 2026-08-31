@@ -1058,6 +1058,17 @@ input[type="checkbox"] {
 }
 .hist-extra { margin-left: auto; font-size: 11px; color: var(--muted); flex-shrink: 0; }
 .hist-extra.hidden { display: none; }
+#out-filter-wrap { display: flex; align-items: center; gap: 10px; }
+#out-filter-wrap.hidden { display: none; }
+.out-filter {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  padding: 0;
+}
+.out-filter[aria-pressed="true"] { color: #e8eaed; }
 .hist-tab {
   height: 32px;
   border: 0;
@@ -1107,6 +1118,17 @@ input[type="checkbox"] {
 }
 .bal-pnl.up { color: var(--green); }
 .bal-pnl.down { color: var(--red); }
+.out-mkt-btn {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.out-mkt-btn:hover { color: #fff; }
+.out-mkt-side { color: var(--muted); font-weight: 400; }
 
 @media (max-width: 1180px) {
   .trade-shell {

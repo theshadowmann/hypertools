@@ -131,6 +131,9 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="leg-yes"');
     expect(html).toContain('id="ticket-tif"');
     expect(html).toContain("Payout if Yes");
+    expect(html).toMatch(/data-bottom-tab="positions"[\s\S]*data-bottom-tab="outcomes"[\s\S]*data-bottom-tab="orders"/);
+    expect(html).toContain('id="trade-outcomes"');
+    expect(html).toContain(">Outcomes<");
   });
 
   it("puts Order Book and Trades as word tabs in the book column", () => {

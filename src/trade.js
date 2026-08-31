@@ -62,6 +62,7 @@ import {
   outcomeLegBalance,
   outcomeLegCoin,
   outcomePayout,
+  outcomePositionMetrics,
   outcomePositionsFromSpot,
   outcomeVenueBadge,
 } from "./outcomes.js";
@@ -127,6 +128,8 @@ export function createTradeView(app) {
   let extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: null };
   let bottomTab = "balances";
   let hideSmallBalances = true;
+  let outcomeSideFilter = "all";
+  let pendingOutcomeSelect = null;
   let fundingTimer = null;
   let lastTv = "";
   let pickerOpen = false;
@@ -1255,43 +1258,6 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load positions."));
       return;
     }
-    if (pageKind === "outcome") {
-      const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
-      const rows = outcomePositionsFromSpot(spot, markets);
-      if (!rows.length) {
-        root.appendChild(emptyNote("No outcome positions."));
-        return;
-      }
-      root.appendChild(
-        histTable(
-          ["Market", "Side", "Size", "Available", "Mark", "Value"],
-          rows.map((p) => {
-            const value = Number(p.total) * Number(p.markPx);
-            return h(
-              "tr",
-              {
-                class: "border-t border-white/5 cursor-pointer hover:bg-white/5",
-                onClick: () => {
-                  if (p.marketId) {
-                    const wantNo = p.side === "No";
-                    Promise.resolve(setMarket(p.marketId)).then(() => {
-                      if (wantNo) setOutcomeLeg(1);
-                    });
-                  }
-                },
-              },
-              h("td", { class: "px-2 py-1.5 font-normal text-mist-100" }, p.title),
-              h("td", { class: "px-2 py-1.5 " + (p.side === "Yes" ? "text-buy" : "text-sell") }, p.side),
-              h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(p.total)),
-              h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(p.available)),
-              h("td", { class: "px-2 py-1.5 font-mono" }, p.markPx == null ? "—" : fmtPx(p.markPx)),
-              h("td", { class: "px-2 py-1.5 font-mono" }, Number.isFinite(value) ? fmtUsd(value) : "—")
-            );
-          })
-        )
-      );
-      return;
-    }
     const perps = (app.state.data && app.state.data.perps) || {};
     const rows = positionRows(perps.assetPositions || []);
     const mids = (app.state.data && app.state.data.mids) || {};
@@ -1317,6 +1283,99 @@ export function createTradeView(app) {
             h("td", { class: "px-2 py-1.5 font-mono " + pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true }))
           );
         })
+      )
+    );
+  }
+
+  function jumpToOutcome(p) {
+    if (!p || !p.marketId) return;
+    if (pageKind !== "outcome") {
+      pendingOutcomeSelect = p;
+      if (typeof app.navigate === "function") app.navigate("outcome");
+      return;
+    }
+    Promise.resolve(setMarket(p.marketId)).then(() => {
+      if (p.side === "No") setOutcomeLeg(1);
+    });
+  }
+
+  function renderOutcomes() {
+    const root = byId("trade-outcomes");
+    if (!root) return;
+    clear(root);
+    byId("out-filter-wrap")?.classList.toggle("hidden", bottomTab !== "outcomes");
+    document.querySelectorAll("[data-out-side]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-out-side") === outcomeSideFilter ? "true" : "false");
+    });
+    if (!app.state.address) {
+      root.appendChild(emptyNote("No outcomes yet"));
+      return;
+    }
+    const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
+    let rows = outcomePositionsFromSpot(spot, markets);
+    if (outcomeSideFilter === "Yes" || outcomeSideFilter === "No") {
+      rows = rows.filter((r) => r.side === outcomeSideFilter);
+    }
+    if (!rows.length) {
+      root.appendChild(emptyNote("No outcomes yet"));
+      return;
+    }
+    const body = rows.map((p) => {
+      const m = outcomePositionMetrics(p);
+      const pnlTxt =
+        m.pnlPct == null && !Number.isFinite(m.pnlUsd)
+          ? "—"
+          : (Number.isFinite(m.pnlUsd) ? fmtUsd(m.pnlUsd, { signed: true }) : "—") +
+            " (" +
+            formatPnlPct(m.pnlPct) +
+            ")";
+      const pnlCls =
+        m.pnlPct == null || !Number.isFinite(m.pnlPct) || m.pnlPct === 0 ? "" : m.pnlPct > 0 ? " up" : " down";
+      return h(
+        "tr",
+        null,
+        h(
+          "td",
+          null,
+          h(
+            "button",
+            {
+              type: "button",
+              class: "out-mkt-btn",
+              onClick: () => jumpToOutcome(p),
+            },
+            p.title,
+            h("span", { class: "out-mkt-side" }, " " + p.side)
+          )
+        ),
+        h("td", null, fmtQty(p.total)),
+        h("td", null, fmtQty(p.available)),
+        h("td", null, Number.isFinite(m.value) ? fmtUsd(m.value) : "—"),
+        h("td", null, Number.isFinite(m.entryPx) ? fmtPx(m.entryPx) : "—"),
+        h("td", null, p.markPx == null ? "—" : fmtPx(p.markPx)),
+        h("td", { class: "bal-pnl" + pnlCls }, pnlTxt)
+      );
+    });
+    root.appendChild(
+      h(
+        "table",
+        { class: "bal-table out-table" },
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", null, "Market"),
+            h("th", null, "Size"),
+            h("th", null, "Available Size"),
+            h("th", null, "Position Value"),
+            h("th", null, "Entry Price"),
+            h("th", null, "Mark Price"),
+            h("th", null, "PNL (ROE %)")
+          )
+        ),
+        h("tbody", null, ...body)
       )
     );
   }
@@ -1550,6 +1609,7 @@ export function createTradeView(app) {
   function renderBottom() {
     renderBalances();
     renderPositions();
+    renderOutcomes();
     renderOrders();
     renderTwap();
     renderFunding();
@@ -1961,15 +2021,22 @@ export function createTradeView(app) {
         document.querySelectorAll("[data-bottom-tab]").forEach((b) => {
           b.setAttribute("aria-selected", b.getAttribute("data-bottom-tab") === bottomTab ? "true" : "false");
         });
-        ["balances", "positions", "orders", "twap", "funding", "history"].forEach((id) => {
+        ["balances", "positions", "outcomes", "orders", "twap", "funding", "history"].forEach((id) => {
           byId("trade-" + id)?.classList.toggle("hidden", id !== bottomTab);
         });
         byId("bal-hide-wrap")?.classList.toggle("hidden", bottomTab !== "balances");
+        byId("out-filter-wrap")?.classList.toggle("hidden", bottomTab !== "outcomes");
       });
     });
     byId("bal-hide-small")?.addEventListener("change", (ev) => {
       hideSmallBalances = !!ev.target.checked;
       renderBalances();
+    });
+    document.querySelectorAll("[data-out-side]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        outcomeSideFilter = btn.getAttribute("data-out-side") || "all";
+        renderOutcomes();
+      });
     });
     setSide("buy");
     setOrderType("limit");
@@ -2004,8 +2071,24 @@ export function createTradeView(app) {
         }
       }
       const vis = visibleMarkets();
-      const keep = vis.find((m) => m.id === marketId);
-      await setMarket(keep ? keep.id : vis[0] ? vis[0].id : null);
+      const pending = pendingOutcomeSelect;
+      pendingOutcomeSelect = null;
+      if (pending && pending.marketId) {
+        await setMarket(pending.marketId);
+        if (pending.side === "No") setOutcomeLeg(1);
+        bottomTab = "outcomes";
+        document.querySelectorAll("[data-bottom-tab]").forEach((b) => {
+          b.setAttribute("aria-selected", b.getAttribute("data-bottom-tab") === bottomTab ? "true" : "false");
+        });
+        ["balances", "positions", "outcomes", "orders", "twap", "funding", "history"].forEach((id) => {
+          byId("trade-" + id)?.classList.toggle("hidden", id !== bottomTab);
+        });
+        byId("bal-hide-wrap")?.classList.toggle("hidden", true);
+        byId("out-filter-wrap")?.classList.toggle("hidden", false);
+      } else {
+        const keep = vis.find((m) => m.id === marketId);
+        await setMarket(keep ? keep.id : vis[0] ? vis[0].id : null);
+      }
       subscribeUser();
       refreshEnabled();
       renderBottom();

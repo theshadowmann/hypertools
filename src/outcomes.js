@@ -12,6 +12,7 @@
  * Size is integer shares. Price is probability [0.001, 0.999] tick 0.0001.
  * Collateral quoteToken from live meta is USDC. No leverage / funding.
  */
+import { pnlPctFromEntry } from "./balances.js";
 
 export const OUTCOME_ASSET_OFFSET = 100_000_000;
 
@@ -243,6 +244,18 @@ export function outcomePositionsFromSpot(balances, markets) {
     });
   });
   return rows;
+}
+
+/** Entry, mark value, and ROE from live spot fields only. Missing entryNtl stays blank. */
+export function outcomePositionMetrics(row) {
+  const size = Number(row && row.total);
+  const mark = Number(row && row.markPx);
+  const value = Number.isFinite(size) && Number.isFinite(mark) ? size * mark : NaN;
+  const entryNtl = Number(row && row.entryNtl);
+  const entryPx = Number.isFinite(entryNtl) && Number.isFinite(size) && size > 0 ? entryNtl / size : NaN;
+  const pnlUsd = Number.isFinite(value) && Number.isFinite(entryNtl) ? value - entryNtl : NaN;
+  const pnlPct = pnlPctFromEntry(row && row.entryNtl, value);
+  return { value, entryPx, pnlUsd, pnlPct };
 }
 
 /**

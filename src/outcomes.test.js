@@ -14,6 +14,7 @@ import {
   outcomeLegBalance,
   outcomeLegCoin,
   outcomePayout,
+  outcomePositionMetrics,
   outcomePositionsFromSpot,
   outcomeVenueBadge,
   parseOutcomeExpiryMs,
@@ -151,6 +152,11 @@ describe("outcomePositionsFromSpot", () => {
     expect(rows[0].title).toMatch(/BTC above 100000/);
     expect(rows[1].side).toBe("No");
     expect(rows[1].markPx).toBe("0.58");
+    const metrics = outcomePositionMetrics(rows[0]);
+    expect(metrics.entryPx).toBeCloseTo(0.4);
+    expect(metrics.value).toBeCloseTo(5.04);
+    expect(metrics.pnlPct).toBeCloseTo(5);
+    expect(outcomePositionMetrics({ total: 10, markPx: 0.5 }).entryPx).toBeNaN();
   });
 });
 
