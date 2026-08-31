@@ -11,7 +11,7 @@ describe("TradingView embed", () => {
     const script = host.querySelector("script");
     expect(script).toBeTruthy();
     expect(script.getAttribute("src")).toBe(TV_SCRIPT);
-    expect(TV_SCRIPT).toBe("https://s.tradingview.com/external-embedding/embed-widget-advanced-chart.js");
+    expect(TV_SCRIPT).toBe("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js");
     expect(script.textContent).toContain("HYPERLIQUID:BTCUSDC.P");
     expect(script.textContent).toContain('"interval":"15"');
     expect(host.innerHTML).not.toContain("<img");

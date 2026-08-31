@@ -112,6 +112,12 @@ body {
 .tv-host { height: 100%; width: 100%; min-height: 0; }
 .tradingview-widget-container,
 .tradingview-widget-container__widget { height: 100% !important; width: 100% !important; }
+.tv-host iframe {
+  display: block;
+  height: 100% !important;
+  width: 100% !important;
+  border: 0;
+}
 
 .stats-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .stats-coin { font-size: 14px; font-weight: 700; color: #fff; margin: 0; }

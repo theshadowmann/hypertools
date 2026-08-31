@@ -23,9 +23,9 @@ describe("CSP", () => {
   it("allowlists TradingView without opening script-src to the web", () => {
     const json = JSON.parse(readFileSync(join(root, "staticwebapp.config.json"), "utf8"));
     const csp = json.globalHeaders["Content-Security-Policy"];
-    expect(csp).toMatch(/script-src 'self' https:\/\/s\.tradingview\.com/);
+    expect(csp).toMatch(/script-src 'self' https:\/\/s3\.tradingview\.com https:\/\/s\.tradingview\.com/);
     expect(csp).not.toMatch(/script-src[^;]*\*/);
-    expect(csp).toMatch(/frame-src https:\/\/s\.tradingview\.com https:\/\/www\.tradingview\.com/);
+    expect(csp).toMatch(/frame-src https:\/\/www\.tradingview-widget\.com/);
     expect(csp).toMatch(/frame-ancestors 'none'/);
     expect(csp).toMatch(/connect-src 'self' https:\/\/api\.hyperliquid\.xyz wss:\/\/api\.hyperliquid\.xyz/);
     expect(csp).not.toMatch(/cdnjs|jsdelivr|unpkg|googleapis/);

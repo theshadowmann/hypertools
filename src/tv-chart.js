@@ -1,8 +1,8 @@
 import { clear } from "./dom.js";
 import { tvInterval, tvSymbol } from "./ticket-math.js";
 
-/** Official TradingView Advanced Chart embed. Not user-configurable. */
-export const TV_SCRIPT = "https://s.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+/** Official TradingView Advanced Chart iframe widget. Not user-configurable. */
+export const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
 export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 
 export function mountTvChart(container, { coin, interval }) {
