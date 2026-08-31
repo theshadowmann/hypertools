@@ -237,13 +237,19 @@
               <button type="button" data-interval="1d" class="iv-btn">1d</button>
             </div>
           </div>
-          <div class="stats-metrics">
+          <div class="stats-metrics" id="stats-perp">
             <div class="stat"><span class="stat-k">Mark</span><span id="stat-mark" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">Oracle</span><span id="stat-oracle" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">24h Change</span><span id="stat-change" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">24h Volume</span><span id="stat-volume" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">Open Interest</span><span id="stat-oi" class="stat-v">—</span></div>
             <div class="stat"><span class="stat-k">Funding</span><span id="stat-funding" class="stat-v">—</span></div>
+          </div>
+          <div class="stats-metrics hidden" id="stats-outcome">
+            <div class="stat"><span class="stat-k">Underlying</span><span id="stat-und" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Countdown</span><span id="stat-ends" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">% Chance</span><span id="stat-chance" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Price (Yes)</span><span id="stat-yes" class="stat-v">—</span></div>
           </div>
         </div>
 
@@ -264,7 +270,7 @@
             <button type="button" data-mp-tab="trending" class="mp-tab" role="tab" aria-selected="false">Trending</button>
           </div>
           <div class="mp-table-wrap">
-            <table class="mp-table">
+            <table class="mp-table" id="mp-table">
               <colgroup>
                 <col class="mp-col-mkt" />
                 <col class="mp-col-px" />
@@ -274,7 +280,7 @@
                 <col class="mp-col-oi" />
               </colgroup>
               <thead>
-                <tr>
+                <tr class="mp-head-perp">
                   <th>Market</th>
                   <th><button type="button" data-mp-sort="price">Last Price</button></th>
                   <th>
@@ -286,6 +292,21 @@
                     </button>
                   </th>
                   <th><button type="button" data-mp-sort="funding">8h Funding</button></th>
+                  <th><button type="button" data-mp-sort="volume">Volume</button></th>
+                  <th><button type="button" data-mp-sort="oi">Open Interest</button></th>
+                </tr>
+                <tr class="mp-head-outcome hidden">
+                  <th>Market</th>
+                  <th>
+                    <button type="button" data-mp-sort="chance">
+                      % Chance
+                      <svg class="mp-sort-chevron" viewBox="0 0 10 10" width="8" height="8" aria-hidden="true">
+                        <path d="M2 3.2 L5 6.8 L8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="mp-outcome-hide"></th>
+                  <th class="mp-outcome-hide"></th>
                   <th><button type="button" data-mp-sort="volume">Volume</button></th>
                   <th><button type="button" data-mp-sort="oi">Open Interest</button></th>
                 </tr>

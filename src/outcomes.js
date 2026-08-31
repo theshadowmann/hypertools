@@ -112,6 +112,73 @@ export function roundOutcomePx(px) {
   return Math.round(clamped * 10000) / 10000;
 }
 
+export function parseOutcomeExpiryMs(fields) {
+  const f = fields || {};
+  const raw = f.time || f.expiry || f.decisionDeadline || f.scheduledDecision || "";
+  const m = String(raw).match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+  if (!m) return null;
+  const ms = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+  return Number.isFinite(ms) ? ms : null;
+}
+
+export function formatOutcomeCountdown(expiryMs, now = Date.now()) {
+  const end = Number(expiryMs);
+  if (!Number.isFinite(end)) return "";
+  const d = end - Number(now);
+  if (d <= 0) return "Ended";
+  const s = Math.floor(d / 1000);
+  const days = Math.floor(s / 86400);
+  const hrs = Math.floor((s % 86400) / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  if (days > 0) return days + "d " + hrs + "h";
+  if (hrs > 0) return hrs + "h " + mins + "m";
+  return Math.max(1, mins) + "m";
+}
+
+export function formatChancePct(px) {
+  if (px == null || px === "") return "—";
+  const n = Number(px);
+  if (!Number.isFinite(n)) return "—";
+  return (n * 100).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+}
+
+/** Live venue strings only. Empty if the API omitted them. */
+export function outcomeVenueBadge(venue) {
+  const v = String(venue || "")
+    .trim()
+    .toLowerCase();
+  if (v === "out" || v === "skew") return v;
+  return "";
+}
+
+/** HIP-4 outcomeMeta has no Crypto/Economics/Sports field on live mainnet. */
+export function outcomeCategories(meta) {
+  const found = new Set();
+  ((meta && meta.outcomes) || []).forEach((o) => {
+    const cat = o && (o.category || o.group || o.sector);
+    if (typeof cat === "string" && cat.trim()) found.add(cat.trim());
+  });
+  return [...found];
+}
+
+export function lookupUnderlyingPx(perpKey, mids, hip3Marks) {
+  const raw = String(perpKey || "").trim();
+  if (!raw) return null;
+  const short = raw.replace(/^xyz:/i, "");
+  const keys = [raw, short];
+  if (raw.indexOf(":") < 0) keys.push("xyz:" + raw);
+  const books = [mids, hip3Marks];
+  for (let i = 0; i < books.length; i++) {
+    const book = books[i];
+    if (!book || typeof book !== "object") continue;
+    for (let k = 0; k < keys.length; k++) {
+      const px = book[keys[k]];
+      if (px != null && Number(px) > 0) return px;
+    }
+  }
+  return null;
+}
+
 /**
  * HIP-4 share balances live in spotClearinghouseState under `+{encoding}` coins.
  */
@@ -152,7 +219,7 @@ export function outcomePositionsFromSpot(balances, markets) {
  * One tradeable Yes-side row per live outcomeMeta entry.
  * Prices come from allMids `#` keys. Missing mids stay blank — never fabricated.
  */
-export function parseOutcomeMarkets(meta, mids) {
+export function parseOutcomeMarkets(meta, mids, hip3Marks) {
   const questions = (meta && meta.questions) || [];
   const qById = {};
   questions.forEach((q) => {
@@ -175,7 +242,9 @@ export function parseOutcomeMarkets(meta, mids) {
     if (!title) return;
     const yesPx = px[yesCoin];
     const noPx = px[noCoin];
-    const fields = parseOutcomeFields(o.description);
+    const q = qById[id];
+    const fields = Object.assign({}, parseOutcomeFields(q && q.description), parseOutcomeFields(o.description));
+    const undKey = fields.perp || fields.underlying || "";
     out.push({
       id: "outcome:" + id + ":0",
       kind: "outcome",
@@ -203,6 +272,9 @@ export function parseOutcomeMarkets(meta, mids) {
       venue: o.venue || null,
       description: o.description || "",
       underlying: underlyingTicker(fields),
+      underlyingKey: undKey,
+      underlyingPx: lookupUnderlyingPx(undKey, px, hip3Marks),
+      expiryMs: parseOutcomeExpiryMs(fields),
       noMarkPx: noPx,
     });
   });

@@ -54,8 +54,11 @@ import {
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import {
+  formatChancePct,
+  formatOutcomeCountdown,
   isOutcomeCoin,
   outcomePositionsFromSpot,
+  outcomeVenueBadge,
 } from "./outcomes.js";
 import {
   aggregateLevels,
@@ -463,9 +466,46 @@ export function createTradeView(app) {
     syncBookColumn();
   }
 
+  function pickerOutcomeMode() {
+    return pickerTab === "outcome";
+  }
+
+  function setPickerTab(tab) {
+    const next = String(tab || "all");
+    if (next === "outcome") {
+      if (pickerSort === "change" || pickerSort === "funding" || pickerSort === "price") {
+        pickerSort = "chance";
+        pickerDir = "desc";
+      }
+    } else if (pickerSort === "chance") {
+      pickerSort = "change";
+      pickerDir = "desc";
+    }
+    pickerTab = next;
+    pickerHi = 0;
+    renderPicker();
+  }
+
   function renderStats() {
     const mkt = currentMarket();
+    const outcome = !!(mkt && mkt.kind === "outcome");
+    byId("stats-perp")?.classList.toggle("hidden", outcome);
+    byId("stats-outcome")?.classList.toggle("hidden", !outcome);
     const k = mark();
+    if (outcome) {
+      const mids = (app.state.data && app.state.data.mids) || {};
+      const undPx = num(mids[mkt.underlyingKey]) || num(mkt.underlyingPx);
+      const undLabel = mkt.underlying || "";
+      const undTxt = Number.isFinite(undPx)
+        ? (undLabel ? undLabel + " " : "") + fmtPx(undPx)
+        : undLabel || "—";
+      setText("stat-und", undTxt);
+      const cd = formatOutcomeCountdown(mkt.expiryMs);
+      setText("stat-ends", cd || "—");
+      setText("stat-chance", formatChancePct(k));
+      setText("stat-yes", Number.isFinite(k) ? fmtPx(k) : "—");
+      return;
+    }
     const oracle = num(ctx.oraclePx) || (mkt && num(mkt.oraclePx));
     const vol = num(ctx.dayNtlVlm) || (mkt && num(mkt.dayNtlVlm));
     const oi = num(ctx.openInterest) || (mkt && num(mkt.openInterest));
@@ -833,6 +873,10 @@ export function createTradeView(app) {
     document.querySelectorAll("[data-mp-tab]").forEach((btn) => {
       btn.setAttribute("aria-selected", btn.getAttribute("data-mp-tab") === pickerTab ? "true" : "false");
     });
+    const outcomeMode = pickerOutcomeMode();
+    byId("mp-table")?.classList.toggle("mp-outcome", outcomeMode);
+    document.querySelector(".mp-head-perp")?.classList.toggle("hidden", outcomeMode);
+    document.querySelector(".mp-head-outcome")?.classList.toggle("hidden", !outcomeMode);
     document.querySelectorAll("[data-mp-sort]").forEach((btn) => {
       const key = btn.getAttribute("data-mp-sort");
       if (key === pickerSort) btn.setAttribute("aria-sort", pickerDir === "asc" ? "asc" : "desc");
@@ -870,17 +914,17 @@ export function createTradeView(app) {
           : "—";
       const oiNtl = Number(m.openInterest) * Number(m.markPx);
       const starred = favs.indexOf(m.id) !== -1;
-      const tr = h(
-        "tr",
-        {
-          class: "mp-row" + (i === pickerHi ? " is-on" : ""),
-          dataset: { mid: m.id },
-          onClick: () => selectPickerRow(m.id),
-          onMouseEnter: () => {
-            pickerHi = i;
-            syncPickerHighlight();
-          },
+      const venue = m.kind === "outcome" ? outcomeVenueBadge(m.venue) : "";
+      const tr = h("tr", {
+        class: "mp-row" + (i === pickerHi ? " is-on" : ""),
+        dataset: { mid: m.id },
+        onClick: () => selectPickerRow(m.id),
+        onMouseEnter: () => {
+          pickerHi = i;
+          syncPickerHighlight();
         },
+      });
+      tr.appendChild(
         h(
           "td",
           null,
@@ -919,15 +963,43 @@ export function createTradeView(app) {
                 })
               : null,
             h("span", { class: "mp-pair" }, m.pair),
-            h("span", { class: "mp-badge" + (m.kind === "perp" ? " perp" : m.kind === "outcome" ? " out" : "") }, m.kind === "perp" ? "PERP" : m.kind === "outcome" ? "OUT" : "SPOT")
+            m.kind === "perp"
+              ? h("span", { class: "mp-badge perp" }, "PERP")
+              : m.kind === "spot"
+                ? h("span", { class: "mp-badge" }, "SPOT")
+                : venue
+                  ? h("span", { class: "mp-badge " + venue }, venue)
+                  : null
           )
-        ),
-        h("td", null, Number.isFinite(num(m.markPx)) ? fmtPx(m.markPx) : "—"),
-        h("td", { class: chCell.cls }, chCell.text),
-        h("td", { class: Number.isFinite(fund) && fund < 0 ? "mp-chg down" : Number.isFinite(fund) && fund > 0 ? "mp-chg up" : "mp-muted" }, fundTxt),
-        h("td", null, compactUsd(m.dayNtlVlm)),
-        h("td", null, m.kind === "perp" && Number.isFinite(oiNtl) ? compactUsd(oiNtl) : "—")
+        )
       );
+      if (outcomeMode) {
+        tr.appendChild(h("td", null, formatChancePct(m.markPx)));
+        tr.appendChild(h("td", { class: "mp-outcome-hide" }, ""));
+        tr.appendChild(h("td", { class: "mp-outcome-hide" }, ""));
+        tr.appendChild(h("td", null, compactUsd(m.dayNtlVlm)));
+        tr.appendChild(
+          h(
+            "td",
+            null,
+            Number.isFinite(Number(m.openInterest)) && Number(m.openInterest) > 0
+              ? compactUsd(Number(m.openInterest) * (num(m.markPx) || 1))
+              : "—"
+          )
+        );
+      } else {
+        tr.appendChild(h("td", null, Number.isFinite(num(m.markPx)) ? fmtPx(m.markPx) : "—"));
+        tr.appendChild(h("td", { class: chCell.cls }, chCell.text));
+        tr.appendChild(
+          h(
+            "td",
+            { class: Number.isFinite(fund) && fund < 0 ? "mp-chg down" : Number.isFinite(fund) && fund > 0 ? "mp-chg up" : "mp-muted" },
+            fundTxt
+          )
+        );
+        tr.appendChild(h("td", null, compactUsd(m.dayNtlVlm)));
+        tr.appendChild(h("td", null, m.kind === "perp" && Number.isFinite(oiNtl) ? compactUsd(oiNtl) : "—"));
+      }
       body.appendChild(tr);
     });
     syncPickerHighlight();
@@ -1695,9 +1767,7 @@ export function createTradeView(app) {
     });
     document.querySelectorAll("[data-mp-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        pickerTab = btn.getAttribute("data-mp-tab");
-        pickerHi = 0;
-        renderPicker();
+        setPickerTab(btn.getAttribute("data-mp-tab"));
       });
     });
     document.querySelectorAll("[data-mp-sort]").forEach((btn) => {
@@ -1706,7 +1776,7 @@ export function createTradeView(app) {
         if (pickerSort === key) pickerDir = pickerDir === "desc" ? "asc" : "desc";
         else {
           pickerSort = key;
-          pickerDir = key === "change" || key === "funding" ? "desc" : "desc";
+          pickerDir = key === "change" || key === "funding" || key === "chance" ? "desc" : "desc";
         }
         renderPicker();
       });
@@ -1821,7 +1891,13 @@ export function createTradeView(app) {
   return {
     async show(kind) {
       pageKind = kind === "outcome" ? "outcome" : "trade";
-      if (pageKind === "outcome") pickerTab = "outcome";
+      if (pageKind === "outcome") {
+        pickerTab = "outcome";
+        if (pickerSort === "change" || pickerSort === "funding" || pickerSort === "price") {
+          pickerSort = "chance";
+          pickerDir = "desc";
+        }
+      }
       bind();
       if (!markets.length) {
         try {

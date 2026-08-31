@@ -3,9 +3,15 @@ import {
   encodeOutcomeAsset,
   encodeOutcomeBalance,
   encodeOutcomeCoin,
+  formatChancePct,
+  formatOutcomeCountdown,
   formatOutcomeTitle,
   isOutcomeCoin,
+  lookupUnderlyingPx,
+  outcomeCategories,
   outcomePositionsFromSpot,
+  outcomeVenueBadge,
+  parseOutcomeExpiryMs,
   parseOutcomeFields,
   parseOutcomeMarkets,
   roundOutcomePx,
@@ -140,5 +146,30 @@ describe("outcomePositionsFromSpot", () => {
     expect(rows[0].title).toMatch(/BTC above 100000/);
     expect(rows[1].side).toBe("No");
     expect(rows[1].markPx).toBe("0.58");
+  });
+});
+
+describe("outcome picker fields", () => {
+  it("formats chance, countdown, and venue from live-shaped fields only", () => {
+    expect(formatChancePct(0.8592)).toBe("85.9%");
+    expect(formatChancePct(null)).toBe("—");
+    expect(parseOutcomeExpiryMs({ time: "20261001-0000" })).toBe(Date.UTC(2026, 9, 1, 0, 0));
+    expect(formatOutcomeCountdown(Date.UTC(2026, 9, 1, 0, 0), Date.UTC(2026, 8, 29, 12, 0))).toBe("1d 12h");
+    expect(formatOutcomeCountdown(Date.UTC(2026, 8, 1, 0, 0), Date.UTC(2026, 8, 2, 0, 0))).toBe("Ended");
+    expect(outcomeVenueBadge("out")).toBe("out");
+    expect(outcomeVenueBadge("skew")).toBe("skew");
+    expect(outcomeVenueBadge("")).toBe("");
+    expect(outcomeCategories(meta)).toEqual([]);
+  });
+
+  it("looks up HIP-3 xyz marks without inventing prices", () => {
+    expect(lookupUnderlyingPx("xyz:CL", { BTC: "1" }, { "xyz:CL": "82.94" })).toBe("82.94");
+    expect(lookupUnderlyingPx("BTC", { BTC: "79000" }, {})).toBe("79000");
+    expect(lookupUnderlyingPx("xyz:GOLD", {}, {})).toBeNull();
+    const rows = parseOutcomeMarkets(meta, { BTC: "79000", "#12100": "0.42" }, { "xyz:CL": "82.9" });
+    const btc = rows.find((m) => m.outcomeId === 1210);
+    expect(btc.underlying).toBe("BTC");
+    expect(btc.underlyingPx).toBe("79000");
+    expect(btc.expiryMs).toBe(Date.UTC(2026, 9, 1, 0, 0));
   });
 });

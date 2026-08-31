@@ -71,18 +71,32 @@ export async function loadAccount(address) {
   };
 }
 
+function marksFromMetaCtxs(payload) {
+  const out = {};
+  if (!Array.isArray(payload) || !payload[0] || !Array.isArray(payload[1])) return out;
+  const uni = payload[0].universe || [];
+  const ctxs = payload[1];
+  uni.forEach((u, i) => {
+    if (!u || !u.name || !ctxs[i] || ctxs[i].markPx == null) return;
+    if (Number(ctxs[i].markPx) > 0) out[u.name] = ctxs[i].markPx;
+  });
+  return out;
+}
+
 export async function loadMarkets() {
   const results = await Promise.allSettled([
     hlInfo({ type: "metaAndAssetCtxs" }),
     hlInfo({ type: "spotMetaAndAssetCtxs" }),
     hlInfo({ type: "outcomeMeta" }),
     hlInfo({ type: "allMids" }),
+    hlInfo({ type: "metaAndAssetCtxs", dex: "xyz" }),
   ]);
   const perps = results[0].status === "fulfilled" ? parsePerpMarkets(results[0].value) : [];
   const spot = results[1].status === "fulfilled" ? parseSpotMarkets(results[1].value) : [];
   const outcomeMeta = results[2].status === "fulfilled" ? results[2].value : null;
   const mids = results[3].status === "fulfilled" ? results[3].value : {};
-  const outcomes = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids) : [];
+  const hip3Marks = marksFromMetaCtxs(results[4].status === "fulfilled" ? results[4].value : null);
+  const outcomes = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids, hip3Marks) : [];
   const markets = mergeMarkets(perps, spot, outcomes);
   if (!markets.length) throw new Error("Hyperliquid returned no markets");
   return markets;

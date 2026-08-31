@@ -86,6 +86,10 @@ describe("picker filter", () => {
     const html = readFileSync(join(root, "index.html"), "utf8");
     const tabs = [...html.matchAll(/data-mp-tab="([^"]+)"/g)].map((m) => m[1]);
     expect(tabs).toEqual(["favorites", "all", "perps", "spot", "outcome", "trending"]);
+    expect(html).toMatch(/mp-head-outcome[\s\S]*% Chance[\s\S]*Volume[\s\S]*Open Interest/);
+    expect(html).toContain('id="stats-outcome"');
+    expect(html).toContain("Price (Yes)");
+    expect(html).not.toMatch(/Crypto|Tradfi|Pre-launch/);
   });
 
   it("favorites tab uses stored ids only", () => {

@@ -192,7 +192,7 @@ export function sortMarkets(rows, sortKey, sortDir) {
       const bm = Number(b.markPx);
       av = Number(a.openInterest) * (Number.isFinite(am) ? am : 1);
       bv = Number(b.openInterest) * (Number.isFinite(bm) ? bm : 1);
-    } else if (sortKey === "price") {
+    } else if (sortKey === "price" || sortKey === "chance") {
       av = Number(a.markPx || a.midPx);
       bv = Number(b.markPx || b.midPx);
     } else {

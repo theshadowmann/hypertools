@@ -264,6 +264,15 @@ body {
 .mp-table col.mp-col-fund { width: 13%; }
 .mp-table col.mp-col-vol { width: 12%; }
 .mp-table col.mp-col-oi { width: 14%; }
+.mp-table.mp-outcome col.mp-col-mkt { width: 52%; }
+.mp-table.mp-outcome col.mp-col-px { width: 16%; }
+.mp-table.mp-outcome col.mp-col-vol { width: 16%; }
+.mp-table.mp-outcome col.mp-col-oi { width: 16%; }
+.mp-table.mp-outcome col.mp-col-chg,
+.mp-table.mp-outcome col.mp-col-fund,
+.mp-table.mp-outcome .mp-outcome-hide { display: none; }
+.mp-table.mp-outcome .mp-head-perp { display: none; }
+.mp-head-outcome.hidden { display: none; }
 .mp-table th,
 .mp-table td {
   box-sizing: border-box;
@@ -345,6 +354,7 @@ body {
   font-weight: 400;
 }
 .mp-badge.out { color: #7dd3c0; background: rgba(125, 211, 192, 0.12); }
+.mp-badge.skew { color: #e7c27a; background: rgba(231, 194, 122, 0.14); }
 .mp-mkt { min-width: 0; }
 .mp-pair { overflow: hidden; text-overflow: ellipsis; }
 .mp-badge {
@@ -391,6 +401,7 @@ body {
   gap: 14px 18px;
   justify-content: flex-end;
 }
+.stats-metrics.hidden { display: none; }
 .stat { display: flex; flex-direction: column; gap: 1px; }
 .stat-k { font-size: 10px; color: var(--muted); letter-spacing: 0.02em; }
 .stat-v { font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; color: #fff; }
