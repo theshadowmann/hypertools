@@ -120,6 +120,7 @@ export function outcomePositionsFromSpot(balances, markets) {
   (markets || []).forEach((m) => {
     if (!m || m.kind !== "outcome") return;
     if (m.balanceCoin) byKey[m.balanceCoin] = m;
+    if (m.noBalanceCoin) byKey[m.noBalanceCoin] = m;
     if (m.coin) byKey[m.coin] = m;
     if (m.noCoin) byKey[m.noCoin] = m;
   });
@@ -130,7 +131,7 @@ export function outcomePositionsFromSpot(balances, markets) {
     if (!Number.isFinite(total) || Math.abs(total) < 1e-8) return;
     const enc = Number(String(b.coin).slice(1));
     const side = Number.isInteger(enc) ? enc % 10 : 0;
-    const m = byKey[b.coin] || null;
+    const m = byKey[b.coin] || byKey["#" + String(b.coin).slice(1)] || null;
     const mark = m ? (side === 1 ? m.noMarkPx : m.markPx) : null;
     rows.push({
       coin: b.coin,
@@ -181,6 +182,7 @@ export function parseOutcomeMarkets(meta, mids) {
       coin: yesCoin,
       noCoin,
       balanceCoin: encodeOutcomeBalance(id, 0),
+      noBalanceCoin: encodeOutcomeBalance(id, 1),
       outcomeId: id,
       side: 0,
       base: "Yes",
