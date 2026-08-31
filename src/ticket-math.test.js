@@ -102,6 +102,7 @@ describe("ticket DOM", () => {
     expect(ticket).toContain("ticket-foot");
     expect(ticket).toContain('id="sum-liq-row"');
     expect(ticket).toContain('id="sum-margin-row"');
+    expect(ticket).toContain("chk-box");
     expect(html).toContain('id="market-chip-icon"');
     expect(html).toContain("chip-chevron");
   });
