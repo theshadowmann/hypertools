@@ -127,6 +127,17 @@ describe("picker 24h sort chrome", () => {
     expect(trade).toMatch(/let pickerDir = "desc"/);
     expect(css).toMatch(/button\[aria-sort="asc"\] \.mp-sort-chevron/);
   });
+
+  it("aligns picker headers and numeric cells on the same columns", () => {
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    expect(html).toMatch(/<colgroup>[\s\S]*mp-col-mkt[\s\S]*mp-col-oi[\s\S]*<\/colgroup>/);
+    expect(css).toMatch(/\.mp-table \{\s*width: 100%;\s*table-layout: fixed;/);
+    expect(css).toMatch(/\.mp-table th,\s*\.mp-table td \{[\s\S]*padding: 6px 12px;[\s\S]*text-align: right;/);
+    expect(css).toMatch(/th:first-child,\s*\.mp-table td:first-child \{ text-align: left; \}/);
+    expect(css).toMatch(/th button \{[\s\S]*width: 100%;/);
+    expect(css).not.toMatch(/\.mp-row td \{\s*padding: 5px 10px/);
+  });
 });
 
 describe("funding and display", () => {

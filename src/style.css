@@ -242,29 +242,44 @@ body {
 }
 .mp-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mp-table col.mp-col-mkt { width: 26%; }
+.mp-table col.mp-col-px { width: 13%; }
+.mp-table col.mp-col-chg { width: 22%; }
+.mp-table col.mp-col-fund { width: 13%; }
+.mp-table col.mp-col-vol { width: 12%; }
+.mp-table col.mp-col-oi { width: 14%; }
+.mp-table th,
+.mp-table td {
+  box-sizing: border-box;
+  padding: 6px 12px;
+  text-align: right;
+  white-space: nowrap;
 }
 .mp-table th {
   position: sticky;
   top: 0;
   z-index: 1;
   background: #111315;
-  text-align: right;
   font-size: 10px;
   font-weight: 550;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
-  padding: 6px 10px;
 }
 .mp-table th:first-child,
 .mp-table td:first-child { text-align: left; }
+.mp-table td[colspan] { text-align: center; color: var(--muted); padding: 24px 12px; }
 .mp-table th button {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
+  width: 100%;
   border: 0;
   background: none;
   color: inherit;
@@ -289,11 +304,8 @@ body {
 }
 .mp-row:hover { background: rgba(255,255,255,0.04); }
 .mp-row.is-on { background: rgba(0, 200, 83, 0.08); }
-.mp-row td {
-  padding: 5px 10px;
+.mp-table td {
   border-top: 1px solid rgba(255,255,255,0.03);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
   color: #e8eaed;
 }
 .mp-mkt {

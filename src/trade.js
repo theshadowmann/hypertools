@@ -778,7 +778,7 @@ export function createTradeView(app) {
     clear(body);
     if (!pickerRows.length) {
       body.appendChild(
-        h("tr", null, h("td", { class: "px-3 py-6 text-center text-mist-400", colSpan: "6" }, "No markets match."))
+        h("tr", null, h("td", { colSpan: "6" }, "No markets match."))
       );
       return;
     }
