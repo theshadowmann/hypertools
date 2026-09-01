@@ -110,7 +110,7 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?color: #fff/);
     expect(css).toContain("--green: #1A2B56");
     expect(css).toContain("--navy: #1A2B56");
-    expect(css).not.toContain("#00c853");
+    expect(css).toContain("--bid: #00c853");
     expect(tw).not.toContain("#00c853");
     expect(hl).not.toContain("#00c853");
     expect(hl).toContain('const UP = "#1A2B56"');
@@ -127,7 +127,13 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--navy\)/);
     expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--green\)/);
-    expect(css).toMatch(/\.book-row\.bid \.px \{ color: var\(--green\)/);
+    expect(css).toMatch(/\.book-row\.bid \.px \{ color: var\(--bid\)/);
+    expect(css).toMatch(/\.book-row\.bid \.depth \{ background: var\(--bid\)/);
+    expect(css).toMatch(/\.book-row\.ask \.px \{ color: var\(--red\)/);
+    expect(css).toMatch(/\.book-row\.ask \.depth \{ background: var\(--red\)/);
+    expect(css).toMatch(/\.book-row \.sz \{[^}]*color: #e8eaed/);
+    expect(css).toMatch(/\.trade-row \.px\.buy \{ color: var\(--bid\)/);
+    expect(css).toMatch(/\.btn-connect \{[\s\S]*?background: var\(--navy\)/);
     expect(css).toMatch(/\.btn-ghost,[\s\S]*?border: 1px solid rgba\(255, 255, 255, 0\.45\)/);
     expect(css).toMatch(/\.btn-ghost,[\s\S]*?background: transparent/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?background: var\(--navy\)/);

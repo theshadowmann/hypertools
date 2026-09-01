@@ -13,6 +13,7 @@
   --hair: #363737;
   --green: #1A2B56;
   --green-dim: #243562;
+  --bid: #00c853;
   --red: #e57373;
   --red-fill: #c62828;
   --muted: #A4A5A5;
@@ -618,9 +619,9 @@ html.desk #trade:not(.hidden) {
   position: absolute; top: 0; bottom: 0; right: 0; pointer-events: none; opacity: 0.18;
 }
 .book-row.ask .depth { background: var(--red); }
-.book-row.bid .depth { background: var(--green); }
+.book-row.bid .depth { background: var(--bid); }
 .book-row.ask .px { color: var(--red); }
-.book-row.bid .px { color: var(--green); }
+.book-row.bid .px { color: var(--bid); }
 .book-row .sz { text-align: right; color: #e8eaed; }
 .book-row .sum { text-align: right; color: var(--muted); }
 .book-spread {
@@ -653,7 +654,7 @@ html.desk #trade:not(.hidden) {
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
-.trade-row .px.buy { color: var(--green); }
+.trade-row .px.buy { color: var(--bid); }
 .trade-row .px.sell { color: var(--red); }
 .trade-row .sz { text-align: right; color: #e8eaed; }
 .trade-row .tm {

@@ -83,7 +83,8 @@ describe("portfolio page structure", () => {
     expect(css).toMatch(/\.port-link \{[\s\S]*?color: var\(--navy\)/);
     expect(css).toMatch(/\.port-card \{[\s\S]*?border: 1px solid rgba\(255, 255, 255, 0\.45\)/);
     expect(css).toMatch(/\.port-page \{[\s\S]*?background: #242525/);
-    expect(css).not.toContain("#00c853");
+    const portCss = css.slice(css.indexOf(".port-page"));
+    expect(portCss).not.toContain("#00c853");
     expect(html.split('id="paste-form"').length - 1).toBe(1);
   });
 });
