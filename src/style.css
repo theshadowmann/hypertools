@@ -1171,6 +1171,7 @@ input[type="checkbox"] {
 .bal-table {
   width: 100%;
   border-collapse: collapse;
+  border: 0;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -1183,14 +1184,28 @@ input[type="checkbox"] {
   color: var(--muted);
   padding: 6px 12px;
   white-space: nowrap;
+  border: 0;
+  text-decoration: none;
 }
 .bal-table th:first-child,
 .bal-table td:first-child { text-align: left; }
 .bal-table td {
   padding: 6px 12px;
-  border-top: 1px solid var(--hair);
+  border: 0;
   color: #e8eaed;
   text-align: right;
+  text-decoration: none;
+}
+.hist-body table {
+  border-collapse: collapse;
+  border: 0;
+}
+.hist-body th,
+.hist-body td {
+  border: 0;
+  border-top: 0;
+  border-bottom: 0;
+  text-decoration: none;
 }
 .bal-asset {
   display: flex;
