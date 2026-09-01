@@ -1,6 +1,7 @@
 import {
   bookLevels,
   hlInfo,
+  loadDailyPrevDay,
   loadTradeExtras,
 } from "./api.js";
 import { clear, h, note } from "./dom.js";
@@ -49,6 +50,7 @@ import {
   funding8h,
   iconSymbol,
   loadFavs,
+  signedChangeClass,
   toggleFav,
 } from "./markets.js";
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
@@ -486,6 +488,42 @@ export function createTradeView(app) {
     return pickerTab === "outcome";
   }
 
+  function paintStatSigned(el, ch) {
+    if (!el) return;
+    el.classList.toggle("up", Number.isFinite(ch) && ch > 0);
+    el.classList.toggle("down", Number.isFinite(ch) && ch < 0);
+    el.classList.toggle("flat", Number.isFinite(ch) && ch === 0);
+  }
+
+  function formatStatChangePct(ch) {
+    if (!Number.isFinite(ch)) return "—";
+    return (
+      (ch * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%"
+    );
+  }
+
+  function marketChange24h(mkt, markPx) {
+    const prev = num(ctx.prevDayPx) || (mkt && num(mkt.prevDayPx));
+    return change24h(markPx, prev);
+  }
+
+  function hydrateOutcomePrevDay(m) {
+    if (!m || m.kind !== "outcome" || !m.coin || m._prevDayTried) return;
+    m._prevDayTried = true;
+    loadDailyPrevDay(m.coin)
+      .then((prev) => {
+        if (prev == null) return;
+        m.prevDayPx = prev;
+        const cur = currentMarket();
+        if (cur && cur.id === m.id && !(num(ctx.prevDayPx) > 0)) {
+          ctx.prevDayPx = prev;
+          renderStats();
+        }
+        if (pickerOpen) renderPicker();
+      })
+      .catch(() => {});
+  }
+
   function setPickerTab(tab) {
     const next = String(tab || "all");
     if (next === "outcome") {
@@ -519,22 +557,24 @@ export function createTradeView(app) {
       const cd = formatOutcomeCountdown(mkt.expiryMs);
       setText("stat-ends", cd || "—");
       setText("stat-chance", formatChancePct(k));
+      const ch = marketChange24h(mkt, k);
+      paintStatSigned(byId("stat-chance"), ch);
+      const outCh = byId("stat-out-change");
+      if (outCh) {
+        outCh.textContent = formatStatChangePct(ch);
+        paintStatSigned(outCh, ch);
+      }
       setText("stat-yes", Number.isFinite(k) ? fmtPx(k) : "—");
       return;
     }
     const oracle = num(ctx.oraclePx) || (mkt && num(mkt.oraclePx));
     const vol = num(ctx.dayNtlVlm) || (mkt && num(mkt.dayNtlVlm));
     const oi = num(ctx.openInterest) || (mkt && num(mkt.openInterest));
-    const prev = num(ctx.prevDayPx) || (mkt && num(mkt.prevDayPx));
-    const ch = change24h(k, prev);
+    const ch = marketChange24h(mkt, k);
     const chEl = byId("stat-change");
     if (chEl) {
-      chEl.textContent = Number.isFinite(ch)
-        ? (ch * 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%"
-        : "—";
-      chEl.classList.toggle("up", Number.isFinite(ch) && ch > 0);
-      chEl.classList.toggle("down", Number.isFinite(ch) && ch < 0);
-      chEl.classList.toggle("flat", Number.isFinite(ch) && ch === 0);
+      chEl.textContent = formatStatChangePct(ch);
+      paintStatSigned(chEl, ch);
     }
     setText("stat-mark", Number.isFinite(k) ? fmtPx(k) : "—");
     setText("stat-oracle", Number.isFinite(oracle) ? fmtPx(oracle) : "—");
@@ -1018,7 +1058,8 @@ export function createTradeView(app) {
         )
       );
       if (outcomeMode) {
-        tr.appendChild(h("td", null, formatChancePct(m.markPx)));
+        const ch = change24h(m.markPx, m.prevDayPx);
+        tr.appendChild(h("td", { class: signedChangeClass(ch) }, formatChancePct(m.markPx)));
         tr.appendChild(h("td", { class: "mp-outcome-hide" }, ""));
         tr.appendChild(h("td", { class: "mp-outcome-hide" }, ""));
         tr.appendChild(h("td", null, compactUsd(m.dayNtlVlm)));
@@ -1767,8 +1808,10 @@ export function createTradeView(app) {
         oraclePx: ctxRow.oraclePx,
         dayNtlVlm: ctxRow.dayNtlVlm,
         openInterest: ctxRow.openInterest,
-        prevDayPx: ctxRow.prevDayPx,
+        prevDayPx: ctxRow.prevDayPx != null && ctxRow.prevDayPx !== "" ? ctxRow.prevDayPx : ctx.prevDayPx,
       };
+      const live = currentMarket();
+      if (live && num(ctx.prevDayPx) > 0) live.prevDayPx = ctx.prevDayPx;
       renderStats();
       updateEstimate();
     });
@@ -1846,6 +1889,7 @@ export function createTradeView(app) {
       openInterest: m.openInterest,
       prevDayPx: m.prevDayPx,
     };
+    if (m.kind === "outcome") hydrateOutcomePrevDay(m);
     syncLeverageFromPos();
     renderTicketKind();
     renderStats();
@@ -2059,6 +2103,7 @@ export function createTradeView(app) {
     marketById = {};
     markets.forEach((m) => {
       marketById[m.id] = m;
+      if (m.kind === "outcome") hydrateOutcomePrevDay(m);
     });
     renderMarketSelect();
   }

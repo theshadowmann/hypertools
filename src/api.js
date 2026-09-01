@@ -180,6 +180,39 @@ export function candlesToBars(rows) {
   return out;
 }
 
+/** Yesterday's close from daily bars: last bar's open, else prior close. Never invents. */
+export function prevDayFromDailyBars(bars) {
+  if (!Array.isArray(bars) || !bars.length) return null;
+  const last = bars[bars.length - 1];
+  const open = Number(last && last.open);
+  if (Number.isFinite(open) && open > 0) return open;
+  if (bars.length >= 2) {
+    const close = Number(bars[bars.length - 2].close);
+    if (Number.isFinite(close) && close > 0) return close;
+  }
+  return null;
+}
+
+export function dailyPrevDayBody(coin) {
+  const now = Date.now();
+  return {
+    type: "candleSnapshot",
+    req: {
+      coin: String(coin || ""),
+      interval: "1d",
+      startTime: now - 8 * 24 * 60 * 60 * 1000,
+      endTime: now,
+    },
+  };
+}
+
+export async function loadDailyPrevDay(coin) {
+  const c = String(coin || "");
+  if (!c) return null;
+  const rows = await hlInfo(dailyPrevDayBody(c));
+  return prevDayFromDailyBars(candlesToBars(rows));
+}
+
 export async function loadTradeExtras(address) {
   const startTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const results = await Promise.allSettled([

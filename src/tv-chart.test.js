@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { mountChart, mountTvChart, TV_SCRIPT } from "./tv-chart.js";
 import { drawCandles } from "./hl-chart.js";
-import { candleSnapshotBody, candlesToBars, hlCandleInterval } from "./api.js";
+import { candleSnapshotBody, candlesToBars, hlCandleInterval, prevDayFromDailyBars } from "./api.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -63,6 +63,14 @@ describe("Hyperliquid candles", () => {
     ]);
     expect(bars).toHaveLength(1);
     expect(bars[0].close).toBe(0.42);
+    expect(prevDayFromDailyBars(bars)).toBe(0.4);
+    expect(prevDayFromDailyBars([])).toBeNull();
+    expect(
+      prevDayFromDailyBars([
+        { time: 1, open: 0.5, high: 0.6, low: 0.4, close: 0.46 },
+        { time: 2, open: 0.46, high: 0.5, low: 0.3, close: 0.36 },
+      ])
+    ).toBe(0.46);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext && canvas.getContext("2d");
     if (ctx) expect(() => drawCandles(ctx, bars, 320, 180)).not.toThrow();

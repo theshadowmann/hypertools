@@ -13,6 +13,7 @@ import {
   loadFavs,
   parsePerpMarkets,
   parseSpotMarkets,
+  signedChangeClass,
   SPOT_ASSET_OFFSET,
   toggleFav,
 } from "./markets.js";
@@ -88,6 +89,12 @@ describe("picker filter", () => {
     expect(tabs).toEqual(["favorites", "all", "perps", "spot", "outcome", "trending"]);
     expect(html).toMatch(/mp-head-outcome[\s\S]*% Chance[\s\S]*Volume[\s\S]*Open Interest/);
     expect(html).toContain('id="stats-outcome"');
+    expect(html).toContain('id="stat-out-change"');
+    expect(html).toMatch(/id="stats-outcome"[\s\S]*24h Change[\s\S]*Price \(Yes\)/);
+    const trade = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(trade).toContain("hydrateOutcomePrevDay");
+    expect(trade).toContain("marketChange24h");
+    expect(trade).toContain("paintStatSigned");
     expect(html).toContain("Price (Yes)");
     expect(html).not.toMatch(/Crypto|Tradfi|Pre-launch/);
   });
@@ -136,6 +143,10 @@ describe("picker filter", () => {
       cls: "mp-muted",
     });
     expect(formatPickerChange("1", "0")).toEqual({ text: "—", cls: "mp-muted" });
+    expect(signedChangeClass(0.12)).toBe("mp-chg up");
+    expect(signedChangeClass(-0.12)).toBe("mp-chg down");
+    expect(signedChangeClass(0)).toBe("mp-muted");
+    expect(signedChangeClass(NaN)).toBe("");
   });
 });
 

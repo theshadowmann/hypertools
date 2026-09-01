@@ -175,6 +175,14 @@ export function formatPickerChange(mark, prevDay) {
   return { text: pxPart + pct, cls };
 }
 
+/** Class for a signed move. Missing (NaN) stays uncolored — not the same as a true zero. */
+export function signedChangeClass(ch) {
+  if (!Number.isFinite(ch)) return "";
+  if (ch > 0) return "mp-chg up";
+  if (ch < 0) return "mp-chg down";
+  return "mp-muted";
+}
+
 export function sortMarkets(rows, sortKey, sortDir) {
   const dir = sortDir === "asc" ? 1 : -1;
   const list = (rows || []).slice();
