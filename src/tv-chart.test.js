@@ -104,6 +104,13 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?background: var\(--navy\)/);
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?color: #fff/);
     expect(css).toMatch(/\.ticket-submit\.buy \{[^}]*background: var\(--green\)/);
+    expect(css).toMatch(/\.mp-tab\[aria-selected="true"\] \{[\s\S]*?color: var\(--navy\)/);
+    expect(css).toMatch(/\.mp-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
+    expect(css).toMatch(/\.nav-word\[aria-current="page"\] \{[\s\S]*?color: var\(--navy\)/);
+    expect(css).toMatch(/\.book-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
+    expect(css).toMatch(/\.hist-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
+    expect(css).toMatch(/\.ls-tab\[aria-pressed="true"\] \{[\s\S]*?color: var\(--green\)/);
+    expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--green\)/);
   });
 });
 
