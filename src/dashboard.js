@@ -535,8 +535,9 @@ export function drawPnlChart(canvas, series) {
   ctx.beginPath();
   ctx.moveTo(padL, padT);
   ctx.lineTo(padL, padT + plotH);
-  ctx.moveTo(padL, padT + plotH);
-  ctx.lineTo(padL + plotW, padT + plotH);
+  const xHairY = yMin <= 0 && yMax >= 0 ? yOf(0) : padT + plotH;
+  ctx.moveTo(padL, xHairY);
+  ctx.lineTo(padL + plotW, xHairY);
   ctx.stroke();
 
   ctx.fillStyle = "#A4A5A5";
@@ -547,11 +548,11 @@ export function drawPnlChart(canvas, series) {
     const y = yOf(tick);
     ctx.beginPath();
     ctx.strokeStyle = "rgba(164, 165, 165, 0.45)";
-    ctx.moveTo(padL, y);
-    ctx.lineTo(padL + 4, y);
+    ctx.moveTo(padL - 4, y);
+    ctx.lineTo(padL, y);
     ctx.stroke();
     ctx.fillStyle = "#A4A5A5";
-    ctx.fillText(chartTickUsd(tick), padL - 6, y);
+    ctx.fillText(chartTickUsd(tick), padL - 8, y);
   });
 
   const nX = tSpan === 0 ? 1 : 4;
@@ -582,24 +583,6 @@ export function drawPnlChart(canvas, series) {
     prevY = y;
   });
   ctx.stroke();
-
-  const last = pts[pts.length - 1];
-  const lx = xOf(last.t);
-  const ly = yOf(last.v);
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(lx, ly, 2.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
-  ctx.textBaseline = "middle";
-  const label = chartTickUsd(last.v);
-  if (lx > cssW - 52) {
-    ctx.textAlign = "right";
-    ctx.fillText(label, lx - 6, ly - 10);
-  } else {
-    ctx.textAlign = "left";
-    ctx.fillText(label, lx + 6, ly);
-  }
 }
 
 export function renderDashboard(el, state) {

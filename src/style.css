@@ -1518,13 +1518,13 @@ input[type="range"] { accent-color: var(--green); }
   overflow-x: auto;
 }
 .port-chart-tab {
-  height: 28px;
+  height: auto;
   border: 0;
   background: none;
   color: var(--muted);
   font-size: 13px;
   font-weight: 500;
-  padding: 0;
+  padding: 0 0 7px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1546,6 +1546,13 @@ input[type="range"] { accent-color: var(--green); }
   gap: 6px;
   cursor: pointer;
 }
+#port-tf-btn.port-menu-btn {
+  border: 0;
+  background: transparent;
+  padding: 0 2px 0 6px;
+  height: 28px;
+}
+#port-tf-btn .port-menu-chevron { color: #fff; }
 .port-menu-btn:focus {
   outline: none;
   border-color: var(--navy);

@@ -97,6 +97,7 @@ describe("portfolio page structure", () => {
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?color: #fff/);
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
     expect(css).toMatch(/#port-tf-menu button\.is-on \{[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/#port-tf-btn\.port-menu-btn \{[\s\S]*?border: 0/);
     expect(css).toMatch(/\.port-check \{[\s\S]*?color: #f6c343/);
     const portCss = css.slice(css.indexOf(".port-page"));
     expect(portCss).not.toContain("#00c853");

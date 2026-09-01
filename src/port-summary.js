@@ -147,9 +147,9 @@ export function chartTickUsd(raw) {
   const sign = n < 0 ? "-" : "";
   if (abs >= 1e6) return sign + "$" + (abs / 1e6).toFixed(1) + "M";
   if (abs >= 1e3) return sign + "$" + (abs / 1e3).toFixed(1) + "k";
-  if (abs >= 1) return sign + "$" + abs.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (abs === 0) return "$0";
-  return sign + "$" + abs.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (abs === 0) return "0";
+  if (abs >= 1) return sign + abs.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return sign + abs.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
 export function formatChartDate(ms, spanMs) {

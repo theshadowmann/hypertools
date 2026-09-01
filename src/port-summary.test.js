@@ -150,7 +150,8 @@ describe("chart series", () => {
   });
 
   it("formats compact USD ticks and nice steps from the selected series", () => {
-    expect(chartTickUsd(0)).toBe("$0");
+    expect(chartTickUsd(0)).toBe("0");
+    expect(chartTickUsd(25)).toBe("25");
     expect(chartTickUsd(12400)).toBe("$12.4k");
     expect(chartTickUsd(1200)).toBe("$1.2k");
     const ticks = niceTicks(0, 165, 4);
