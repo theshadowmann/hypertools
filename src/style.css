@@ -238,7 +238,15 @@ html.desk #trade:not(.hidden) {
 }
 
 .stats-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.market-chip {
+.market-chip,
+.market-chip:hover,
+.market-chip:focus,
+.market-chip:focus-visible,
+.market-chip:active,
+.market-chip[aria-expanded="true"],
+.market-chip[aria-expanded="true"]:hover,
+.market-chip[aria-expanded="true"]:focus,
+.market-chip[aria-expanded="true"]:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -247,20 +255,25 @@ html.desk #trade:not(.hidden) {
   border: 0;
   background: none;
   color: #fff;
+  -webkit-text-fill-color: #fff;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
+  outline: none;
 }
-.market-chip:hover { color: #fff; }
-.market-chip[aria-expanded="true"] { color: #fff; }
-.market-chip[aria-expanded="true"] #market-chip-pair { color: #fff; }
-#market-chip-pair {
+#market-chip-pair,
+.market-chip:hover #market-chip-pair,
+.market-chip:focus #market-chip-pair,
+.market-chip:focus-visible #market-chip-pair,
+.market-chip:active #market-chip-pair,
+.market-chip[aria-expanded="true"] #market-chip-pair {
   font-size: 18px;
   font-weight: 600;
   line-height: 1.15;
   color: #fff;
+  -webkit-text-fill-color: #fff;
   max-width: min(42vw, 520px);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -273,6 +286,7 @@ html.desk #trade:not(.hidden) {
   display: block;
   flex-shrink: 0;
   color: #fff;
+  -webkit-text-fill-color: #fff;
   transition: transform 0.12s ease;
 }
 .market-chip[aria-expanded="true"] .chip-chevron {
@@ -436,7 +450,12 @@ html.desk #trade:not(.hidden) {
 }
 .mp-row:hover { background: var(--hover); }
 .mp-row.is-on { background: rgba(26, 43, 86, 0.28); }
-.mp-pair { color: #fff; }
+.mp-pair,
+.mp-row:hover .mp-pair,
+.mp-row.is-on .mp-pair {
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
 .mp-table td {
   border-top: 1px solid var(--hair);
   color: #e8eaed;
@@ -469,7 +488,7 @@ html.desk #trade:not(.hidden) {
 .mp-badge.out { color: #7dd3c0; background: rgba(125, 211, 192, 0.12); }
 .mp-badge.skew { color: #e7c27a; background: rgba(231, 194, 122, 0.14); }
 .mp-mkt { min-width: 0; }
-.mp-pair { overflow: hidden; text-overflow: ellipsis; color: #fff; }
+.mp-pair { overflow: hidden; text-overflow: ellipsis; }
 .mp-badge {
   font-size: 9px;
   font-weight: 500;

@@ -131,7 +131,14 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.hist-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
     expect(css).toMatch(/\.ls-tab\.short\[aria-pressed="true"\] \{[\s\S]*?color: var\(--red\)/);
     expect(css).toMatch(/\.ticket-submit\.sell \{[^}]*background: var\(--red-fill\)/);
-    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \{[\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\][\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] #market-chip-pair[\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.market-chip:focus-visible[\s\S]*?color: #fff/);
+    expect(css).toMatch(/#market-chip-pair[\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.mp-row\.is-on \.mp-pair[\s\S]*?color: #fff/);
+    expect(css).not.toMatch(/\.market-chip[^{]*\{[^}]*color:\s*var\(--navy\)/);
+    expect(css).not.toMatch(/#market-chip-pair[^{]*\{[^}]*color:\s*var\(--navy\)/);
+    expect(css).not.toMatch(/\.mp-pair[^{]*\{[^}]*color:\s*var\(--navy\)/);
     expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \.chip-chevron \{[\s\S]*?transform: rotate\(180deg\)/);
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?background: var\(--navy\)/);
@@ -167,8 +174,8 @@ describe("type weight", () => {
     const html = readFileSync(join(root, "index.html"), "utf8");
     expect(css).toMatch(/\.nav-word \{[\s\S]*?font-weight: 500/);
     expect(css).toMatch(/\.nav-word\[aria-current="page"\] \{[\s\S]*?font-weight: 600/);
-    expect(css).toMatch(/#market-chip-pair \{[\s\S]*?font-size: 18px/);
-    expect(css).toMatch(/#market-chip-pair \{[\s\S]*?font-weight: 600/);
+    expect(css).toMatch(/#market-chip-pair[\s\S]*?font-size: 18px/);
+    expect(css).toMatch(/#market-chip-pair[\s\S]*?font-weight: 600/);
     expect(css).toMatch(/#market-chip-icon\.coin-icon \{[\s\S]*?width: 22px/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?font-size: 11px/);
     expect(css).toMatch(/\.stat-k \{[^}]*font-size: 10px/);
