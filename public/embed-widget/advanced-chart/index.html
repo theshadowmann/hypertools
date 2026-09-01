@@ -97,7 +97,30 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   color: #06B6D4 !important;
   stroke: #06B6D4 !important;
 }
-</style>
+[class*="isActive-"],
+[class*="button-"][class*="isActive"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+}
+[class*="isActive-"]::before,
+[class*="isActive-"]::after,
+[class*="button-"][class*="isActive"]::before,
+[class*="button-"][class*="isActive"]::after,
+[class*="isActive-"] > *,
+[class*="button-"][class*="isActive"] > * {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+</style><script id="ht-tv-flatten" src="/tv-flatten.js" defer></script>
 	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
 	<title>TradingView Chart Widget</title>
 

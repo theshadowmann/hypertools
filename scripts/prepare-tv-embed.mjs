@@ -21,7 +21,8 @@ function injectChrome(html) {
   let out = html.replace(/\snonce="[^"]*"/g, "");
   out = out.replace(/<style id="ht-tv-chrome">[\s\S]*?<\/style>/g, "");
   out = out.replace(/<link id="ht-tv-chrome-file"[^>]*>/g, "");
-  const tag = `<link id="ht-tv-chrome-file" rel="stylesheet" href="${TV_CHROME_CSS_URL}"/><style id="ht-tv-chrome">${TV_CHROME_CSS}</style>`;
+  out = out.replace(/<script id="ht-tv-flatten"[^>]*><\/script>/g, "");
+  const tag = `<link id="ht-tv-chrome-file" rel="stylesheet" href="${TV_CHROME_CSS_URL}"/><style id="ht-tv-chrome">${TV_CHROME_CSS}</style><script id="ht-tv-flatten" src="/tv-flatten.js" defer></script>`;
   if (out.includes("<head>")) out = out.replace("<head>", `<head>${tag}`);
   else out = tag + out;
   return out;

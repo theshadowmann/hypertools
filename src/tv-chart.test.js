@@ -47,6 +47,7 @@ describe("TradingView embed", () => {
     expect(TV_CHROME_CSS).toContain("--tv-color-toolbar-button-background-active: transparent");
     expect(TV_CHROME_CSS).toContain("--tv-color-toolbar-button-text-active: #06B6D4");
     expect(TV_CHROME_CSS).toContain("--tv-color-toolbar-button-text: #F8FAFC");
+    expect(TV_CHROME_CSS).toContain('[class*="isActive-"]');
     expect(TV_CHROME_CSS).toContain("box-shadow: none");
     expect(TV_CHROME_CSS).not.toContain(".layout__area--top *");
     expect(TV_CHROME_CSS).not.toContain(".layout__area--left *");
@@ -62,9 +63,14 @@ describe("TradingView embed", () => {
     expect(snap).not.toContain("Paste an address");
     expect(snap).not.toContain('id="dashboard"');
     expect(snap).not.toMatch(/\snonce="/);
+    expect(snap).toContain('id="ht-tv-flatten"');
+    expect(snap).toContain("/tv-flatten.js");
+    const flatten = readFileSync(join(root, "public/tv-flatten.js"), "utf8");
+    expect(flatten).toContain("ht-tv-chrome-late");
+    expect(flatten).toContain("shadowRoot");
+    expect(flatten).toContain('isActive-');
     const hosted = readFileSync(join(root, "public/tv-chrome.css"), "utf8");
     expect(hosted).toBe(TV_CHROME_CSS);
-    expect(hosted).toContain("box-shadow: none");
   });
 
   it("skips TradingView for outcome markets instead of embedding a BTC chart", () => {

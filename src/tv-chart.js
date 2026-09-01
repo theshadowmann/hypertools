@@ -116,6 +116,29 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   color: ${TV_ACCENT} !important;
   stroke: ${TV_ACCENT} !important;
 }
+[class*="isActive-"],
+[class*="button-"][class*="isActive"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  color: ${TV_ACCENT} !important;
+  fill: ${TV_ACCENT} !important;
+}
+[class*="isActive-"]::before,
+[class*="isActive-"]::after,
+[class*="button-"][class*="isActive"]::before,
+[class*="button-"][class*="isActive"]::after,
+[class*="isActive-"] > *,
+[class*="button-"][class*="isActive"] > * {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
 `;
 
 export const TV_OVERRIDES = {
