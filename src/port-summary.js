@@ -15,6 +15,7 @@ export const PORT_CHARTS = [
 ];
 
 export const PORT_ACCOUNTS = [
+  { id: "perps", label: "Only Perps" },
   { id: "all", label: "All" },
 ];
 

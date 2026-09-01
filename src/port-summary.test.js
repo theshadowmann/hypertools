@@ -12,6 +12,7 @@ import {
   periodVolume,
   perpsEquity,
   pnlSeries,
+  PORT_ACCOUNTS,
   PORT_CHARTS,
   PORT_PERIODS,
   spotEquityUsd,
@@ -109,6 +110,7 @@ describe("volume and equity", () => {
   it("keeps 24h / 7D / 30D / All-time windows", () => {
     expect(PORT_PERIODS.map((p) => p.id)).toEqual(["day", "week", "month", "allTime"]);
     expect(PORT_CHARTS.map((c) => c.label)).toEqual(["Account Value", "PNL", "Perps PNL"]);
+    expect(PORT_ACCOUNTS.map((a) => a.label)).toEqual(["Only Perps", "All"]);
   });
 });
 

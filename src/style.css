@@ -1553,6 +1553,17 @@ input[type="range"] { accent-color: var(--green); }
   height: 28px;
 }
 #port-tf-btn .port-menu-chevron { color: #fff; }
+#port-acct-btn.port-menu-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: auto;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  gap: 6px;
+}
+#port-acct-btn .port-menu-chevron { color: #fff; }
 .port-menu-btn:focus {
   outline: none;
   border-color: var(--navy);
@@ -1568,15 +1579,24 @@ input[type="range"] { accent-color: var(--green); }
 }
 .port-menu {
   position: absolute;
-  right: 0;
+  left: 0;
+  right: auto;
   top: calc(100% + 4px);
   z-index: 30;
-  min-width: 148px;
+  min-width: 100%;
   background: #242525;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 4px 0;
+  padding: 6px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+#port-tf-menu.port-menu {
+  left: auto;
+  right: 0;
+  min-width: 148px;
+}
+#port-acct-menu.port-menu {
+  min-width: 168px;
 }
 .port-menu.hidden { display: none; }
 .port-menu button {
@@ -1585,12 +1605,14 @@ input[type="range"] { accent-color: var(--green); }
   justify-content: space-between;
   width: 100%;
   text-align: left;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 0;
   background: none;
-  color: #e8eaed;
-  font-size: 12px;
+  color: var(--muted);
+  font-size: 13px;
   cursor: pointer;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 .port-menu button:hover { background: var(--hover); color: #fff; }
 #port-tf-menu button.is-on {
@@ -1603,7 +1625,7 @@ input[type="range"] { accent-color: var(--green); }
 }
 .port-check {
   color: #f6c343;
-  font-size: 12px;
+  font-size: 13px;
   margin-left: 12px;
 }
 .port-chart {

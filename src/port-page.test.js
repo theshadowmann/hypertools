@@ -24,12 +24,14 @@ function mount() {
     <p id="port-14d-vol"></p>
     <span id="port-fee-perp-taker"></span>
     <span id="port-fee-perp-maker"></span>
-    <span id="port-fee-spot-taker"></span>
-    <span id="port-fee-spot-maker"></span>
+    <div id="port-fee-spot-row" class="port-fee-row">
+      <span id="port-fee-spot-taker"></span>
+      <span id="port-fee-spot-maker"></span>
+    </div>
     <span id="port-pnl"></span>
     <span id="port-vol"></span>
     <span id="port-total-eq"></span>
-    <span id="port-spot-eq"></span>
+    <div id="port-spot-eq-row"><span id="port-spot-eq"></span></div>
     <span id="port-perp-eq"></span>
     <span id="port-upnl"></span>
     <span id="port-vault-eq"></span>
@@ -37,7 +39,10 @@ function mount() {
     <span id="port-stake"></span>
     <div class="port-menu-wrap">
       <button type="button" id="port-acct-btn" aria-expanded="false"><span id="port-acct-label">All</span></button>
-      <div id="port-acct-menu" class="port-menu hidden" hidden></div>
+      <div id="port-acct-menu" class="port-menu hidden" hidden>
+        <button type="button" data-port-acct="perps"><span>Only Perps</span><span class="port-check" hidden>✓</span></button>
+        <button type="button" data-port-acct="all" class="is-on"><span>All</span><span class="port-check">✓</span></button>
+      </div>
     </div>
     <select id="port-period"><option value="week">7 Days</option></select>
     <canvas id="port-pnl-chart" width="320" height="160"></canvas>
@@ -79,7 +84,12 @@ describe("portfolio page structure", () => {
     expect(port).toContain('data-port-chart="pnl"');
     expect(port).toContain('data-port-chart="perpPnl"');
     expect(port).toContain('id="port-acct-btn"');
+    expect(port).toContain('id="port-acct-label"');
+    expect(port).toContain("Only Perps");
+    expect(port).toContain('data-port-acct="perps"');
     expect(port).toContain('data-port-acct="all"');
+    expect(port).not.toContain("subAccountUser");
+    expect(port).not.toContain("Master");
     expect(port).toContain(">24h<");
     expect(port).toContain(">7D<");
     expect(port).toContain(">30D<");
@@ -103,6 +113,8 @@ describe("portfolio page structure", () => {
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
     expect(css).toMatch(/#port-tf-menu button\.is-on \{[\s\S]*?background: var\(--navy\)/);
     expect(css).toMatch(/#port-tf-btn\.port-menu-btn \{[\s\S]*?border: 0/);
+    expect(css).toMatch(/#port-acct-btn\.port-menu-btn \{[\s\S]*?border: 0/);
+    expect(css).toMatch(/#port-acct-menu button\.is-on \{[\s\S]*?background: #323333/);
     expect(css).toMatch(/\.port-check \{[\s\S]*?color: #f6c343/);
     const portCss = css.slice(css.indexOf(".port-page"));
     expect(portCss).not.toContain("#00c853");
@@ -173,28 +185,82 @@ describe("portfolio disconnected and live numbers", () => {
     expect(js).not.toMatch(/\{ t: 0, v: 0 \}/);
     expect(js).toMatch(/axisTicks\(/);
     expect(js).toMatch(/chartSeries\(/);
+    expect(js).not.toMatch(/fillAcctMenu/);
+    expect(js).not.toMatch(/setPortUserLoader/);
     expect(() => drawPnlChart(canvas, [])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 0 }, { t: 2, v: 0 }])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 1 }, { t: 2, v: 3 }])).not.toThrow();
   });
 
-  it("opens the Accounts menu with All plus the loaded address even when there are no subs", () => {
+  it("opens the Accounts menu with Only Perps and All, gold check on All", () => {
+    const js = readFileSync(join(root, "src/dashboard.js"), "utf8");
+    expect(js).not.toMatch(/fillAcctMenu/);
+    expect(js).not.toMatch(/setPortUserLoader/);
     const { el } = mount();
-    const addr = "0x999a4b5f268a8fbf33736feff360d462ad248dbf";
     renderDashboard(el, {
-      address: addr,
+      address: "0x999a4b5f268a8fbf33736feff360d462ad248dbf",
       error: null,
-      data: { perps: {}, spot: { balances: [] }, portfolio: [], subAccounts: null },
+      data: { perps: {}, spot: { balances: [] }, portfolio: [] },
     });
     const btn = document.getElementById("port-acct-btn");
     const menu = document.getElementById("port-acct-menu");
-    expect(btn).toBeTruthy();
-    expect(menu.textContent).toContain("All");
-    expect(menu.textContent).toContain("0x999a");
+    const rows = [...menu.querySelectorAll("[data-port-acct]")];
+    expect(document.getElementById("port-acct-label").textContent).toBe("All");
+    expect(rows.map((r) => r.getAttribute("data-port-acct"))).toEqual(["perps", "all"]);
+    expect(rows.map((r) => r.querySelector("span").textContent)).toEqual(["Only Perps", "All"]);
+    expect(menu.textContent).not.toContain("0x999a");
     expect(menu.classList.contains("hidden")).toBe(true);
     btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(menu.classList.contains("hidden")).toBe(false);
     expect(btn.getAttribute("aria-expanded")).toBe("true");
-    expect(menu.querySelectorAll("[data-port-acct]").length).toBeGreaterThanOrEqual(2);
+    expect(rows[1].classList.contains("is-on")).toBe(true);
+    expect(rows[1].querySelector(".port-check").hasAttribute("hidden")).toBe(false);
+    expect(rows[0].querySelector(".port-check").hasAttribute("hidden")).toBe(true);
+  });
+
+  it("switches to Only Perps from live perp windows and hides spot figures", () => {
+    const { el } = mount();
+    const addr = "0x999a4b5f268a8fbf33736feff360d462ad248dbf";
+    const data = {
+      perps: { marginSummary: { accountValue: "100" }, assetPositions: [] },
+      spot: { balances: [{ coin: "USDC", total: "20" }] },
+      staking: { delegated: "3" },
+      mids: { HYPE: "2" },
+      userFees: {
+        userCrossRate: "0.00045",
+        userAddRate: "0.00015",
+        userSpotCrossRate: "0.0004",
+        userSpotAddRate: "0.0001",
+      },
+      portfolio: [
+        ["week", { pnlHistory: [[1, "10"]], vlm: "50", accountValueHistory: [[1, "200"]] }],
+        ["perpWeek", { pnlHistory: [[1, "3"]], vlm: "8", accountValueHistory: [[1, "80"]] }],
+      ],
+      userVaultEquities: [{ equity: "7" }],
+    };
+    renderDashboard(el, { address: addr, error: null, data });
+    expect(document.getElementById("port-pnl").textContent).toBe("+$10.00");
+    expect(document.getElementById("port-vol").textContent).toBe("$50.00");
+    expect(document.getElementById("port-total-eq").textContent).toBe("$133.00");
+    expect(document.getElementById("port-spot-eq-row").classList.contains("hidden")).toBe(false);
+
+    const menu = document.getElementById("port-acct-menu");
+    document.getElementById("port-acct-btn").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    menu.querySelector('[data-port-acct="perps"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(document.getElementById("port-acct-label").textContent).toBe("Only Perps");
+    expect(menu.classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("port-pnl").textContent).toBe("+$3.00");
+    expect(document.getElementById("port-vol").textContent).toBe("$8.00");
+    expect(document.getElementById("port-total-eq").textContent).toBe("$100.00");
+    expect(document.getElementById("port-perp-eq").textContent).toBe("$100.00");
+    expect(document.getElementById("port-spot-eq-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("port-fee-spot-row").classList.contains("hidden")).toBe(true);
+    expect(document.getElementById("port-vault-eq").textContent).toBe("--");
+    expect(document.getElementById("port-stake").textContent).toBe("--");
+
+    menu.querySelector('[data-port-acct="all"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.getElementById("port-acct-label").textContent).toBe("All");
+    expect(document.getElementById("port-total-eq").textContent).toBe("$133.00");
   });
 });

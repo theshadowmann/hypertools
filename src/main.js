@@ -1,7 +1,7 @@
 import "./style.css";
 import { wipeAgents } from "./agent-store.js";
 import { ADDR_RE, loadAccount, loadMarkets, loadTradeExtras } from "./api.js";
-import { renderDashboard, setPortUserLoader } from "./dashboard.js";
+import { renderDashboard } from "./dashboard.js";
 import { clear, h } from "./dom.js";
 import { truncAddr } from "./format.js";
 import { createHlWs } from "./ws.js";
@@ -401,7 +401,6 @@ createWalletDiscovery((list) => {
   renderWalletButtons();
 });
 renderWalletButtons();
-setPortUserLoader(refreshAccount);
 
 state.view = viewFromLocation();
 renderChrome();
