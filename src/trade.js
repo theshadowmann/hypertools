@@ -651,6 +651,7 @@ export function createTradeView(app) {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-otype") === next ? "true" : "false");
     });
     const proOn = next === "scale" || next === "twap" || next === "stop-limit" || next === "stop-market";
+    byId("ticket-form")?.classList.toggle("has-pro-extra", proOn);
     const proBtn = byId("pro-toggle");
     if (proBtn) {
       proBtn.setAttribute("aria-pressed", proOn ? "true" : "false");
@@ -1998,7 +1999,9 @@ export function createTradeView(app) {
     byId("ticket-price")?.addEventListener("input", updateEstimate);
     byId("ticket-slip")?.addEventListener("input", updateEstimate);
     byId("ticket-tpsl")?.addEventListener("change", () => {
-      byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !byId("ticket-tpsl")?.checked);
+      const on = !!byId("ticket-tpsl")?.checked;
+      byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !on);
+      byId("ticket-form")?.classList.toggle("has-tpsl-extra", on);
     });
     byId("lev-toggle")?.addEventListener("click", (ev) => {
       ev.stopPropagation();

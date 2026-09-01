@@ -104,6 +104,16 @@ describe("ticket DOM", () => {
     expect(ticket).toContain("ticket-slip");
     expect(ticket).toContain("ticket-scroll");
     expect(ticket).toContain("ticket-foot");
+    expect(ticket).toContain("ticket-core");
+    expect(ticket).toContain("ticket-core-tail");
+    const priceAt = ticket.indexOf('id="ticket-price-wrap"');
+    const scrollAt = ticket.indexOf('class="ticket-scroll"');
+    const sizeAt = ticket.indexOf('id="ticket-amount-wrap"');
+    expect(priceAt).toBeGreaterThan(-1);
+    expect(priceAt).toBeLessThan(scrollAt);
+    expect(sizeAt).toBeGreaterThan(-1);
+    expect(sizeAt).toBeLessThan(scrollAt);
+    expect(ticket.indexOf('id="ticket-scale-wrap"')).toBeGreaterThan(scrollAt);
     expect(ticket).toContain('id="sum-liq-row"');
     expect(ticket).toContain('id="sum-margin-row"');
     expect(ticket).toContain("chk-box");
@@ -159,5 +169,17 @@ describe("ticket DOM", () => {
     expect(pane).not.toMatch(/role="slider"/);
     expect(pane).not.toMatch(/pill/);
     expect(html.split('data-book-tab="trades"').length - 1).toBe(1);
+  });
+
+  it("keeps Market and Limit from scrolling; only Pro extras may overflow", () => {
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(css).toMatch(/\.trade-ticket \{[\s\S]*?overflow: hidden/);
+    expect(css).toMatch(/\.ticket \{[\s\S]*?overflow: hidden/);
+    expect(css).toMatch(/\.ticket-scroll \{[\s\S]*?overflow-y: hidden/);
+    expect(css).toMatch(/\.ticket:not\(\.has-pro-extra\) \.ticket-scroll \{[\s\S]*?overflow: hidden/);
+    expect(css).toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow-y: auto/);
+    expect(css).toMatch(/\.ticket-foot \{[\s\S]*?flex: 0 0 auto/);
+    expect(js).toContain('classList.toggle("has-pro-extra", proOn)');
   });
 });
