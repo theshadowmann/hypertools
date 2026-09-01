@@ -82,6 +82,36 @@ html.desk #trade:not(.hidden) {
 .btn-connect:hover,
 .wallet-connect-btn:hover { background: #243562; }
 
+.btn-ghost,
+.addr-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  background: transparent;
+  color: #e8eaed;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btn-ghost:hover {
+  border-color: #e8eaed;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+.addr-chip {
+  max-width: 9.5rem;
+  padding: 0 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .trade-shell {
   position: relative;
   display: grid;

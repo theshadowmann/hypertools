@@ -128,6 +128,14 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--navy\)/);
     expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--green\)/);
     expect(css).toMatch(/\.book-row\.bid \.px \{ color: var\(--green\)/);
+    expect(css).toMatch(/\.btn-ghost,[\s\S]*?border: 1px solid rgba\(255, 255, 255, 0\.45\)/);
+    expect(css).toMatch(/\.btn-ghost,[\s\S]*?background: transparent/);
+    expect(css).toMatch(/\.btn-connect \{[\s\S]*?background: var\(--navy\)/);
+    expect(html).toMatch(/id="btn-refresh"[^>]*class="btn-ghost"/);
+    expect(html).toMatch(/id="btn-disconnect"[^>]*class="btn-ghost"/);
+    expect(html).toMatch(/id="nav-address"[^>]*class="addr-chip"/);
+    expect(html).not.toMatch(/id="btn-refresh"[^>]*border-chrome/);
+    expect(html).not.toMatch(/id="btn-disconnect"[^>]*border-chrome/);
   });
 });
 
