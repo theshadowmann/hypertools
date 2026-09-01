@@ -50,6 +50,7 @@ describe("CSP", () => {
     expect(embed.headers["X-Frame-Options"]).toBe("SAMEORIGIN");
     expect(embed.headers["Content-Security-Policy"]).toMatch(/frame-ancestors 'self'/);
     expect(embed.headers["Content-Security-Policy"]).toMatch(/unsafe-inline/);
+    expect(embed.headers["Content-Security-Policy"]).toMatch(/connect-src 'self'/);
   });
 });
 

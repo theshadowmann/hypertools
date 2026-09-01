@@ -21,6 +21,7 @@
 
   let cssText = "";
   let queued = false;
+  let booted = false;
 
   function setVars(el) {
     if (!el || !el.style || !el.style.setProperty) return;
@@ -50,7 +51,7 @@
   function flattenActive(root) {
     if (!root.querySelectorAll) return;
     const nodes = root.querySelectorAll(
-      '[class*="isActive-"], [class*="button-"][class*="isActive"], [aria-checked="true"], [aria-pressed="true"]'
+      '[class*="isActive"], [class*="isSelected"], [class*="isChecked"], [aria-checked="true"], [aria-pressed="true"]'
     );
     for (let i = 0; i < nodes.length; i++) {
       const el = nodes[i];
@@ -106,15 +107,22 @@
   }
 
   function boot(css) {
-    cssText = css;
+    if (css) cssText = css;
     apply();
+    if (booted) return;
+    booted = true;
     new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
     document.addEventListener("DOMContentLoaded", apply);
     window.addEventListener("load", apply);
   }
 
+  const fromDoc = document.getElementById("ht-tv-chrome");
+  const embedded = fromDoc && fromDoc.textContent ? fromDoc.textContent : "";
+  boot(embedded);
   fetch("/tv-chrome.css")
     .then((r) => r.text())
-    .then(boot)
-    .catch(() => boot(""));
+    .then((css) => {
+      if (css && css !== cssText) boot(css);
+    })
+    .catch(() => {});
 })();

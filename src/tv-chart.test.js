@@ -68,7 +68,8 @@ describe("TradingView embed", () => {
     const flatten = readFileSync(join(root, "public/tv-flatten.js"), "utf8");
     expect(flatten).toContain("ht-tv-chrome-late");
     expect(flatten).toContain("shadowRoot");
-    expect(flatten).toContain('isActive-');
+    expect(flatten).toContain("isActive");
+    expect(flatten).toContain("ht-tv-chrome");
     const hosted = readFileSync(join(root, "public/tv-chrome.css"), "utf8");
     expect(hosted).toBe(TV_CHROME_CSS);
   });
