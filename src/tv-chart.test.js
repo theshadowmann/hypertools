@@ -68,12 +68,15 @@ describe("TradingView embed", () => {
       "https://www.tradingview-widget.com/embed-widget/advanced-chart/#" + encodeURIComponent(JSON.stringify(cfg))
     );
     stampTvChrome(iframe);
-    const hash = decodeURIComponent(new URL(iframe.getAttribute("src")).hash.slice(1));
+    const src = iframe.getAttribute("src");
+    const parsed = new URL(src);
+    const hash = decodeURIComponent(parsed.hash.slice(1));
     expect(hash).toContain('"toolbar_bg":"#0F172A"');
     expect(hash).toContain('"paneProperties.background":"#0F172A"');
     expect(hash).toContain('"paneProperties.backgroundType":"solid"');
     expect(hash).toContain('"hide_top_toolbar":false');
     expect(hash).toContain('"hide_side_toolbar":false');
+    expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
     expect(TV_CHROME).toBe("#0F172A");
   });
 });
@@ -111,6 +114,8 @@ describe("chart chrome", () => {
     expect(css).toMatch(/\.trade-iv \{[\s\S]*?height: 22px/);
     expect(css).toMatch(/\.trade-iv \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?border: 0 !important/);
+    expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?mix-blend-mode: lighten/);
+    expect(css).toMatch(/\.tv-host \{[\s\S]*?isolation: isolate/);
     expect(css).toMatch(/\.trade-chart \{[^}]*padding: 0;/);
     expect(css).toMatch(/\.trade-chart \{[^}]*background: var\(--bg-surface\)/);
     expect(css).toMatch(/\.trade-chart \{[^}]*border-right: 1px solid var\(--border-color\)/);

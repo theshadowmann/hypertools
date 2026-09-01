@@ -48,9 +48,9 @@ export function tvWidgetConfig({ symbol, interval }) {
 }
 
 /**
- * The public embed script allowlists `overrides` / `backgroundColor` but strips
- * `toolbar_bg`. Re-apply it on the iframe hash so the left drawing bar and top
- * widget bar use the same navy as the pane (not a host overlay).
+ * The public embed script allowlists `backgroundColor` but strips `toolbar_bg`.
+ * Stamp toolbar_bg onto the iframe hash, and put overrides on the query string
+ * (`__defaultsOverrides` reads querySettings.overrides, not the hash).
  */
 export function stampTvChrome(iframe) {
   if (!iframe || typeof iframe.getAttribute !== "function") return;
@@ -62,32 +62,33 @@ export function stampTvChrome(iframe) {
   } catch {
     return;
   }
+  let cfg = {};
   const encoded = (url.hash || "").replace(/^#/, "");
-  if (!encoded) return;
-  let cfg;
-  try {
-    cfg = JSON.parse(decodeURIComponent(encoded));
-  } catch {
-    return;
+  if (encoded) {
+    try {
+      cfg = JSON.parse(decodeURIComponent(encoded));
+    } catch {
+      cfg = {};
+    }
   }
-  if (!cfg || typeof cfg !== "object") return;
+  if (!cfg || typeof cfg !== "object") cfg = {};
   const overrides = { ...(cfg.overrides && typeof cfg.overrides === "object" ? cfg.overrides : {}), ...TV_OVERRIDES };
-  if (
-    cfg.toolbar_bg === TV_CHROME &&
-    cfg.backgroundColor === TV_CHROME &&
-    overrides["paneProperties.background"] === TV_CHROME &&
-    overrides["paneProperties.backgroundType"] === "solid"
-  ) {
-    return;
-  }
   cfg.backgroundColor = TV_CHROME;
   cfg.toolbar_bg = TV_CHROME;
+  cfg.colorTheme = "dark";
+  cfg.theme = cfg.theme || "dark";
   cfg.overrides = overrides;
   cfg.loading_screen = {
     ...(cfg.loading_screen && typeof cfg.loading_screen === "object" ? cfg.loading_screen : {}),
     backgroundColor: TV_CHROME,
   };
-  url.hash = encodeURIComponent(JSON.stringify(cfg));
+  const overrideStr = JSON.stringify(TV_OVERRIDES);
+  const nextHash = encodeURIComponent(JSON.stringify(cfg));
+  const sameHash = (url.hash || "").replace(/^#/, "") === nextHash;
+  const sameQuery = url.searchParams.get("overrides") === overrideStr;
+  if (sameHash && sameQuery) return;
+  url.hash = nextHash;
+  url.searchParams.set("overrides", overrideStr);
   iframe.setAttribute("src", url.toString());
 }
 
