@@ -54,7 +54,7 @@ export function note(message, className) {
 export function dashedEmpty(message) {
   return h(
     "div",
-    { class: "rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-10 text-center text-sm text-mist-400" },
+    { class: "rounded-xl border border-dashed border-chrome/60 bg-ink-850/50 px-5 py-10 text-center text-sm text-mist-400" },
     message
   );
 }

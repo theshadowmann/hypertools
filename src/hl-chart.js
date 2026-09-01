@@ -1,11 +1,11 @@
 import { clear } from "./dom.js";
 import { loadCandles } from "./api.js";
 
-const BG = "#0a0c0e";
-const GRID = "rgba(255, 255, 255, 0.04)";
+const BG = "#1A2B56";
+const GRID = "rgba(54, 55, 55, 0.35)";
 const UP = "#00c853";
 const DOWN = "#e57373";
-const AXIS = "#8b9198";
+const AXIS = "#A4A5A5";
 const PAD = { top: 8, right: 48, bottom: 22, left: 4 };
 
 export function formatAxisPx(n) {

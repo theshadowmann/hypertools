@@ -48,7 +48,7 @@ export function levLabel(lev) {
 function cardMini(label, value, hint) {
   return h(
     "article",
-    { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card" },
+    { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card" },
     h("p", { class: "text-xs font-medium uppercase tracking-wider text-mist-400" }, label),
     h("p", { class: "mt-2 font-mono text-xl font-medium tracking-tight text-white tabular" }, value),
     hint ? h("p", { class: "mt-1 text-[10px] tracking-wide text-mist-400/70" }, hint) : null
@@ -132,7 +132,7 @@ function renderOverview(el, perps, spotBalances) {
     el.overview.appendChild(
       h(
         "article",
-        { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card" },
+        { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card" },
         h("p", { class: "text-xs font-medium uppercase tracking-wider text-mist-400" }, c.label),
         h("p", { class: "mt-2 font-mono text-2xl font-medium tracking-tight tabular " + color }, c.value),
         c.extra ? h("p", { class: "mt-1 text-xs text-mist-400" }, c.extra) : null,
@@ -161,7 +161,7 @@ function renderPerps(el, assetPositions, mids) {
     const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
     return h(
       "tr",
-      { class: "border-t border-white/5" },
+      { class: "border-t border-chrome/50" },
       h("td", { class: "px-3 py-2.5 font-normal text-mist-100" }, p.coin || "—"),
       h(
         "td",
@@ -193,7 +193,7 @@ function renderPerps(el, assetPositions, mids) {
   el.perpsRoot.appendChild(
     h(
       "div",
-      { class: "hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card md:block" },
+      { class: "hidden overflow-x-auto rounded-xl border border-chrome/50 bg-ink-850 shadow-card md:block" },
       h(
         "table",
         { class: "min-w-full text-sm" },
@@ -217,7 +217,7 @@ function renderPerps(el, assetPositions, mids) {
     cards.appendChild(
       h(
         "article",
-        { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card" },
+        { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card" },
         h(
           "div",
           { class: "mb-3 flex items-center justify-between" },
@@ -256,7 +256,7 @@ function renderSpot(el, balances) {
     const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
     return h(
       "tr",
-      { class: "border-t border-white/5" },
+      { class: "border-t border-chrome/50" },
       h("td", { class: "px-3 py-2.5 font-normal text-mist-100" }, b.coin || "—"),
       h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtQty(b.total)),
       h("td", { class: "px-3 py-2.5 font-mono text-sm tabular text-mist-300" }, fmtQty(b.hold)),
@@ -267,7 +267,7 @@ function renderSpot(el, balances) {
   el.spotRoot.appendChild(
     h(
       "div",
-      { class: "hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card sm:block" },
+      { class: "hidden overflow-x-auto rounded-xl border border-chrome/50 bg-ink-850 shadow-card sm:block" },
       h(
         "table",
         { class: "min-w-full text-sm" },
@@ -289,7 +289,7 @@ function renderSpot(el, balances) {
     cards.appendChild(
       h(
         "article",
-        { class: "rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card sm:hidden" },
+        { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card sm:hidden" },
         h("p", { class: "font-medium text-mist-100" }, b.coin || "—"),
         h(
           "div",
@@ -353,7 +353,7 @@ function renderStaking(el, summary, delegations, validatorNames) {
     const showAddr = names[key] ? String(d.validator || "") : "";
     return h(
       "tr",
-      { class: "border-t border-white/5" },
+      { class: "border-t border-chrome/50" },
       h(
         "td",
         { class: "px-3 py-2.5" },
@@ -368,7 +368,7 @@ function renderStaking(el, summary, delegations, validatorNames) {
   el.stakingRoot.appendChild(
     h(
       "div",
-      { class: "mt-4 overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card" },
+      { class: "mt-4 overflow-x-auto rounded-xl border border-chrome/50 bg-ink-850 shadow-card" },
       h(
         "table",
         { class: "min-w-full text-sm" },

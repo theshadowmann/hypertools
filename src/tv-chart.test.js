@@ -76,6 +76,27 @@ describe("chart chrome", () => {
   });
 });
 
+describe("navy grey theme", () => {
+  it("uses navy #1A2B56 and grey #363737 instead of charcoal", () => {
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    const tw = readFileSync(join(root, "tailwind.config.js"), "utf8");
+    const tv = readFileSync(join(root, "src/tv-chart.js"), "utf8");
+    const hl = readFileSync(join(root, "src/hl-chart.js"), "utf8");
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    expect(css).toContain("--bg: #1A2B56");
+    expect(css).toContain("--grey: #363737");
+    expect(css).toContain("--line: #363737");
+    expect(css).not.toContain("#0a0c0e");
+    expect(tw).toContain('950: "#1A2B56"');
+    expect(tw).toContain('chrome: "#363737"');
+    expect(tv).toContain('backgroundColor: "#1A2B56"');
+    expect(hl).toContain('const BG = "#1A2B56"');
+    expect(html).toContain('content="#1A2B56"');
+    expect(css).toMatch(/\.chk-box \{[\s\S]*?border: 1px solid var\(--grey\)/);
+    expect(css).toMatch(/\.chk-box \{[\s\S]*?background: var\(--bg\)/);
+  });
+});
+
 describe("type weight", () => {
   it("keeps trade chrome at 400–600 with no fake-bold", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");

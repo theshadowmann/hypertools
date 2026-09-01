@@ -292,7 +292,7 @@ function showNavWalletMenu(targets) {
         {
           type: "button",
           class:
-            "block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-white/5 hover:text-white",
+            "block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-ink-700 hover:text-white",
           role: "menuitem",
           onClick: (ev) => {
             ev.stopPropagation();

@@ -1272,7 +1272,7 @@ export function createTradeView(app) {
           const szi = num(p.szi);
           return h(
             "tr",
-            { class: "border-t border-white/5 cursor-pointer hover:bg-white/5", onClick: () => setMarket(p.coin) },
+            { class: "border-t border-chrome/50 cursor-pointer hover:bg-ink-700", onClick: () => setMarket(p.coin) },
             h("td", { class: "px-2 py-1.5 font-normal text-mist-100" }, p.coin),
             h("td", { class: "px-2 py-1.5 " + (szi >= 0 ? "text-buy" : "text-sell") }, szi >= 0 ? "Long" : "Short"),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(Math.abs(szi))),
@@ -1415,7 +1415,7 @@ export function createTradeView(app) {
           const label = m && m.kind === "outcome" ? m.pair : o.coin;
           return h(
             "tr",
-            { class: "border-t border-white/5" },
+            { class: "border-t border-chrome/50" },
             h("td", { class: "px-2 py-1.5 text-mist-400" }, formatClock(o.timestamp)),
             h("td", { class: "px-2 py-1.5 text-white" }, label),
             h("td", { class: "px-2 py-1.5 " + (o.side === "B" ? "text-buy" : "text-sell") }, dir),
@@ -1461,7 +1461,7 @@ export function createTradeView(app) {
       rows.push(
         h(
           "tr",
-          { class: "border-t border-white/5" },
+          { class: "border-t border-chrome/50" },
           h("td", { class: "px-2 py-1.5 text-white" }, st.coin || "—"),
           h("td", { class: "px-2 py-1.5" }, st.side === "B" ? "Buy" : "Sell"),
           h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(st.sz)),
@@ -1483,7 +1483,7 @@ export function createTradeView(app) {
       rows.push(
         h(
           "tr",
-          { class: "border-t border-white/5" },
+          { class: "border-t border-chrome/50" },
           h("td", { class: "px-2 py-1.5 text-white" }, st.coin || "—"),
           h("td", { class: "px-2 py-1.5" }, st.side === "B" ? "Buy" : "Sell"),
           h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(st.sz)),
@@ -1498,7 +1498,7 @@ export function createTradeView(app) {
       rows.push(
         h(
           "tr",
-          { class: "border-t border-white/5" },
+          { class: "border-t border-chrome/50" },
           h("td", { class: "px-2 py-1.5 text-white" }, fill.coin || "—"),
           h("td", { class: "px-2 py-1.5" }, fill.side === "B" ? "Buy" : "Sell"),
           h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(fill.sz)),
@@ -1535,7 +1535,7 @@ export function createTradeView(app) {
           const d = f.delta || {};
           return h(
             "tr",
-            { class: "border-t border-white/5" },
+            { class: "border-t border-chrome/50" },
             h("td", { class: "px-2 py-1.5 text-mist-400" }, formatLocalTime(f.time)),
             h("td", { class: "px-2 py-1.5 text-white" }, d.coin || "—"),
             h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(d.szi)),
@@ -1570,7 +1570,7 @@ export function createTradeView(app) {
             const label = m && m.kind === "outcome" ? m.pair : f.coin;
             return h(
               "tr",
-              { class: "border-t border-white/5" },
+              { class: "border-t border-chrome/50" },
               h("td", { class: "px-2 py-1.5 text-mist-400" }, formatLocalTime(f.time)),
               h("td", { class: "px-2 py-1.5 text-white" }, label),
               h("td", { class: "px-2 py-1.5 " + (f.side === "B" ? "text-buy" : "text-sell") }, f.side === "B" ? "Buy" : "Sell"),
@@ -1596,7 +1596,7 @@ export function createTradeView(app) {
           const o = row.order || row;
           return h(
             "tr",
-            { class: "border-t border-white/5" },
+            { class: "border-t border-chrome/50" },
             h("td", { class: "px-2 py-1.5 text-mist-400" }, formatLocalTime(o.timestamp)),
             h("td", { class: "px-2 py-1.5 text-white" }, o.coin),
             h("td", { class: "px-2 py-1.5" }, o.side === "B" ? "Long" : "Short"),
