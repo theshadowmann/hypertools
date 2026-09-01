@@ -534,6 +534,7 @@ export function createTradeView(app) {
         : "—";
       chEl.classList.toggle("up", Number.isFinite(ch) && ch > 0);
       chEl.classList.toggle("down", Number.isFinite(ch) && ch < 0);
+      chEl.classList.toggle("flat", Number.isFinite(ch) && ch === 0);
     }
     setText("stat-mark", Number.isFinite(k) ? fmtPx(k) : "—");
     setText("stat-oracle", Number.isFinite(oracle) ? fmtPx(oracle) : "—");

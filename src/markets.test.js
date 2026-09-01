@@ -131,6 +131,10 @@ describe("picker filter", () => {
       text: "-$100.00 / -3.23%",
       cls: "mp-chg down",
     });
+    expect(formatPickerChange("100", "100")).toEqual({
+      text: "$0.000000 / 0.00%",
+      cls: "mp-muted",
+    });
     expect(formatPickerChange("1", "0")).toEqual({ text: "—", cls: "mp-muted" });
   });
 });

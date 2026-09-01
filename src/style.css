@@ -474,7 +474,7 @@ html.desk #trade:not(.hidden) {
   color: var(--muted);
 }
 .mp-badge.perp { color: var(--navy); background: rgba(26, 43, 86, 0.28); }
-.mp-chg.up { color: var(--green); }
+.mp-chg.up { color: var(--bid); }
 .mp-chg.down { color: var(--red); }
 .mp-muted { color: var(--muted); }
 .mp-foot {
@@ -513,8 +513,9 @@ html.desk #trade:not(.hidden) {
 .stat { display: flex; flex-direction: column; gap: 1px; }
 .stat-k { font-size: 10px; font-weight: 400; color: var(--muted); letter-spacing: 0.02em; }
 .stat-v { font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 500; color: #e8eaed; }
-.stat-v.up { color: var(--green); }
+.stat-v.up { color: var(--bid); }
 .stat-v.down { color: var(--red); }
+.stat-v.flat { color: var(--muted); }
 
 .book-head {
   display: flex;

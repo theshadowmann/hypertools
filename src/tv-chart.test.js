@@ -126,7 +126,13 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--navy\)/);
-    expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--green\)/);
+    expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--bid\)/);
+    expect(css).toMatch(/\.stat-v\.up \{ color: var\(--bid\)/);
+    expect(css).toMatch(/\.stat-v\.down \{ color: var\(--red\)/);
+    expect(css).toMatch(/\.stat-v\.flat \{ color: var\(--muted\)/);
+    expect(css).toMatch(/\.mp-chg\.down \{ color: var\(--red\)/);
+    expect(css).not.toMatch(/\.stat-v\.up \{ color: var\(--green\)/);
+    expect(css).not.toMatch(/\.mp-chg\.up \{ color: var\(--green\)/);
     expect(css).toMatch(/\.book-row\.bid \.px \{ color: var\(--bid\)/);
     expect(css).toMatch(/\.book-row\.bid \.depth \{ background: var\(--bid\)/);
     expect(css).toMatch(/\.book-row\.ask \.px \{ color: var\(--red\)/);
