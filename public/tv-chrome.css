@@ -94,13 +94,18 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   stroke: #06B6D4 !important;
 }
 [class*="isActive-"],
-[class*="button-"][class*="isActive"] {
+[class*="button-"][class*="isActive"],
+[class*="isActive-"] *,
+[class*="button-"][class*="isActive"] * {
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+}
+[aria-checked="true"],
+[aria-pressed="true"] {
   background: transparent !important;
   background-color: transparent !important;
-  background-image: none !important;
   box-shadow: none !important;
   border: 0 !important;
-  outline: none !important;
   color: #06B6D4 !important;
   fill: #06B6D4 !important;
 }

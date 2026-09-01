@@ -49,7 +49,9 @@
 
   function flattenActive(root) {
     if (!root.querySelectorAll) return;
-    const nodes = root.querySelectorAll('[class*="isActive-"], [class*="button-"][class*="isActive"]');
+    const nodes = root.querySelectorAll(
+      '[class*="isActive-"], [class*="button-"][class*="isActive"], [aria-checked="true"], [aria-pressed="true"]'
+    );
     for (let i = 0; i < nodes.length; i++) {
       const el = nodes[i];
       el.style.setProperty("background", "transparent", "important");
@@ -57,6 +59,15 @@
       el.style.setProperty("box-shadow", "none", "important");
       el.style.setProperty("border", "0", "important");
       el.style.setProperty("color", "#06B6D4", "important");
+      el.style.setProperty("fill", "#06B6D4", "important");
+      const kids = el.querySelectorAll("*");
+      for (let k = 0; k < kids.length; k++) {
+        kids[k].style.setProperty("background", "transparent", "important");
+        kids[k].style.setProperty("background-color", "transparent", "important");
+        kids[k].style.setProperty("box-shadow", "none", "important");
+        kids[k].style.setProperty("color", "#06B6D4", "important");
+        kids[k].style.setProperty("fill", "#06B6D4", "important");
+      }
     }
   }
 

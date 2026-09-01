@@ -117,13 +117,18 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   stroke: ${TV_ACCENT} !important;
 }
 [class*="isActive-"],
-[class*="button-"][class*="isActive"] {
+[class*="button-"][class*="isActive"],
+[class*="isActive-"] *,
+[class*="button-"][class*="isActive"] * {
+  color: ${TV_ACCENT} !important;
+  fill: ${TV_ACCENT} !important;
+}
+[aria-checked="true"],
+[aria-pressed="true"] {
   background: transparent !important;
   background-color: transparent !important;
-  background-image: none !important;
   box-shadow: none !important;
   border: 0 !important;
-  outline: none !important;
   color: ${TV_ACCENT} !important;
   fill: ${TV_ACCENT} !important;
 }
