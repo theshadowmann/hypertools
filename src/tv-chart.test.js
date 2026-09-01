@@ -120,7 +120,7 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.ticket-submit\.sell \{[^}]*background: var\(--red-fill\)/);
     expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
-    expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--green\)/);
+    expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--navy\)/);
     expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--green\)/);
     expect(css).toMatch(/\.book-row\.bid \.px \{ color: var\(--green\)/);
   });
