@@ -92,6 +92,8 @@ export function drawCandles(ctx, bars, width, height) {
 
 export function mountHlChart(container, { coin, interval }) {
   if (!container) return;
+  const prev = container.querySelector(".hl-chart-host, .tradingview-widget-container");
+  if (prev && typeof prev._chartTeardown === "function") prev._chartTeardown();
   clear(container);
   const c = String(coin || "");
   if (!c) {
@@ -138,6 +140,7 @@ export function mountHlChart(container, { coin, interval }) {
     cancelled = true;
     if (ro) ro.disconnect();
   };
+  wrap._chartTeardown = wrap._hlChartTeardown;
 
   loadCandles(c, interval)
     .then((rows) => {

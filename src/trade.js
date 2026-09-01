@@ -296,13 +296,36 @@ export function createTradeView(app) {
     const key = (m ? m.id : coin) + "|" + chartCoin + "|" + interval;
     if (key === lastTv && byId("chart") && byId("chart").firstChild) return;
     lastTv = key;
-    mountChart(byId("chart"), {
+    const kind = mountChart(byId("chart"), {
       coin: chartCoin,
       interval,
       kind: m ? m.kind : pageKind === "outcome" ? "outcome" : "perp",
       base: m && m.base,
       quote: m && m.quote,
+      onFallback: () => renderHlIntervalRow(true),
     });
+    renderHlIntervalRow(kind === "hl");
+  }
+
+  function renderHlIntervalRow(show) {
+    const row = byId("hl-iv");
+    if (!row) return;
+    const on = !!show;
+    row.classList.toggle("hidden", !on);
+    row.querySelectorAll("[data-hl-iv]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-hl-iv") === interval ? "true" : "false");
+    });
+  }
+
+  function setChartInterval(next) {
+    const allowed = { "1m": 1, "5m": 1, "15m": 1, "1h": 1, "4h": 1, "1d": 1 };
+    if (!allowed[next] || interval === next) {
+      renderHlIntervalRow(!byId("hl-iv")?.classList.contains("hidden"));
+      return;
+    }
+    interval = next;
+    lastTv = "";
+    ensureChart();
   }
 
   function useBookPrice(px) {
@@ -1860,6 +1883,7 @@ export function createTradeView(app) {
       byId("market-chip-lev")?.classList.add("hidden");
       lastTv = "empty";
       mountChart(byId("chart"), { coin: "", kind: pageKind === "outcome" ? "outcome" : "perp" });
+      renderHlIntervalRow(false);
       book = { bids: [], asks: [], time: 0 };
       trades = [];
       bookSnapshotDone = true;
@@ -2066,6 +2090,11 @@ export function createTradeView(app) {
       }
     });
     byId("ticket-form")?.addEventListener("submit", onSubmit);
+    byId("hl-iv")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-hl-iv]");
+      if (!btn) return;
+      setChartInterval(btn.getAttribute("data-hl-iv"));
+    });
     document.querySelectorAll("[data-bottom-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         bottomTab = btn.getAttribute("data-bottom-tab");

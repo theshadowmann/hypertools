@@ -240,34 +240,36 @@ export function tvWidgetConfig({ symbol, interval }) {
     enable_publishing: false,
     loading_screen: { backgroundColor: TV_CHROME },
     overrides: { ...TV_OVERRIDES },
-    custom_css_url: tvChromeCssUrl(),
     support_host: TV_SUPPORT_HOST,
   };
 }
 
-function serializeTvSrc(url, relative) {
-  if (relative) return url.pathname + url.search + url.hash;
-  return url.toString();
+export const TV_PAINT_MS = 8000;
+
+function teardownChartHost(container) {
+  if (!container || !container.querySelector) return;
+  const host = container.querySelector(".tradingview-widget-container, .hl-chart-host");
+  if (host && typeof host._chartTeardown === "function") host._chartTeardown();
 }
 
 /**
- * The public embed script allowlists `backgroundColor` but strips `toolbar_bg`.
- * Stamp toolbar_bg onto the iframe hash, and put overrides on the query string
- * (`__defaultsOverrides` reads querySettings.overrides, not the hash).
+ * Official widget only. Same-origin `/embed-widget/...` is an empty SPA shell
+ * and must never be the chart iframe src (it spins forever).
+ * `custom_css_url` is omitted: a relative path 404s on tradingview-widget.com.
  */
 export function stampTvChrome(iframe) {
   if (!iframe || typeof iframe.getAttribute !== "function") return;
   const raw = iframe.getAttribute("src") || "";
   if (!raw || !/tradingview|embed-widget|tv-embed/i.test(raw)) return;
   const relative = raw.startsWith("/") || !/^https?:\/\//i.test(raw);
-  let url;
+  let parsed;
   try {
-    url = relative ? new URL(raw, "http://ht.invalid") : new URL(raw);
+    parsed = relative ? new URL(raw, "http://ht.invalid") : new URL(raw);
   } catch {
     return;
   }
   let cfg = {};
-  const encoded = (url.hash || "").replace(/^#/, "");
+  const encoded = (parsed.hash || "").replace(/^#/, "");
   if (encoded) {
     try {
       cfg = JSON.parse(decodeURIComponent(encoded));
@@ -279,7 +281,7 @@ export function stampTvChrome(iframe) {
   const overrides = { ...(cfg.overrides && typeof cfg.overrides === "object" ? cfg.overrides : {}), ...TV_OVERRIDES };
   cfg.backgroundColor = TV_CHROME;
   cfg.toolbar_bg = TV_CHROME;
-  cfg.custom_css_url = tvChromeCssUrl();
+  delete cfg.custom_css_url;
   cfg.colorTheme = "dark";
   cfg.theme = cfg.theme || "dark";
   cfg.overrides = overrides;
@@ -287,18 +289,39 @@ export function stampTvChrome(iframe) {
     ...(cfg.loading_screen && typeof cfg.loading_screen === "object" ? cfg.loading_screen : {}),
     backgroundColor: TV_CHROME,
   };
-  const overrideStr = JSON.stringify(TV_OVERRIDES);
-  const nextHash = encodeURIComponent(JSON.stringify(cfg));
-  const sameHash = (url.hash || "").replace(/^#/, "") === nextHash;
-  const sameQuery = url.searchParams.get("overrides") === overrideStr;
-  if (sameHash && sameQuery) return;
-  url.hash = nextHash;
-  url.searchParams.set("overrides", overrideStr);
-  iframe.setAttribute("src", serializeTvSrc(url, relative));
+  const dest = new URL(TV_WIDGET_PAGE);
+  dest.searchParams.set("overrides", JSON.stringify(TV_OVERRIDES));
+  dest.hash = encodeURIComponent(JSON.stringify(cfg));
+  iframe.setAttribute("src", dest.toString());
 }
 
-export function mountTvChart(container, { coin, interval, kind, base, quote }) {
+export function officialTvWidgetSrc(src) {
+  return String(src || "").startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart");
+}
+
+export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS) {
+  let settled = false;
+  let timer = 0;
+  const finish = (failed) => {
+    if (settled) return;
+    settled = true;
+    if (timer) clearTimeout(timer);
+    if (failed && typeof onFail === "function") onFail();
+  };
+  if (iframe && typeof iframe.addEventListener === "function") {
+    iframe.addEventListener("load", () => {
+      const src = iframe.getAttribute && iframe.getAttribute("src");
+      if (officialTvWidgetSrc(src)) finish(false);
+    });
+    iframe.addEventListener("error", () => finish(true));
+  }
+  timer = setTimeout(() => finish(true), ms);
+  return () => finish(false);
+}
+
+export function mountTvChart(container, { coin, interval, kind, base, quote, onFallback } = {}) {
   if (!container) return;
+  teardownChartHost(container);
   clear(container);
   const symbol = tvSymbol(coin, kind, base, quote);
   if (!symbol) {
@@ -325,20 +348,26 @@ export function mountTvChart(container, { coin, interval, kind, base, quote }) {
   iframe.setAttribute("scrolling", "no");
   iframe.style.cssText = "width:100%;height:100%;border:0;margin:0;display:block;background:" + TV_CHROME;
   const cfg = tvWidgetConfig({ symbol, interval });
-  iframe.setAttribute("src", TV_EMBED_PAGE + "#" + encodeURIComponent(JSON.stringify(cfg)));
+  iframe.setAttribute("src", TV_WIDGET_PAGE + "#" + encodeURIComponent(JSON.stringify(cfg)));
   stampTvChrome(iframe);
   widget.appendChild(iframe);
   container.appendChild(wrap);
+  const cancel = scheduleTvFallback(iframe, () => {
+    mountHlChart(container, { coin, interval });
+    if (typeof onFallback === "function") onFallback();
+  });
+  wrap._chartTeardown = cancel;
 }
 
 /** TV when a Hyperliquid symbol exists; otherwise live HL candles for that coin (never a fake BTC chart). */
 export function mountChart(container, opts) {
-  if (!container) return;
+  if (!container) return "skip";
   const o = opts || {};
   const symbol = tvSymbol(o.coin, o.kind, o.base, o.quote);
   if (symbol) {
     mountTvChart(container, o);
-    return;
+    return "tv";
   }
   mountHlChart(container, o);
+  return "hl";
 }

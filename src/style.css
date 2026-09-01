@@ -169,12 +169,40 @@ html.tv-embed-frame footer {
   grid-area: chart;
   grid-column: 1;
   grid-row: 2;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
   padding: 0;
   margin: 0;
   background: var(--bg-surface);
   border-right: 1px solid var(--border-color);
+}
+.hl-iv {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+}
+.hl-iv.hidden { display: none; }
+.hl-iv-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  height: 28px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.hl-iv-btn[aria-pressed="true"] {
+  color: var(--accent-primary);
+  box-shadow: inset 0 -2px 0 var(--accent-primary);
 }
 .trade-book {
   grid-area: book;
@@ -223,6 +251,7 @@ html.tv-embed-frame footer {
 .trade-shell.no-book .trade-ticket { grid-column: 2; }
 
 .tv-host {
+  flex: 1;
   height: 100%;
   width: 100%;
   min-height: 0;

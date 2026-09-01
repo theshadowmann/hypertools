@@ -4,24 +4,40 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { mountChart, mountTvChart, stampTvChrome, TV_CHROME, TV_CHROME_CSS, TV_EMBED_PAGE, TV_SCRIPT } from "./tv-chart.js";
+import { describe, expect, it, vi } from "vitest";
+import {
+  mountChart,
+  mountTvChart,
+  officialTvWidgetSrc,
+  scheduleTvFallback,
+  stampTvChrome,
+  TV_CHROME,
+  TV_CHROME_CSS,
+  TV_EMBED_PAGE,
+  TV_PAINT_MS,
+  TV_SCRIPT,
+  TV_WIDGET_PAGE,
+} from "./tv-chart.js";
 import { drawCandles } from "./hl-chart.js";
 import { candleSnapshotBody, candlesToBars, hlCandleInterval, prevDayFromDailyBars } from "./api.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("TradingView embed", () => {
-  it("loads the official Advanced Chart via a same-origin snapshot with navy chrome CSS", () => {
+  it("loads the official Advanced Chart iframe, not a same-origin snapshot", () => {
     const host = document.createElement("div");
     mountTvChart(host, { coin: "BTC", interval: "15m" });
     const iframe = host.querySelector("iframe");
     expect(iframe).toBeTruthy();
     expect(TV_SCRIPT).toBe("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js");
+    expect(TV_WIDGET_PAGE).toBe("https://www.tradingview-widget.com/embed-widget/advanced-chart/");
     expect(TV_EMBED_PAGE).toBe("/embed-widget/advanced-chart/");
     const src = iframe.getAttribute("src");
-    expect(src).toContain("/embed-widget/advanced-chart/");
-    const parsed = new URL(src, "http://localhost");
+    expect(officialTvWidgetSrc(src)).toBe(true);
+    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
+    expect(src.startsWith("/embed-widget/")).toBe(false);
+    const parsed = new URL(src);
+    expect(parsed.origin).toBe("https://www.tradingview-widget.com");
     expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
     const hash = decodeURIComponent(parsed.hash.slice(1));
     expect(hash).toContain("HYPERLIQUID:BTCUSDC.P");
@@ -32,7 +48,8 @@ describe("TradingView embed", () => {
     expect(hash).toContain('"hide_volume":false');
     expect(hash).toContain('"backgroundColor":"#0F172A"');
     expect(hash).toContain('"toolbar_bg":"#0F172A"');
-    expect(hash).toMatch(/"custom_css_url":"(https?:\/\/[^"]+)?\/tv-chrome\.css"/);
+    expect(hash).not.toContain("custom_css_url");
+    expect(hash).not.toContain("/tv-chrome.css");
     expect(hash).toContain('"colorTheme":"dark"');
     expect(hash).toContain('"paneProperties.background":"#0F172A"');
     expect(hash).toContain('"paneProperties.backgroundType":"solid"');
@@ -117,7 +134,7 @@ describe("TradingView embed", () => {
     const parsed = new URL(src);
     const hash = decodeURIComponent(parsed.hash.slice(1));
     expect(hash).toContain('"toolbar_bg":"#0F172A"');
-    expect(hash).toMatch(/"custom_css_url":"(https?:\/\/[^"]+)?\/tv-chrome\.css"/);
+    expect(hash).not.toContain("custom_css_url");
     expect(hash).toContain('"paneProperties.background":"#0F172A"');
     expect(hash).toContain('"paneProperties.backgroundType":"solid"');
     expect(hash).toContain('"hide_top_toolbar":false');
@@ -126,17 +143,61 @@ describe("TradingView embed", () => {
     expect(TV_CHROME).toBe("#0F172A");
   });
 
-  it("stamps navy chrome onto a same-origin embed-widget path", () => {
+  it("rewrites a same-origin embed-widget src to the official widget host", () => {
     const iframe = document.createElement("iframe");
     iframe.setAttribute("src", "/embed-widget/advanced-chart/#" + encodeURIComponent(JSON.stringify({ symbol: "HYPERLIQUID:BTCUSDC.P", theme: "dark" })));
     stampTvChrome(iframe);
     const src = iframe.getAttribute("src");
-    expect(src.startsWith("/embed-widget/advanced-chart/")).toBe(true);
-    expect(src).not.toContain("tradingview-widget.com");
-    const parsed = new URL(src, "http://localhost");
+    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
+    expect(src.startsWith("/embed-widget/")).toBe(false);
+    const parsed = new URL(src);
     expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
     expect(decodeURIComponent(parsed.hash.slice(1))).toContain('"toolbar_bg":"#0F172A"');
-    expect(decodeURIComponent(parsed.hash.slice(1))).toMatch(/"custom_css_url":"(https?:\/\/[^"]+)?\/tv-chrome\.css"/);
+    expect(decodeURIComponent(parsed.hash.slice(1))).not.toContain("custom_css_url");
+  });
+
+  it("falls back to HL candles if the official widget does not load in 8s", () => {
+    vi.useFakeTimers();
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", TV_WIDGET_PAGE + "#{}");
+    let failed = false;
+    scheduleTvFallback(iframe, () => {
+      failed = true;
+    }, TV_PAINT_MS);
+    vi.advanceTimersByTime(TV_PAINT_MS - 1);
+    expect(failed).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(failed).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("does not treat a same-origin snapshot load as a successful paint", () => {
+    vi.useFakeTimers();
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", TV_EMBED_PAGE);
+    let failed = false;
+    scheduleTvFallback(iframe, () => {
+      failed = true;
+    }, TV_PAINT_MS);
+    iframe.dispatchEvent(new Event("load"));
+    expect(failed).toBe(false);
+    vi.advanceTimersByTime(TV_PAINT_MS);
+    expect(failed).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("cancels the 8s fallback when the official widget loads", () => {
+    vi.useFakeTimers();
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", TV_WIDGET_PAGE + "#{}");
+    let failed = false;
+    scheduleTvFallback(iframe, () => {
+      failed = true;
+    }, TV_PAINT_MS);
+    iframe.dispatchEvent(new Event("load"));
+    vi.advanceTimersByTime(TV_PAINT_MS);
+    expect(failed).toBe(false);
+    vi.useRealTimers();
   });
 });
 
@@ -174,6 +235,9 @@ describe("chart chrome", () => {
     expect(css).toMatch(/grid-template-areas:[\s\S]*?"chart book ticket"/);
     expect(css).not.toContain(".trade-iv");
     expect(css).not.toContain(".iv-btn");
+    expect(css).toMatch(/\.hl-iv \{[\s\S]*?background: var\(--bg-surface\)/);
+    expect(css).toMatch(/\.hl-iv-btn \{[\s\S]*?color: var\(--text-muted\)/);
+    expect(css).toMatch(/\.hl-iv-btn\[aria-pressed="true"\] \{[\s\S]*?color: var\(--accent-primary\)/);
     expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?border: 0 !important/);
     expect(css).toMatch(/\.trade-chart \{[^}]*padding: 0;/);
     expect(css).toMatch(/\.trade-chart \{[^}]*background: var\(--bg-surface\)/);
@@ -215,7 +279,9 @@ describe("deep teal theme", () => {
     expect(tv).toContain("toolbar_bg: TV_CHROME");
     expect(tv).toContain("export const TV_CHROME_CSS_PATH = \"/tv-chrome.css\"");
     expect(tv).toContain("function tvChromeCssUrl");
-    expect(tv).toContain("custom_css_url: tvChromeCssUrl()");
+    expect(tv).toContain("delete cfg.custom_css_url");
+    expect(tv).not.toMatch(/custom_css_url:\s*tvChromeCssUrl/);
+    expect(tv).toContain("TV_WIDGET_PAGE");
     expect(tv).not.toContain('backgroundColor: "#242525"');
     expect(tv).not.toContain('backgroundColor: "#1A2B56"');
     expect(hl).toContain('const BG = "#0F172A"');
@@ -315,5 +381,27 @@ describe("type weight", () => {
     expect(css).toMatch(/\.hist-tab \{[\s\S]*?font-weight: 400/);
     expect(css).toMatch(/\.ticket-submit \{[\s\S]*?font-weight: 600/);
     expect(html).not.toMatch(/font-(extrabold|black|bold)\b/);
+  });
+});
+
+describe("HL interval row", () => {
+  it("is in the chart chrome, hidden by default, and used only for mountHlChart markets", () => {
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    const trade = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(html).toContain('id="hl-iv"');
+    expect(html).toContain('class="hl-iv hidden"');
+    expect(html).toContain('data-hl-iv="1m"');
+    expect(html).toContain('data-hl-iv="5m"');
+    expect(html).toContain('data-hl-iv="15m"');
+    expect(html).toContain('data-hl-iv="1h"');
+    expect(html).toContain('data-hl-iv="4h"');
+    expect(html).toContain('data-hl-iv="1d"');
+    expect(html).not.toContain('class="trade-iv"');
+    expect(html).not.toContain("data-interval");
+    expect(trade).toContain("renderHlIntervalRow(kind === \"hl\")");
+    expect(trade).toContain("onFallback: () => renderHlIntervalRow(true)");
+    expect(trade).toContain('byId("hl-iv")');
+    expect(trade).toContain("setChartInterval");
+    expect(trade).not.toContain(".trade-iv");
   });
 });
