@@ -147,7 +147,7 @@ describe("grey canvas theme", () => {
     expect(html).toContain("M2.5 4.5 L6 8 L9.5 4.5");
     expect(html).toContain("M2.5 7.5 L6 4 L9.5 7.5");
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
-    expect(css).toMatch(/\.lev-badge \{[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/\.lev-badge \{[\s\S]*?background: #1A2B56/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: #fff/);
     expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--bid\)/);
     expect(css).toMatch(/\.stat-v\.up \{ color: var\(--bid\)/);

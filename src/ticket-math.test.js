@@ -118,6 +118,9 @@ describe("ticket DOM", () => {
     expect(ticket).toContain('id="sum-margin-row"');
     expect(ticket).toContain("chk-box");
     expect(html).toContain('id="market-chip-icon"');
+    expect(html).toMatch(
+      /id="market-chip-pair">[\s\S]*class="chip-chevron"[\s\S]*id="market-chip-lev" class="lev-badge"/
+    );
     expect(html).toContain("Hide Small Balances");
     expect(html).toContain('id="trade-balances"');
   });

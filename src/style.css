@@ -305,13 +305,17 @@ html.desk #trade:not(.hidden) {
 .lev-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 18px;
   padding: 0 6px;
-  border-radius: 3px;
-  background: var(--navy);
+  border-radius: 4px;
+  background: #1A2B56;
   color: #fff;
+  -webkit-text-fill-color: #fff;
   font-size: 11px;
   font-weight: 500;
+  line-height: 1;
+  flex-shrink: 0;
 }
 .lev-badge.hidden { display: none; }
 

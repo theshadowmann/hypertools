@@ -63,6 +63,7 @@ describe("spot vs perp ticket chrome", () => {
     expect(document.querySelector(".type-row").classList.contains("hidden")).toBe(true);
     expect(document.getElementById("ticket-chk-row").classList.contains("hidden")).toBe(true);
     expect(document.getElementById("ticket-price-k").textContent).toBe("Price (USDC)");
+    expect(document.getElementById("market-chip-lev").classList.contains("hidden")).toBe(true);
     expect(document.getElementById("ticket-submit")).toBeTruthy();
   });
 });
