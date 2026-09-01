@@ -124,8 +124,15 @@ describe("deep teal theme", () => {
     expect(hl).not.toContain("#242525");
     expect(hl).not.toContain("#1A2B56");
     expect(html).toContain('content="#080D1A"');
+    expect(css).toMatch(/\.chk \{[\s\S]*?color: var\(--text-primary\)/);
     expect(css).toMatch(/\.chk-box \{[\s\S]*?border: 1px solid var\(--border-color\)/);
-    expect(css).toMatch(/\.chk-box \{[\s\S]*?background: var\(--bg-main\)/);
+    expect(css).toMatch(/\.chk-box \{[\s\S]*?background: var\(--bg-surface\)/);
+    expect(css).toMatch(/:checked \+ \.chk-box \{[\s\S]*?border-color: var\(--accent-primary\)/);
+    expect(css).toMatch(/:checked \+ \.chk-box \{[\s\S]*?background: var\(--bg-surface\)/);
+    expect(css).toMatch(/:checked \+ \.chk-box::after \{[\s\S]*?background: var\(--accent-primary\)/);
+    expect(css).toMatch(/:checked \+ \.chk-box::after \{[\s\S]*?inset: 2px/);
+    expect(css).not.toMatch(/chk-box::after[\s\S]*?rotate\(45deg\)/);
+    expect(css).not.toMatch(/chk-box::after[\s\S]*?content:\s*["'][✓✔]["']/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?background: var\(--accent-primary\)/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?color: var\(--bg-main\)/);
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?background: var\(--accent-primary\)/);
