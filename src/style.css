@@ -4,13 +4,13 @@
 
 :root {
   --navy: #1A2B56;
-  --bg: #1A2B56;
-  --pane: #283860;
-  --field: #2C3C64;
-  --hover: #314067;
+  --bg: #242525;
+  --pane: #2a2b2b;
+  --field: #2e2f2f;
+  --hover: #323333;
   --grey: #363737;
   --line: #363737;
-  --hair: rgba(54, 55, 55, 0.4);
+  --hair: #363737;
   --green: #00c853;
   --green-dim: #00b34a;
   --red: #e57373;
@@ -55,12 +55,17 @@ body {
   padding: 0 14px;
   border: 0;
   border-radius: 4px;
-  background: var(--green);
-  color: #04150e;
+  background: var(--navy);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
 }
-.btn-connect:hover { background: var(--green-dim); }
+.wallet-connect-btn {
+  background: var(--navy);
+  color: #fff;
+}
+.btn-connect:hover,
+.wallet-connect-btn:hover { background: #243562; }
 
 .trade-shell {
   position: relative;
@@ -1021,6 +1026,15 @@ input[type="checkbox"] {
 .ticket-submit.buy { background: var(--green); color: #04150e; }
 .ticket-submit.buy:hover { background: var(--green-dim); }
 .ticket-submit.sell { background: var(--red-fill); color: #fff; }
+.ticket-submit.connect,
+.ticket-submit.connect.buy,
+.ticket-submit.connect.sell {
+  background: var(--navy);
+  color: #fff;
+}
+.ticket-submit.connect:hover,
+.ticket-submit.connect.buy:hover,
+.ticket-submit.connect.sell:hover { background: #243562; }
 .ticket-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .ticket-status { min-height: 1.1rem; font-size: 11px; color: var(--muted); margin: 0; }

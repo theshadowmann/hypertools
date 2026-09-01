@@ -693,6 +693,7 @@ export function createTradeView(app) {
     if (!app.state.address || app.state.source !== "wallet") {
       submit.textContent = "Connect wallet";
       submit.disabled = false;
+      submit.classList.add("connect");
       submit.classList.toggle("buy", side === "buy");
       submit.classList.toggle("sell", side === "sell");
       return;
@@ -700,8 +701,10 @@ export function createTradeView(app) {
     if (!enabled) {
       submit.textContent = "Enable trading";
       submit.disabled = ticketBusy;
+      submit.classList.add("connect");
       return;
     }
+    submit.classList.remove("connect");
     submit.disabled = ticketBusy;
     const verb = side === "buy" ? "Buy" : "Sell";
     if (isOutcome()) submit.textContent = verb + " " + (outcomeLeg === 1 ? "No" : "Yes");

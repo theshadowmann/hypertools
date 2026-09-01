@@ -1,8 +1,8 @@
 import { clear } from "./dom.js";
 import { loadCandles } from "./api.js";
 
-const BG = "#1A2B56";
-const GRID = "rgba(54, 55, 55, 0.35)";
+const BG = "#242525";
+const GRID = "rgba(54, 55, 55, 0.45)";
 const UP = "#00c853";
 const DOWN = "#e57373";
 const AXIS = "#A4A5A5";

@@ -125,7 +125,7 @@ function connectButton(label, onClick, iconSrc) {
     {
       type: "button",
       class:
-        "wallet-connect-btn inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim",
+        "wallet-connect-btn inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold text-white shadow-glow transition",
       onClick,
     },
     icon,

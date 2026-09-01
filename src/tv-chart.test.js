@@ -76,24 +76,34 @@ describe("chart chrome", () => {
   });
 });
 
-describe("navy grey theme", () => {
-  it("uses navy #1A2B56 and grey #363737 instead of charcoal", () => {
+describe("grey canvas theme", () => {
+  it("uses grey page fill, not navy", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     const tw = readFileSync(join(root, "tailwind.config.js"), "utf8");
     const tv = readFileSync(join(root, "src/tv-chart.js"), "utf8");
     const hl = readFileSync(join(root, "src/hl-chart.js"), "utf8");
     const html = readFileSync(join(root, "index.html"), "utf8");
-    expect(css).toContain("--bg: #1A2B56");
+    expect(css).toContain("--bg: #242525");
+    expect(css).toContain("--pane: #2a2b2b");
     expect(css).toContain("--grey: #363737");
     expect(css).toContain("--line: #363737");
-    expect(css).not.toContain("#0a0c0e");
-    expect(tw).toContain('950: "#1A2B56"');
+    expect(css).not.toMatch(/--bg:\s*#1A2B56/i);
+    expect(css).not.toContain("#283860");
+    expect(css).not.toContain("#2C3C64");
+    expect(css).not.toContain("#314067");
+    expect(tw).toContain('950: "#242525"');
     expect(tw).toContain('chrome: "#363737"');
-    expect(tv).toContain('backgroundColor: "#1A2B56"');
-    expect(hl).toContain('const BG = "#1A2B56"');
-    expect(html).toContain('content="#1A2B56"');
+    expect(tw).not.toContain('950: "#1A2B56"');
+    expect(tv).toContain('backgroundColor: "#242525"');
+    expect(tv).not.toContain('backgroundColor: "#1A2B56"');
+    expect(hl).toContain('const BG = "#242525"');
+    expect(html).toContain('content="#242525"');
     expect(css).toMatch(/\.chk-box \{[\s\S]*?border: 1px solid var\(--grey\)/);
     expect(css).toMatch(/\.chk-box \{[\s\S]*?background: var\(--bg\)/);
+    expect(css).toMatch(/\.btn-connect \{[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.ticket-submit\.buy \{[^}]*background: var\(--green\)/);
   });
 });
 
