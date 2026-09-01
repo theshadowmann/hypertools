@@ -505,7 +505,7 @@ export function drawPnlChart(canvas, series) {
   canvas.height = Math.max(1, Math.floor(cssH * dpr));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
-  ctx.fillStyle = "#2a2b2b";
+  ctx.fillStyle = "#0F172A";
   ctx.fillRect(0, 0, cssW, cssH);
 
   const pts = canvas._series.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v));
@@ -529,7 +529,7 @@ export function drawPnlChart(canvas, series) {
   const xOf = (t) => padL + (tSpan === 0 ? plotW / 2 : ((t - t0) / tSpan) * plotW);
   const yOf = (v) => padT + ((yMax - v) / ySpan) * plotH;
 
-  ctx.strokeStyle = "rgba(164, 165, 165, 0.45)";
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padL, padT);
@@ -539,18 +539,18 @@ export function drawPnlChart(canvas, series) {
   ctx.lineTo(padL + plotW, xHairY);
   ctx.stroke();
 
-  ctx.fillStyle = "#A4A5A5";
+  ctx.fillStyle = "#94A3B8";
   ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   (ticks.length ? ticks : []).forEach((tick) => {
     const y = yOf(tick);
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(164, 165, 165, 0.45)";
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
     ctx.moveTo(padL - 4, y);
     ctx.lineTo(padL, y);
     ctx.stroke();
-    ctx.fillStyle = "#A4A5A5";
+    ctx.fillStyle = "#94A3B8";
     ctx.fillText(chartTickUsd(tick), padL - 8, y);
   });
 
@@ -560,12 +560,12 @@ export function drawPnlChart(canvas, series) {
   for (let i = 0; i < nX; i++) {
     const tt = tSpan === 0 ? t0 : t0 + (tSpan * i) / (nX - 1);
     const x = xOf(tt);
-    ctx.fillStyle = "#A4A5A5";
+    ctx.fillStyle = "#94A3B8";
     ctx.fillText(formatChartDate(tt, tSpan), x, padT + plotH + 6);
   }
 
   ctx.beginPath();
-  ctx.strokeStyle = "#ffffff";
+  ctx.strokeStyle = "#F8FAFC";
   ctx.lineWidth = 1.6;
   ctx.lineJoin = "miter";
   ctx.lineCap = "butt";

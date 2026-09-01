@@ -193,7 +193,7 @@ describe("ticket DOM", () => {
   it("drops hist table row rules and dotted underlines, keeps the tab hairline", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
-    expect(css).toMatch(/\.hist-tabs \{[\s\S]*?border-bottom: 1px solid var\(--line\)/);
+    expect(css).toMatch(/\.hist-tabs \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.bal-table td \{[\s\S]*?border: 0/);
     expect(css).not.toMatch(/\.bal-table td \{[\s\S]*?border-top: 1px solid var\(--hair\)/);
     expect(css).toMatch(/\.hist-body th,[\s\S]*?border: 0/);

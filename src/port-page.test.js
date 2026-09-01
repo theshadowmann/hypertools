@@ -112,19 +112,19 @@ describe("portfolio page structure", () => {
     expect(port).toMatch(/class="port-link"[^>]*>View Volume</);
     expect(port).toMatch(/class="port-link"[^>]*>View Fee Schedule</);
     expect(port).not.toMatch(/#ffc107|#FFD700/i);
-    expect(css).toMatch(/\.port-link \{[\s\S]*?color: var\(--navy\)/);
-    expect(css).toMatch(/\.port-card \{[\s\S]*?border: 1px solid #363737/);
-    expect(css).toMatch(/\.port-card \{[\s\S]*?background: #2a2b2b/);
+    expect(css).toMatch(/\.port-link \{[\s\S]*?color: var\(--accent-primary\)/);
+    expect(css).toMatch(/\.port-card \{[\s\S]*?border: 1px solid var\(--border-color\)/);
+    expect(css).toMatch(/\.port-card \{[\s\S]*?background: var\(--bg-surface\)/);
     expect(css).toMatch(/\.port-col \{[\s\S]*?gap: 10px/);
     expect(css).toMatch(/\.port-col \.port-card \{[\s\S]*?flex: none/);
     expect(css).toMatch(/\.port-vol-card \{[\s\S]*?min-height: 148px/);
-    expect(css).toMatch(/\.port-page \{[\s\S]*?background: #242525/);
-    expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?color: #fff/);
-    expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
-    expect(css).toMatch(/#port-tf-menu button\.is-on \{[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/\.port-page \{[\s\S]*?background: var\(--bg-main\)/);
+    expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?color: var\(--text-primary\)/);
+    expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--accent-primary\)/);
+    expect(css).toMatch(/#port-tf-menu button\.is-on \{[\s\S]*?background: var\(--accent-primary\)/);
     expect(css).toMatch(/#port-tf-btn\.port-menu-btn \{[\s\S]*?border: 0/);
     expect(css).toMatch(/#port-acct-btn\.port-menu-btn \{[\s\S]*?border: 0/);
-    expect(css).toMatch(/#port-acct-menu button\.is-on \{[\s\S]*?background: #323333/);
+    expect(css).toMatch(/#port-acct-menu button\.is-on \{[\s\S]*?background: var\(--bg-input\)/);
     expect(css).toMatch(/\.port-check \{[\s\S]*?color: #f6c343/);
     const portCss = css.slice(css.indexOf(".port-page"));
     expect(portCss).not.toContain("#00c853");
@@ -183,15 +183,16 @@ describe("portfolio disconnected and live numbers", () => {
     expect(document.getElementById("port-fee-perp-taker").textContent).toContain("0.0450%");
   });
 
-  it("draws a white step line on a grey canvas and does not invent an empty series", () => {
+  it("draws a text-primary step line on a surface canvas and does not invent an empty series", () => {
     const js = readFileSync(join(root, "src/dashboard.js"), "utf8");
     const canvas = document.createElement("canvas");
     canvas.width = 100;
     canvas.height = 40;
-    expect(js).toMatch(/ctx\.strokeStyle = "#ffffff"/);
-    expect(js).toMatch(/ctx\.fillStyle = "#2a2b2b"/);
+    expect(js).toMatch(/ctx\.strokeStyle = "#F8FAFC"/);
+    expect(js).toMatch(/ctx\.fillStyle = "#0F172A"/);
     expect(js).toMatch(/ctx\.lineTo\(x, prevY\)/);
     expect(js).not.toMatch(/ctx\.strokeStyle = "#1A2B56"/);
+    expect(js).not.toMatch(/ctx\.strokeStyle = "#06B6D4"/);
     expect(js).not.toMatch(/\{ t: 0, v: 0 \}/);
     expect(js).toMatch(/axisTicks\(/);
     expect(js).toMatch(/chartSeries\(/);
