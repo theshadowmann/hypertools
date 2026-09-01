@@ -72,6 +72,8 @@ describe("TradingView embed", () => {
     expect(flatten).toContain("shadowRoot");
     expect(flatten).toContain("isActive");
     expect(flatten).toContain("isSelected");
+    expect(flatten).toContain("flattenToolbarTiles");
+    expect(flatten).toContain("layout__area--top");
     expect(flatten).toContain("MutationObserver");
     expect(flatten).toContain("ht-tv-chrome");
     expect(flatten).toContain("location.origin");

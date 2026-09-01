@@ -48,31 +48,55 @@
     if (style.textContent !== cssText) style.textContent = cssText;
   }
 
+  function zeroChrome(el, paintText) {
+    if (!el || !el.style || !el.style.setProperty) return;
+    el.style.setProperty("background", "transparent", "important");
+    el.style.setProperty("background-color", "transparent", "important");
+    el.style.setProperty("background-image", "none", "important");
+    el.style.setProperty("box-shadow", "none", "important");
+    el.style.setProperty("border", "0", "important");
+    el.style.setProperty("border-color", "transparent", "important");
+    el.style.setProperty("outline", "none", "important");
+    if (paintText) {
+      el.style.setProperty("color", "#06B6D4", "important");
+      el.style.setProperty("fill", "#06B6D4", "important");
+    }
+  }
+
   function flattenActive(root) {
     if (!root.querySelectorAll) return;
     const nodes = root.querySelectorAll(
       '[class*="isActive"], [class*="isSelected"], [class*="isChecked"], [class*="isOpened"], [aria-checked="true"], [aria-pressed="true"]'
     );
     for (let i = 0; i < nodes.length; i++) {
-      const el = nodes[i];
-      el.style.setProperty("background", "transparent", "important");
-      el.style.setProperty("background-color", "transparent", "important");
-      el.style.setProperty("background-image", "none", "important");
-      el.style.setProperty("box-shadow", "none", "important");
-      el.style.setProperty("border", "0", "important");
-      el.style.setProperty("outline", "none", "important");
-      el.style.setProperty("color", "#06B6D4", "important");
-      el.style.setProperty("fill", "#06B6D4", "important");
-      const kids = el.querySelectorAll("*");
-      for (let k = 0; k < kids.length; k++) {
-        kids[k].style.setProperty("background", "transparent", "important");
-        kids[k].style.setProperty("background-color", "transparent", "important");
-        kids[k].style.setProperty("background-image", "none", "important");
-        kids[k].style.setProperty("box-shadow", "none", "important");
-        kids[k].style.setProperty("border-color", "transparent", "important");
-        kids[k].style.setProperty("outline", "none", "important");
-        kids[k].style.setProperty("color", "#06B6D4", "important");
-        kids[k].style.setProperty("fill", "#06B6D4", "important");
+      zeroChrome(nodes[i], true);
+      const kids = nodes[i].querySelectorAll("*");
+      for (let k = 0; k < kids.length; k++) zeroChrome(kids[k], true);
+    }
+  }
+
+  function flattenToolbarTiles(root) {
+    if (!root.querySelectorAll) return;
+    const areas = root.querySelectorAll('.layout__area--top, .layout__area--left, [class*="layout__area--top"], [class*="layout__area--left"]');
+    const view = root.defaultView || (root.ownerDocument && root.ownerDocument.defaultView);
+    for (let a = 0; a < areas.length; a++) {
+      const nodes = areas[a].querySelectorAll("button, [class*='button'], [class*='isInteractive'], [class*='apply-common-tooltip'], [class*='item-'], [class*='bg-'], [class*='buttonInner']");
+      for (let i = 0; i < nodes.length; i++) {
+        zeroChrome(nodes[i], false);
+      }
+      if (!view || !view.getComputedStyle) continue;
+      const all = areas[a].querySelectorAll("*");
+      for (let i = 0; i < all.length; i++) {
+        const el = all[i];
+        let bg = "";
+        try {
+          bg = view.getComputedStyle(el).backgroundColor || "";
+        } catch {
+          continue;
+        }
+        if (!bg || bg === "transparent" || bg === "rgba(0, 0, 0, 0)") continue;
+        if (bg === "rgb(15, 23, 42)" || bg === "rgba(15, 23, 42, 1)") continue;
+        zeroChrome(el, false);
       }
     }
   }
@@ -100,6 +124,7 @@
       if (root.documentElement) setVars(root.documentElement);
       else if (root.host) setVars(root.host);
       flattenActive(root);
+      flattenToolbarTiles(root);
       observe(root);
       const nodes = root.querySelectorAll("*");
       for (let i = 0; i < nodes.length; i++) {
