@@ -97,6 +97,12 @@ describe("portfolio page structure", () => {
     expect(port).toContain('id="port-pnl-chart"');
     expect(port).not.toContain("Chart PNL");
     expect(port).toContain('class="port-col"');
+    expect(port).toContain('class="port-card port-vol-card"');
+    expect(port).toContain('class="port-card port-fee-card"');
+    expect(port.indexOf("port-vol-card")).toBeLessThan(port.indexOf("port-fee-card"));
+    expect(port.indexOf("14 Day Volume")).toBeGreaterThan(port.indexOf("port-vol-card"));
+    expect(port.indexOf("14 Day Volume")).toBeLessThan(port.indexOf("port-fee-card"));
+    expect(port.indexOf("Fees (Taker / Maker)")).toBeGreaterThan(port.indexOf("port-fee-card"));
     expect(port).toContain('data-port-tab="balances"');
     expect(port).toContain('data-port-tab="outcomes"');
     expect(port).toContain('id="port-history"');
@@ -107,7 +113,11 @@ describe("portfolio page structure", () => {
     expect(port).toMatch(/class="port-link"[^>]*>View Fee Schedule</);
     expect(port).not.toMatch(/#ffc107|#FFD700/i);
     expect(css).toMatch(/\.port-link \{[\s\S]*?color: var\(--navy\)/);
-    expect(css).toMatch(/\.port-card \{[\s\S]*?border: 1px solid rgba\(255, 255, 255, 0\.45\)/);
+    expect(css).toMatch(/\.port-card \{[\s\S]*?border: 1px solid #363737/);
+    expect(css).toMatch(/\.port-card \{[\s\S]*?background: #2a2b2b/);
+    expect(css).toMatch(/\.port-col \{[\s\S]*?gap: 10px/);
+    expect(css).toMatch(/\.port-col \.port-card \{[\s\S]*?flex: none/);
+    expect(css).toMatch(/\.port-vol-card \{[\s\S]*?min-height: 148px/);
     expect(css).toMatch(/\.port-page \{[\s\S]*?background: #242525/);
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?color: #fff/);
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
