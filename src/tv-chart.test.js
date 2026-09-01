@@ -32,7 +32,7 @@ describe("TradingView embed", () => {
     expect(hash).toContain('"hide_volume":false');
     expect(hash).toContain('"backgroundColor":"#0F172A"');
     expect(hash).toContain('"toolbar_bg":"#0F172A"');
-    expect(hash).toContain('"custom_css_url":"/tv-chrome.css"');
+    expect(hash).toMatch(/"custom_css_url":"(https?:\/\/[^"]+)?\/tv-chrome\.css"/);
     expect(hash).toContain('"colorTheme":"dark"');
     expect(hash).toContain('"paneProperties.background":"#0F172A"');
     expect(hash).toContain('"paneProperties.backgroundType":"solid"');
@@ -48,6 +48,8 @@ describe("TradingView embed", () => {
     expect(TV_CHROME_CSS).toContain("--tv-color-toolbar-button-text-active: #06B6D4");
     expect(TV_CHROME_CSS).toContain("--tv-color-toolbar-button-text: #F8FAFC");
     expect(TV_CHROME_CSS).toContain('[class*="isActive-"]');
+    expect(TV_CHROME_CSS).toContain('[class*="isSelected"]');
+    expect(TV_CHROME_CSS).toContain("outline: none");
     expect(TV_CHROME_CSS).toContain("box-shadow: none");
     expect(TV_CHROME_CSS).not.toContain(".layout__area--top *");
     expect(TV_CHROME_CSS).not.toContain(".layout__area--left *");
@@ -69,7 +71,10 @@ describe("TradingView embed", () => {
     expect(flatten).toContain("ht-tv-chrome-late");
     expect(flatten).toContain("shadowRoot");
     expect(flatten).toContain("isActive");
+    expect(flatten).toContain("isSelected");
+    expect(flatten).toContain("MutationObserver");
     expect(flatten).toContain("ht-tv-chrome");
+    expect(flatten).toContain("location.origin");
     const hosted = readFileSync(join(root, "public/tv-chrome.css"), "utf8");
     expect(hosted).toBe(TV_CHROME_CSS);
   });
@@ -110,7 +115,7 @@ describe("TradingView embed", () => {
     const parsed = new URL(src);
     const hash = decodeURIComponent(parsed.hash.slice(1));
     expect(hash).toContain('"toolbar_bg":"#0F172A"');
-    expect(hash).toContain('"custom_css_url":"/tv-chrome.css"');
+    expect(hash).toMatch(/"custom_css_url":"(https?:\/\/[^"]+)?\/tv-chrome\.css"/);
     expect(hash).toContain('"paneProperties.background":"#0F172A"');
     expect(hash).toContain('"paneProperties.backgroundType":"solid"');
     expect(hash).toContain('"hide_top_toolbar":false');
@@ -129,7 +134,7 @@ describe("TradingView embed", () => {
     const parsed = new URL(src, "http://localhost");
     expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
     expect(decodeURIComponent(parsed.hash.slice(1))).toContain('"toolbar_bg":"#0F172A"');
-    expect(decodeURIComponent(parsed.hash.slice(1))).toContain('"custom_css_url":"/tv-chrome.css"');
+    expect(decodeURIComponent(parsed.hash.slice(1))).toMatch(/"custom_css_url":"(https?:\/\/[^"]+)?\/tv-chrome\.css"/);
   });
 });
 
@@ -206,8 +211,9 @@ describe("deep teal theme", () => {
     expect(tv).toContain('export const TV_CHROME = "#0F172A"');
     expect(tv).toContain("backgroundColor: TV_CHROME");
     expect(tv).toContain("toolbar_bg: TV_CHROME");
-    expect(tv).toContain("custom_css_url: TV_CHROME_CSS_URL");
-    expect(tv).toContain('export const TV_CHROME_CSS_URL = "/tv-chrome.css"');
+    expect(tv).toContain("export const TV_CHROME_CSS_PATH = \"/tv-chrome.css\"");
+    expect(tv).toContain("function tvChromeCssUrl");
+    expect(tv).toContain("custom_css_url: tvChromeCssUrl()");
     expect(tv).not.toContain('backgroundColor: "#242525"');
     expect(tv).not.toContain('backgroundColor: "#1A2B56"');
     expect(hl).toContain('const BG = "#0F172A"');

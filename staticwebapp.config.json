@@ -12,10 +12,31 @@
       "/embed-widget/advanced-chart",
       "/embed-widget/advanced-chart/",
       "/embed-widget/advanced-chart/index.html",
-      "/tv-embed.html"
+      "/tv-embed.html",
+      "/tv-chrome.css",
+      "/tv-flatten.js"
     ]
   },
   "routes": [
+    {
+      "route": "/tv-chrome.css",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Cache-Control": "public, max-age=300",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "route": "/tv-flatten.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Cache-Control": "public, max-age=300"
+      }
+    },
     {
       "route": "/embed-widget/advanced-chart",
       "rewrite": "/embed-widget/advanced-chart/index.html",

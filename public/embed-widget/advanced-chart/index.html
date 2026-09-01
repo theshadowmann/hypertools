@@ -56,6 +56,7 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   border-color: transparent !important;
   box-shadow: none !important;
   outline: none !important;
+  outline-width: 0 !important;
   color: #F8FAFC !important;
   fill: #F8FAFC !important;
 }
@@ -86,6 +87,8 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   background-color: transparent !important;
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
+  outline-width: 0 !important;
   color: #06B6D4 !important;
   fill: #06B6D4 !important;
 }
@@ -97,12 +100,48 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   color: #06B6D4 !important;
   stroke: #06B6D4 !important;
 }
+.layout__area--top [class*="isSelected"],
+.layout__area--left [class*="isSelected"],
+.layout__area--top [class*="isChecked"],
+.layout__area--left [class*="isChecked"],
+.layout__area--top [aria-checked="true"],
+.layout__area--left [aria-checked="true"],
+.layout__area--top [aria-pressed="true"],
+.layout__area--left [aria-pressed="true"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+}
+.layout__area--top [class*="isSelected"] svg,
+.layout__area--left [class*="isSelected"] svg,
+.layout__area--top [class*="isChecked"] svg,
+.layout__area--left [class*="isChecked"] svg,
+.layout__area--top [class*="isSelected"] svg path,
+.layout__area--left [class*="isSelected"] svg path {
+  fill: #06B6D4 !important;
+  color: #06B6D4 !important;
+  stroke: #06B6D4 !important;
+}
 [class*="isActive-"],
+[class*="isSelected-"],
+[class*="isChecked-"],
 [class*="button-"][class*="isActive"],
+[class*="button-"][class*="isSelected"],
 [class*="isActive-"] *,
+[class*="isSelected-"] *,
 [class*="button-"][class*="isActive"] * {
   color: #06B6D4 !important;
   fill: #06B6D4 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  outline: none !important;
 }
 [aria-checked="true"],
 [aria-pressed="true"] {
@@ -110,20 +149,29 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   background-color: transparent !important;
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
   color: #06B6D4 !important;
   fill: #06B6D4 !important;
 }
 [class*="isActive-"]::before,
 [class*="isActive-"]::after,
+[class*="isSelected-"]::before,
+[class*="isSelected-"]::after,
+[class*="isChecked-"]::before,
+[class*="isChecked-"]::after,
 [class*="button-"][class*="isActive"]::before,
 [class*="button-"][class*="isActive"]::after,
+[class*="button-"][class*="isSelected"]::before,
+[class*="button-"][class*="isSelected"]::after,
 [class*="isActive-"] > *,
+[class*="isSelected-"] > *,
 [class*="button-"][class*="isActive"] > * {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
 }
 </style><script id="ht-tv-flatten" src="/tv-flatten.js" defer></script>
 	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">

@@ -10,10 +10,11 @@ import {
   createWalletDiscovery,
   labelInjected,
   requestAccounts,
-  walletTargets,
 } from "./wallet.js";
 import { guardProvider } from "./wallet-guard.js";
 import { deskUrl, viewFromLocation } from "./routes.js";
+import { bindAppListeners } from "./app-bind.js";
+import { runConnectFromNav, showConnectStatus } from "./nav-connect.js";
 
 const state = {
   address: null,
@@ -146,6 +147,7 @@ function connectButton(label, onClick, iconSrc) {
 }
 
 function renderWalletButtons() {
+  if (!el.walletButtons || !el.noWallet) return;
   const list = discoveredList;
   clear(el.walletButtons);
   if (list.length) {
@@ -166,11 +168,15 @@ function renderWalletButtons() {
 }
 
 function showPasteError(msg) {
-  el.pasteError.textContent = msg;
-  el.pasteError.classList.remove("hidden");
+  if (el.pasteError) {
+    el.pasteError.textContent = msg;
+    el.pasteError.classList.remove("hidden");
+  }
+  showConnectStatus(msg, "err");
 }
 
 function clearPasteError() {
+  if (!el.pasteError) return;
   el.pasteError.textContent = "";
   el.pasteError.classList.add("hidden");
 }
@@ -280,6 +286,7 @@ async function connectWallet(provider) {
     if (tradeView && typeof tradeView.setStatus === "function") {
       tradeView.setStatus(msg, "err");
     }
+    showConnectStatus(msg, "err");
   }
 }
 
@@ -289,12 +296,12 @@ function renderChrome() {
   const onPort = state.view === "portfolio";
   document.documentElement.classList.toggle("desk", onDesk);
   document.body.classList.toggle("desk", onDesk);
-  el.landing.classList.toggle("hidden", connected || onDesk || onPort);
-  el.dashboard.classList.toggle("hidden", !onPort);
-  el.trade.classList.toggle("hidden", !onDesk);
-  el.navDisc.classList.toggle("hidden", connected);
-  el.navConn.classList.toggle("hidden", !connected);
-  el.navConn.classList.toggle("flex", connected);
+  el.landing?.classList.toggle("hidden", connected || onDesk || onPort);
+  el.dashboard?.classList.toggle("hidden", !onPort);
+  el.trade?.classList.toggle("hidden", !onDesk);
+  el.navDisc?.classList.toggle("hidden", connected);
+  el.navConn?.classList.toggle("hidden", !connected);
+  el.navConn?.classList.toggle("flex", connected);
   const footer = document.querySelector("footer");
   if (footer) footer.classList.toggle("hidden", onDesk);
   if (el.navPortfolio) {
@@ -306,7 +313,7 @@ function renderChrome() {
   if (el.navOutcome) {
     el.navOutcome.setAttribute("aria-current", state.view === "outcome" ? "page" : "false");
   }
-  if (connected) {
+  if (connected && el.navAddress) {
     el.navAddress.textContent = truncAddr(state.address);
     el.navAddress.title = state.address;
     const via = state.source === "wallet" ? "connected wallet" : "pasted address";
@@ -362,70 +369,33 @@ function showNavWalletMenu(targets) {
 }
 
 function connectFromNav() {
-  const targets = walletTargets(discoveredList);
-  if (!targets.length) {
-    if (state.view !== "portfolio") setView("portfolio", true);
-    const section = document.getElementById("port-paste-wrap") || document.getElementById("paste-form");
-    if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-  if (targets.length === 1) {
-    hideNavWalletMenu();
-    connectWallet(targets[0].provider);
-    return;
-  }
-  if (el.navWalletMenu && !el.navWalletMenu.classList.contains("hidden")) {
-    hideNavWalletMenu();
-    return;
-  }
-  showNavWalletMenu(targets);
-}
-
-el.pasteForm.addEventListener("submit", (ev) => {
-  ev.preventDefault();
-  setAddress(el.pasteInput.value, "paste");
-});
-
-document.getElementById("btn-refresh").addEventListener("click", () => {
-  if (state.address) refreshAccount(state.address);
-});
-
-document.getElementById("btn-disconnect").addEventListener("click", disconnect);
-
-document.getElementById("wordmark").addEventListener("click", (ev) => {
-  ev.preventDefault();
-  setView("trade", true);
-});
-
-el.navPortfolio.addEventListener("click", (ev) => {
-  ev.preventDefault();
-  setView("portfolio", true);
-});
-el.navTrade.addEventListener("click", (ev) => {
-  ev.preventDefault();
-  setView("trade", true);
-});
-if (el.navOutcome) {
-  el.navOutcome.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    setView("outcome", true);
+  return runConnectFromNav({
+    discoveredList,
+    ethereum: typeof window !== "undefined" ? window.ethereum : null,
+    connectWallet,
+    showMenu: showNavWalletMenu,
+    hideMenu: hideNavWalletMenu,
+    menuOpen: !!(el.navWalletMenu && !el.navWalletMenu.classList.contains("hidden")),
+    onNoWallet: (msg) => {
+      showConnectStatus(msg, "err");
+      if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg, "err");
+    },
   });
 }
 
-if (el.navConnect) {
-  el.navConnect.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    connectFromNav();
-  });
-}
-
-document.addEventListener("click", (ev) => {
-  const t = ev.target;
-  if (t && typeof t.closest === "function" && t.closest("#btn-nav-connect, #nav-wallet-menu, #ticket-submit")) {
-    return;
-  }
-  hideNavWalletMenu();
+bindAppListeners({
+  el,
+  onPaste: () => setAddress(el.pasteInput && el.pasteInput.value, "paste"),
+  onRefresh: () => {
+    if (state.address) refreshAccount(state.address);
+  },
+  onDisconnect: disconnect,
+  onWordmark: () => setView("trade", true),
+  onPortfolio: () => setView("portfolio", true),
+  onTrade: () => setView("trade", true),
+  onOutcome: () => setView("outcome", true),
+  connectFromNav,
+  hideNavWalletMenu,
 });
 
 window.addEventListener("popstate", () => {

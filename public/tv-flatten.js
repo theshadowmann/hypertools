@@ -21,7 +21,7 @@
 
   let cssText = "";
   let queued = false;
-  let booted = false;
+  const observed = typeof WeakSet === "function" ? new WeakSet() : null;
 
   function setVars(el) {
     if (!el || !el.style || !el.style.setProperty) return;
@@ -51,24 +51,45 @@
   function flattenActive(root) {
     if (!root.querySelectorAll) return;
     const nodes = root.querySelectorAll(
-      '[class*="isActive"], [class*="isSelected"], [class*="isChecked"], [aria-checked="true"], [aria-pressed="true"]'
+      '[class*="isActive"], [class*="isSelected"], [class*="isChecked"], [class*="isOpened"], [aria-checked="true"], [aria-pressed="true"]'
     );
     for (let i = 0; i < nodes.length; i++) {
       const el = nodes[i];
       el.style.setProperty("background", "transparent", "important");
       el.style.setProperty("background-color", "transparent", "important");
+      el.style.setProperty("background-image", "none", "important");
       el.style.setProperty("box-shadow", "none", "important");
       el.style.setProperty("border", "0", "important");
+      el.style.setProperty("outline", "none", "important");
       el.style.setProperty("color", "#06B6D4", "important");
       el.style.setProperty("fill", "#06B6D4", "important");
       const kids = el.querySelectorAll("*");
       for (let k = 0; k < kids.length; k++) {
         kids[k].style.setProperty("background", "transparent", "important");
         kids[k].style.setProperty("background-color", "transparent", "important");
+        kids[k].style.setProperty("background-image", "none", "important");
         kids[k].style.setProperty("box-shadow", "none", "important");
+        kids[k].style.setProperty("border-color", "transparent", "important");
+        kids[k].style.setProperty("outline", "none", "important");
         kids[k].style.setProperty("color", "#06B6D4", "important");
         kids[k].style.setProperty("fill", "#06B6D4", "important");
       }
+    }
+  }
+
+  function observe(root) {
+    const node = root.documentElement || root;
+    if (!node || (observed && observed.has(node))) return;
+    if (observed) observed.add(node);
+    try {
+      new MutationObserver(schedule).observe(node, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class", "aria-checked", "aria-pressed"],
+      });
+    } catch {
+      /* detached */
     }
   }
 
@@ -77,7 +98,9 @@
     try {
       putSheet(root);
       if (root.documentElement) setVars(root.documentElement);
+      else if (root.host) setVars(root.host);
       flattenActive(root);
+      observe(root);
       const nodes = root.querySelectorAll("*");
       for (let i = 0; i < nodes.length; i++) {
         if (nodes[i].shadowRoot) walk(nodes[i].shadowRoot);
@@ -109,9 +132,6 @@
   function boot(css) {
     if (css) cssText = css;
     apply();
-    if (booted) return;
-    booted = true;
-    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
     document.addEventListener("DOMContentLoaded", apply);
     window.addEventListener("load", apply);
   }
@@ -119,7 +139,11 @@
   const fromDoc = document.getElementById("ht-tv-chrome");
   const embedded = fromDoc && fromDoc.textContent ? fromDoc.textContent : "";
   boot(embedded);
-  fetch("/tv-chrome.css")
+  const link = document.getElementById("ht-tv-chrome-file");
+  const href =
+    (link && link.href) ||
+    (typeof location !== "undefined" && location.origin ? location.origin + "/tv-chrome.css" : "/tv-chrome.css");
+  fetch(href)
     .then((r) => r.text())
     .then((css) => {
       if (css && css !== cssText) boot(css);

@@ -51,6 +51,9 @@ describe("CSP", () => {
     expect(embed.headers["Content-Security-Policy"]).toMatch(/frame-ancestors 'self'/);
     expect(embed.headers["Content-Security-Policy"]).toMatch(/unsafe-inline/);
     expect(embed.headers["Content-Security-Policy"]).toMatch(/connect-src 'self'/);
+    const chromeCss = json.routes.find((r) => r.route === "/tv-chrome.css");
+    expect(chromeCss.headers["Access-Control-Allow-Origin"]).toBe("*");
+    expect(json.navigationFallback.exclude).toContain("/tv-chrome.css");
   });
 });
 

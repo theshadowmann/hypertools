@@ -13,7 +13,18 @@ export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 export const TV_CHROME = "#0F172A";
 export const TV_ACCENT = "#06B6D4";
 export const TV_ICE = "#F8FAFC";
-export const TV_CHROME_CSS_URL = "/tv-chrome.css";
+export const TV_CHROME_CSS_PATH = "/tv-chrome.css";
+export const TV_CHROME_CSS_URL = TV_CHROME_CSS_PATH;
+
+export function tvChromeCssUrl(origin) {
+  const base =
+    origin ||
+    (typeof location !== "undefined" && location.origin && location.origin !== "null"
+      ? location.origin
+      : "");
+  if (!base) return TV_CHROME_CSS_PATH;
+  return String(base).replace(/\/$/, "") + TV_CHROME_CSS_PATH;
+}
 
 /**
  * Official TV chrome tokens plus frameless toolbar buttons.
@@ -75,6 +86,7 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   border-color: transparent !important;
   box-shadow: none !important;
   outline: none !important;
+  outline-width: 0 !important;
   color: ${TV_ICE} !important;
   fill: ${TV_ICE} !important;
 }
@@ -105,6 +117,8 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   background-color: transparent !important;
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
+  outline-width: 0 !important;
   color: ${TV_ACCENT} !important;
   fill: ${TV_ACCENT} !important;
 }
@@ -116,12 +130,48 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   color: ${TV_ACCENT} !important;
   stroke: ${TV_ACCENT} !important;
 }
+.layout__area--top [class*="isSelected"],
+.layout__area--left [class*="isSelected"],
+.layout__area--top [class*="isChecked"],
+.layout__area--left [class*="isChecked"],
+.layout__area--top [aria-checked="true"],
+.layout__area--left [aria-checked="true"],
+.layout__area--top [aria-pressed="true"],
+.layout__area--left [aria-pressed="true"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  color: ${TV_ACCENT} !important;
+  fill: ${TV_ACCENT} !important;
+}
+.layout__area--top [class*="isSelected"] svg,
+.layout__area--left [class*="isSelected"] svg,
+.layout__area--top [class*="isChecked"] svg,
+.layout__area--left [class*="isChecked"] svg,
+.layout__area--top [class*="isSelected"] svg path,
+.layout__area--left [class*="isSelected"] svg path {
+  fill: ${TV_ACCENT} !important;
+  color: ${TV_ACCENT} !important;
+  stroke: ${TV_ACCENT} !important;
+}
 [class*="isActive-"],
+[class*="isSelected-"],
+[class*="isChecked-"],
 [class*="button-"][class*="isActive"],
+[class*="button-"][class*="isSelected"],
 [class*="isActive-"] *,
+[class*="isSelected-"] *,
 [class*="button-"][class*="isActive"] * {
   color: ${TV_ACCENT} !important;
   fill: ${TV_ACCENT} !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  outline: none !important;
 }
 [aria-checked="true"],
 [aria-pressed="true"] {
@@ -129,20 +179,29 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
   background-color: transparent !important;
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
   color: ${TV_ACCENT} !important;
   fill: ${TV_ACCENT} !important;
 }
 [class*="isActive-"]::before,
 [class*="isActive-"]::after,
+[class*="isSelected-"]::before,
+[class*="isSelected-"]::after,
+[class*="isChecked-"]::before,
+[class*="isChecked-"]::after,
 [class*="button-"][class*="isActive"]::before,
 [class*="button-"][class*="isActive"]::after,
+[class*="button-"][class*="isSelected"]::before,
+[class*="button-"][class*="isSelected"]::after,
 [class*="isActive-"] > *,
+[class*="isSelected-"] > *,
 [class*="button-"][class*="isActive"] > * {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
 }
 `;
 
@@ -181,7 +240,7 @@ export function tvWidgetConfig({ symbol, interval }) {
     enable_publishing: false,
     loading_screen: { backgroundColor: TV_CHROME },
     overrides: { ...TV_OVERRIDES },
-    custom_css_url: TV_CHROME_CSS_URL,
+    custom_css_url: tvChromeCssUrl(),
     support_host: TV_SUPPORT_HOST,
   };
 }
@@ -220,7 +279,7 @@ export function stampTvChrome(iframe) {
   const overrides = { ...(cfg.overrides && typeof cfg.overrides === "object" ? cfg.overrides : {}), ...TV_OVERRIDES };
   cfg.backgroundColor = TV_CHROME;
   cfg.toolbar_bg = TV_CHROME;
-  cfg.custom_css_url = TV_CHROME_CSS_URL;
+  cfg.custom_css_url = tvChromeCssUrl();
   cfg.colorTheme = "dark";
   cfg.theme = cfg.theme || "dark";
   cfg.overrides = overrides;
