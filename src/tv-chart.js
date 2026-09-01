@@ -11,14 +11,19 @@ export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 
 /** Same navy as the chart pane (`--bg-surface`). Toolbars must match this, not black. */
 export const TV_CHROME = "#0F172A";
+export const TV_ACCENT = "#06B6D4";
+export const TV_ICE = "#F8FAFC";
+export const TV_CHROME_CSS_URL = "/tv-chrome.css";
 
 /**
- * Official TV chrome tokens plus layout-area paint. Applied on a same-origin
- * snapshot of the Advanced Chart page because the public iframe strips toolbar_bg
- * and `--tv-color-pane-background` cannot be set across origin.
+ * Official TV chrome tokens plus frameless toolbar buttons.
+ * Hosted at TV_CHROME_CSS_URL (`custom_css_url`) and inlined on the same-origin
+ * snapshot. Painting every toolbar descendant navy left grey/navy tiles around
+ * the selected interval and candle-type; those controls must be transparent.
  */
 export const TV_CHROME_CSS = `
-html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body {
+html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
+.theme-dark:root, :root {
   --color-header-bg: ${TV_CHROME} !important;
   --color-body-bg: ${TV_CHROME} !important;
   --color-pane-bg: ${TV_CHROME} !important;
@@ -26,6 +31,19 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body {
   --tv-color-platform-background: ${TV_CHROME} !important;
   --tv-color-pane-background: ${TV_CHROME} !important;
   --tv-color-pane-background-secondary: ${TV_CHROME} !important;
+  --tv-color-toolbar-button-background-hover: transparent !important;
+  --tv-color-toolbar-button-background-secondary-hover: transparent !important;
+  --tv-color-toolbar-button-background-expanded: transparent !important;
+  --tv-color-toolbar-button-background-active: transparent !important;
+  --tv-color-toolbar-button-background-active-hover: transparent !important;
+  --tv-color-toolbar-toggle-button-background-active: transparent !important;
+  --tv-color-toolbar-toggle-button-background-active-hover: transparent !important;
+  --tv-color-toolbar-button-text: ${TV_ICE} !important;
+  --tv-color-toolbar-button-text-hover: ${TV_ICE} !important;
+  --tv-color-toolbar-button-text-active: ${TV_ACCENT} !important;
+  --tv-color-toolbar-button-text-active-hover: ${TV_ACCENT} !important;
+  --tv-color-item-active-text: ${TV_ACCENT} !important;
+  --tv-color-toolbar-divider-background: rgba(51, 65, 85, 0.55) !important;
   background: ${TV_CHROME} !important;
   background-color: ${TV_CHROME} !important;
 }
@@ -34,15 +52,69 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body {
 .layout__area--center,
 .layout__area--top,
 .layout__area--left,
-.layout__area--top > *,
-.layout__area--left > *,
-.layout__area--top *,
-.layout__area--left *,
 [class^="toolbar-"],
 [class*=" toolbar-"] {
   background: ${TV_CHROME} !important;
   background-color: ${TV_CHROME} !important;
   background-image: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+.layout__area--top button,
+.layout__area--left button,
+.layout__area--top [class*="button"],
+.layout__area--left [class*="button"],
+.layout__area--top [class*="apply-common-tooltip"],
+.layout__area--left [class*="apply-common-tooltip"],
+.layout__area--top [class*="isInteractive"],
+.layout__area--left [class*="isInteractive"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: ${TV_ICE} !important;
+  fill: ${TV_ICE} !important;
+}
+.layout__area--top button::before,
+.layout__area--top button::after,
+.layout__area--left button::before,
+.layout__area--left button::after,
+.layout__area--top [class*="button"]::before,
+.layout__area--top [class*="button"]::after,
+.layout__area--left [class*="button"]::before,
+.layout__area--left [class*="button"]::after,
+.layout__area--top [class*="apply-common-tooltip"]::before,
+.layout__area--top [class*="apply-common-tooltip"]::after,
+.layout__area--left [class*="apply-common-tooltip"]::before,
+.layout__area--left [class*="apply-common-tooltip"]::after {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.layout__area--top [class*="isActive"],
+.layout__area--left [class*="isActive"],
+.layout__area--top [class*="isOpened"],
+.layout__area--left [class*="isOpened"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  color: ${TV_ACCENT} !important;
+  fill: ${TV_ACCENT} !important;
+}
+.layout__area--top [class*="isActive"] svg,
+.layout__area--left [class*="isActive"] svg,
+.layout__area--top [class*="isActive"] svg path,
+.layout__area--left [class*="isActive"] svg path {
+  fill: ${TV_ACCENT} !important;
+  color: ${TV_ACCENT} !important;
+  stroke: ${TV_ACCENT} !important;
 }
 `;
 
@@ -81,6 +153,7 @@ export function tvWidgetConfig({ symbol, interval }) {
     enable_publishing: false,
     loading_screen: { backgroundColor: TV_CHROME },
     overrides: { ...TV_OVERRIDES },
+    custom_css_url: TV_CHROME_CSS_URL,
     support_host: TV_SUPPORT_HOST,
   };
 }
@@ -119,6 +192,7 @@ export function stampTvChrome(iframe) {
   const overrides = { ...(cfg.overrides && typeof cfg.overrides === "object" ? cfg.overrides : {}), ...TV_OVERRIDES };
   cfg.backgroundColor = TV_CHROME;
   cfg.toolbar_bg = TV_CHROME;
+  cfg.custom_css_url = TV_CHROME_CSS_URL;
   cfg.colorTheme = "dark";
   cfg.theme = cfg.theme || "dark";
   cfg.overrides = overrides;

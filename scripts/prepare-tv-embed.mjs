@@ -10,16 +10,18 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TV_CHROME_CSS, TV_WIDGET_PAGE } from "../src/tv-chart.js";
+import { TV_CHROME_CSS, TV_CHROME_CSS_URL, TV_WIDGET_PAGE } from "../src/tv-chart.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const destDir = join(root, "public/embed-widget/advanced-chart");
 const dest = join(destDir, "index.html");
+const cssDest = join(root, "public/tv-chrome.css");
 
 function injectChrome(html) {
   let out = html.replace(/\snonce="[^"]*"/g, "");
   out = out.replace(/<style id="ht-tv-chrome">[\s\S]*?<\/style>/g, "");
-  const tag = `<style id="ht-tv-chrome">${TV_CHROME_CSS}</style>`;
+  out = out.replace(/<link id="ht-tv-chrome-file"[^>]*>/g, "");
+  const tag = `<link id="ht-tv-chrome-file" rel="stylesheet" href="${TV_CHROME_CSS_URL}"/><style id="ht-tv-chrome">${TV_CHROME_CSS}</style>`;
   if (out.includes("<head>")) out = out.replace("<head>", `<head>${tag}`);
   else out = tag + out;
   return out;
@@ -39,5 +41,7 @@ try {
 }
 
 mkdirSync(destDir, { recursive: true });
+writeFileSync(cssDest, TV_CHROME_CSS);
 writeFileSync(dest, injectChrome(html));
 console.log("wrote", dest, html.length, "bytes");
+console.log("wrote", cssDest);
