@@ -69,8 +69,19 @@ describe("portfolio page structure", () => {
     expect(port).toContain("Vault Equity");
     expect(port).toContain("Earn Balance");
     expect(port).toContain("Staking Account");
-    expect(port).toContain("Chart PNL");
+    expect(port).toContain("Account Value");
+    expect(port).toContain("Perps PNL");
+    expect(port).toContain('data-port-chart="account"');
+    expect(port).toContain('data-port-chart="pnl"');
+    expect(port).toContain('data-port-chart="perpPnl"');
+    expect(port).toContain("Only Perps");
+    expect(port).toContain(">24h<");
+    expect(port).toContain(">7D<");
+    expect(port).toContain(">30D<");
+    expect(port).toContain("All-time");
     expect(port).toContain('id="port-pnl-chart"');
+    expect(port).not.toContain("Chart PNL");
+    expect(port).toContain('class="port-col"');
     expect(port).toContain('data-port-tab="balances"');
     expect(port).toContain('data-port-tab="outcomes"');
     expect(port).toContain('id="port-history"');
@@ -79,10 +90,14 @@ describe("portfolio page structure", () => {
     expect(port).toContain('href="' + HL_FEES_DOCS + '"');
     expect(port).toMatch(/class="port-link"[^>]*>View Volume</);
     expect(port).toMatch(/class="port-link"[^>]*>View Fee Schedule</);
-    expect(port).not.toMatch(/#f6c343|#ffc107|#FFD700|gold/i);
+    expect(port).not.toMatch(/#ffc107|#FFD700/i);
     expect(css).toMatch(/\.port-link \{[\s\S]*?color: var\(--navy\)/);
     expect(css).toMatch(/\.port-card \{[\s\S]*?border: 1px solid rgba\(255, 255, 255, 0\.45\)/);
     expect(css).toMatch(/\.port-page \{[\s\S]*?background: #242525/);
+    expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
+    expect(css).toMatch(/#port-tf-menu button\.is-on \{[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/\.port-check \{[\s\S]*?color: #f6c343/);
     const portCss = css.slice(css.indexOf(".port-page"));
     expect(portCss).not.toContain("#00c853");
     expect(html.split('id="paste-form"').length - 1).toBe(1);
@@ -140,15 +155,19 @@ describe("portfolio disconnected and live numbers", () => {
     expect(document.getElementById("port-fee-perp-taker").textContent).toContain("0.0450%");
   });
 
-  it("draws a white PNL line on a grey canvas, including a flat $0 series", () => {
+  it("draws a white step line on a grey canvas and does not invent an empty series", () => {
     const js = readFileSync(join(root, "src/dashboard.js"), "utf8");
     const canvas = document.createElement("canvas");
     canvas.width = 100;
     canvas.height = 40;
     expect(js).toMatch(/ctx\.strokeStyle = "#ffffff"/);
     expect(js).toMatch(/ctx\.fillStyle = "#2a2b2b"/);
+    expect(js).toMatch(/ctx\.lineTo\(x, prevY\)/);
     expect(js).not.toMatch(/ctx\.strokeStyle = "#1A2B56"/);
+    expect(js).not.toMatch(/\{ t: 0, v: 0 \}/);
+    expect(js).toMatch(/chartSeries\(/);
     expect(() => drawPnlChart(canvas, [])).not.toThrow();
+    expect(() => drawPnlChart(canvas, [{ t: 1, v: 0 }, { t: 2, v: 0 }])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 1 }, { t: 2, v: 3 }])).not.toThrow();
   });
 });

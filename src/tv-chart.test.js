@@ -131,9 +131,11 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.hist-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
     expect(css).toMatch(/\.ls-tab\.short\[aria-pressed="true"\] \{[\s\S]*?color: var\(--red\)/);
     expect(css).toMatch(/\.ticket-submit\.sell \{[^}]*background: var\(--red-fill\)/);
-    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \{ color: var\(--navy\)/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \{[\s\S]*?color: #fff/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \.chip-chevron \{[\s\S]*?transform: rotate\(180deg\)/);
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
-    expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--navy\)/);
+    expect(css).toMatch(/\.lev-badge \{[\s\S]*?background: var\(--navy\)/);
+    expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: #fff/);
     expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--bid\)/);
     expect(css).toMatch(/\.stat-v\.up \{ color: var\(--bid\)/);
     expect(css).toMatch(/\.stat-v\.down \{ color: var\(--red\)/);

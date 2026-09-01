@@ -156,35 +156,46 @@
 
         <div id="dash-content" class="port-body">
           <div class="port-cards">
-            <article class="port-card">
-              <h2 class="port-card-title">14 Day Volume</h2>
-              <p id="port-14d-vol" class="port-card-value">--</p>
-              <a class="port-link" href="https://app.hyperliquid.xyz/portfolio" target="_blank" rel="noopener noreferrer">View Volume</a>
-              <h3 class="port-card-k">Fees (Taker / Maker)</h3>
-              <div class="port-fee-row">
-                <span>Perps</span>
-                <span><span id="port-fee-perp-taker">--</span> / <span id="port-fee-perp-maker">--</span></span>
-              </div>
-              <div class="port-fee-row">
-                <span>Spot</span>
-                <span><span id="port-fee-spot-taker">--</span> / <span id="port-fee-spot-maker">--</span></span>
-              </div>
-              <a class="port-link" href="https://hyperliquid.gitbook.io/hyperliquid-docs/trading/fees" target="_blank" rel="noopener noreferrer">View Fee Schedule</a>
-            </article>
+            <div class="port-col">
+              <article class="port-card">
+                <h2 class="port-card-title">14 Day Volume</h2>
+                <p id="port-14d-vol" class="port-card-value">--</p>
+                <a class="port-link" href="https://app.hyperliquid.xyz/portfolio" target="_blank" rel="noopener noreferrer">View Volume</a>
+              </article>
+              <article class="port-card">
+                <h2 class="port-card-title">Fees (Taker / Maker)</h2>
+                <div class="port-fee-row">
+                  <span>Perps</span>
+                  <span><span id="port-fee-perp-taker">--</span> / <span id="port-fee-perp-maker">--</span></span>
+                </div>
+                <div id="port-fee-spot-row" class="port-fee-row">
+                  <span>Spot</span>
+                  <span><span id="port-fee-spot-taker">--</span> / <span id="port-fee-spot-maker">--</span></span>
+                </div>
+                <a class="port-link" href="https://hyperliquid.gitbook.io/hyperliquid-docs/trading/fees" target="_blank" rel="noopener noreferrer">View Fee Schedule</a>
+              </article>
+            </div>
 
             <article class="port-card">
               <div class="port-acct-head">
-                <div class="port-dd">
+                <div class="port-dd port-menu-wrap">
                   <span class="port-dd-k">Accounts</span>
-                  <span class="port-dd-v">All</span>
-                </div>
-                <div class="port-dd">
-                  <label class="port-dd-k" for="port-period">Period</label>
-                  <select id="port-period" class="port-select">
-                    <option value="week">7 Days</option>
-                    <option value="month">30 Days</option>
-                    <option value="allTime">All Time</option>
-                  </select>
+                  <button type="button" id="port-acct-btn" class="port-menu-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="port-acct-label">All</span>
+                    <svg class="port-menu-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                      <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <div id="port-acct-menu" class="port-menu hidden" role="listbox" hidden>
+                    <button type="button" data-port-acct="perps">
+                      <span>Only Perps</span>
+                      <span class="port-check" hidden>✓</span>
+                    </button>
+                    <button type="button" data-port-acct="all" class="is-on">
+                      <span>All</span>
+                      <span class="port-check">✓</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="port-acct-row">
@@ -199,7 +210,7 @@
                 <span class="port-acct-k">Total Equity</span>
                 <span id="port-total-eq" class="port-acct-v">--</span>
               </div>
-              <div class="port-acct-row indent">
+              <div id="port-spot-eq-row" class="port-acct-row indent">
                 <span class="port-acct-k">Spot Equity</span>
                 <span id="port-spot-eq" class="port-acct-v">--</span>
               </div>
@@ -225,9 +236,29 @@
               </div>
             </article>
 
-            <article class="port-card">
-              <h2 class="port-card-title">Chart PNL</h2>
-              <canvas id="port-pnl-chart" class="port-chart" width="640" height="200" aria-label="PNL chart"></canvas>
+            <article class="port-card port-chart-card">
+              <div class="port-chart-head">
+                <div class="port-chart-tabs" role="tablist">
+                  <button type="button" class="port-chart-tab" data-port-chart="account" aria-selected="false">Account Value</button>
+                  <button type="button" class="port-chart-tab" data-port-chart="pnl" aria-selected="true">PNL</button>
+                  <button type="button" class="port-chart-tab" data-port-chart="perpPnl" aria-selected="false">Perps PNL</button>
+                </div>
+                <div class="port-menu-wrap">
+                  <button type="button" id="port-tf-btn" class="port-menu-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="port-tf-label">7D</span>
+                    <svg class="port-menu-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                      <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <div id="port-tf-menu" class="port-menu hidden" role="listbox" hidden>
+                    <button type="button" data-port-period="day">24h</button>
+                    <button type="button" data-port-period="week" class="is-on">7D</button>
+                    <button type="button" data-port-period="month">30D</button>
+                    <button type="button" data-port-period="allTime">All-time</button>
+                  </div>
+                </div>
+              </div>
+              <canvas id="port-pnl-chart" class="port-chart" width="640" height="220" aria-label="Portfolio chart"></canvas>
             </article>
           </div>
 

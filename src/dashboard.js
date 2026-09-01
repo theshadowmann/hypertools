@@ -12,16 +12,21 @@ import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import { outcomePositionMetrics, outcomePositionsFromSpot } from "./outcomes.js";
 import {
+  chartSeries,
+  chartTickUsd,
+  formatChartDate,
   lastPnl,
   missingMoney,
+  niceTicks,
   parsePortfolio,
-  periodBlock,
   periodVolume,
   perpsEquity,
-  pnlSeries,
+  PORT_ACCOUNTS,
+  PORT_CHARTS,
   PORT_PERIODS,
   spotEquityUsd,
   stakingUsd,
+  summaryBlock,
   sum14DayVolume,
   sumVaultEquity,
   upnlSum,
@@ -89,16 +94,109 @@ function stakeText(connected, staking, hypePx) {
 }
 
 let portPeriod = "week";
+let portChart = "pnl";
+let portAcct = "all";
 let portHistTab = "balances";
 let portHideSmall = true;
 let chartResizeBound = false;
+let portMenuDocBound = false;
+
+function closePortMenus() {
+  ["port-tf-menu", "port-acct-menu"].forEach((id) => {
+    const menu = document.getElementById(id);
+    if (!menu) return;
+    menu.classList.add("hidden");
+    menu.setAttribute("hidden", "");
+  });
+  ["port-tf-btn", "port-acct-btn"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  });
+}
+
+function togglePortMenu(btnId, menuId, ev) {
+  if (ev) ev.stopPropagation();
+  const menu = document.getElementById(menuId);
+  const btn = document.getElementById(btnId);
+  if (!menu || !btn) return;
+  const open = menu.classList.contains("hidden");
+  closePortMenus();
+  if (open) {
+    menu.classList.remove("hidden");
+    menu.removeAttribute("hidden");
+    btn.setAttribute("aria-expanded", "true");
+  }
+}
+
+function syncPortChrome() {
+  document.querySelectorAll("[data-port-chart]").forEach((b) => {
+    b.setAttribute("aria-selected", b.getAttribute("data-port-chart") === portChart ? "true" : "false");
+  });
+  const tfLabel = document.getElementById("port-tf-label");
+  const tf = PORT_PERIODS.find((p) => p.id === portPeriod);
+  if (tfLabel && tf) tfLabel.textContent = tf.label;
+  document.querySelectorAll("[data-port-period]").forEach((b) => {
+    b.classList.toggle("is-on", b.getAttribute("data-port-period") === portPeriod);
+  });
+  const acctLabel = document.getElementById("port-acct-label");
+  const acct = PORT_ACCOUNTS.find((a) => a.id === portAcct);
+  if (acctLabel && acct) acctLabel.textContent = acct.label;
+  document.querySelectorAll("[data-port-acct]").forEach((b) => {
+    const on = b.getAttribute("data-port-acct") === portAcct;
+    b.classList.toggle("is-on", on);
+    const check = b.querySelector(".port-check");
+    if (check) {
+      if (on) check.removeAttribute("hidden");
+      else check.setAttribute("hidden", "");
+    }
+  });
+}
 
 function bindPortHistOnce() {
   const dash = document.getElementById("dashboard");
   if (!dash || dash.dataset.portBound === "1") return;
   dash.dataset.portBound = "1";
   dash.addEventListener("click", (ev) => {
-    const btn = ev.target && ev.target.closest && ev.target.closest("[data-port-tab]");
+    const t = ev.target;
+    if (!t || !t.closest) return;
+    if (t.closest(".port-menu-wrap") && dash.contains(t.closest(".port-menu-wrap"))) ev.stopPropagation();
+
+    const tfBtn = t.closest("#port-tf-btn");
+    if (tfBtn && dash.contains(tfBtn)) {
+      togglePortMenu("port-tf-btn", "port-tf-menu", ev);
+      return;
+    }
+    const acctBtn = t.closest("#port-acct-btn");
+    if (acctBtn && dash.contains(acctBtn)) {
+      togglePortMenu("port-acct-btn", "port-acct-menu", ev);
+      return;
+    }
+
+    const periodBtn = t.closest("[data-port-period]");
+    if (periodBtn && dash.contains(periodBtn)) {
+      const next = periodBtn.getAttribute("data-port-period");
+      if (PORT_PERIODS.some((p) => p.id === next)) portPeriod = next;
+      closePortMenus();
+      if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      return;
+    }
+    const acctItem = t.closest("[data-port-acct]");
+    if (acctItem && dash.contains(acctItem)) {
+      const next = acctItem.getAttribute("data-port-acct");
+      if (PORT_ACCOUNTS.some((a) => a.id === next)) portAcct = next;
+      closePortMenus();
+      if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      return;
+    }
+    const chartTab = t.closest("[data-port-chart]");
+    if (chartTab && dash.contains(chartTab)) {
+      const next = chartTab.getAttribute("data-port-chart");
+      if (PORT_CHARTS.some((c) => c.id === next)) portChart = next;
+      if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      return;
+    }
+
+    const btn = t.closest("[data-port-tab]");
     if (!btn || !dash.contains(btn)) return;
     portHistTab = btn.getAttribute("data-port-tab") || "balances";
     dash.querySelectorAll("[data-port-tab]").forEach((b) => {
@@ -114,17 +212,15 @@ function bindPortHistOnce() {
   dash.addEventListener("change", (ev) => {
     const t = ev.target;
     if (!t) return;
-    if (t.id === "port-period") {
-      const next = t.value;
-      if (PORT_PERIODS.some((p) => p.id === next)) portPeriod = next;
-      if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
-      return;
-    }
     if (t.id === "port-bal-hide-small") {
       portHideSmall = !!t.checked;
       if (dash._lastState) renderPortHist(dash._lastState);
     }
   });
+  if (!portMenuDocBound && typeof document !== "undefined") {
+    portMenuDocBound = true;
+    document.addEventListener("click", () => closePortMenus());
+  }
 }
 
 function bindChartResize() {
@@ -405,27 +501,105 @@ export function drawPnlChart(canvas, series) {
   ctx.clearRect(0, 0, cssW, cssH);
   ctx.fillStyle = "#2a2b2b";
   ctx.fillRect(0, 0, cssW, cssH);
-  const pts = canvas._series.length ? canvas._series : [{ t: 0, v: 0 }, { t: 1, v: 0 }];
+
+  const pts = canvas._series.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v));
+  if (!pts.length) return;
+
+  const padL = 46;
+  const padR = 36;
+  const padT = 10;
+  const padB = 22;
+  const plotW = Math.max(1, cssW - padL - padR);
+  const plotH = Math.max(1, cssH - padT - padB);
+
   const ys = pts.map((p) => p.v);
   let min = Math.min.apply(null, ys);
   let max = Math.max.apply(null, ys);
-  if (min === max) {
-    min -= 1;
-    max += 1;
+  if (min > 0 && max > 0 && min / max < 0.15) min = 0;
+  if (min < 0 && max > 0) {
+    /* keep 0 in range so PNL crosses the axis */
   }
-  const pad = 8;
-  const w = cssW - pad * 2;
-  const h = cssH - pad * 2;
+  const ticks = niceTicks(min, max, 4);
+  const yMin = ticks.length ? Math.min(min, ticks[0]) : min;
+  const yMax = ticks.length ? Math.max(max, ticks[ticks.length - 1]) : max;
+  const ySpan = yMax - yMin || 1;
+  const t0 = pts[0].t;
+  const t1 = pts[pts.length - 1].t;
+  const tSpan = t1 - t0;
+
+  const xOf = (t) => padL + (tSpan === 0 ? plotW / 2 : ((t - t0) / tSpan) * plotW);
+  const yOf = (v) => padT + ((yMax - v) / ySpan) * plotH;
+
+  ctx.strokeStyle = "rgba(164, 165, 165, 0.45)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + plotH);
+  ctx.moveTo(padL, padT + plotH);
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+
+  ctx.fillStyle = "#A4A5A5";
+  ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  (ticks.length ? ticks : [min, max]).forEach((tick) => {
+    const y = yOf(tick);
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(164, 165, 165, 0.45)";
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + 4, y);
+    ctx.stroke();
+    ctx.fillStyle = "#A4A5A5";
+    ctx.fillText(chartTickUsd(tick), padL - 6, y);
+  });
+
+  const nX = tSpan === 0 ? 1 : 4;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  for (let i = 0; i < nX; i++) {
+    const tt = tSpan === 0 ? t0 : t0 + (tSpan * i) / (nX - 1);
+    const x = xOf(tt);
+    ctx.fillStyle = "#A4A5A5";
+    ctx.fillText(formatChartDate(tt, tSpan), x, padT + plotH + 6);
+  }
+
   ctx.beginPath();
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 1.6;
+  ctx.lineJoin = "miter";
+  ctx.lineCap = "butt";
+  let prevY = 0;
   pts.forEach((p, i) => {
-    const x = pad + (pts.length === 1 ? w / 2 : (i / (pts.length - 1)) * w);
-    const y = pad + ((max - p.v) / (max - min)) * h;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    const x = xOf(p.t);
+    const y = yOf(p.v);
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, prevY);
+      ctx.lineTo(x, y);
+    }
+    prevY = y;
   });
   ctx.stroke();
+
+  const last = pts[pts.length - 1];
+  const lx = xOf(last.t);
+  const ly = yOf(last.v);
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(lx, ly, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textBaseline = "middle";
+  const label = chartTickUsd(last.v);
+  if (lx > cssW - 52) {
+    ctx.textAlign = "right";
+    ctx.fillText(label, lx - 6, ly - 10);
+  } else {
+    ctx.textAlign = "left";
+    ctx.fillText(label, lx + 6, ly);
+  }
 }
 
 export function renderDashboard(el, state) {
@@ -458,7 +632,9 @@ export function renderDashboard(el, state) {
   const mids = data.mids || {};
   const fees = data.userFees;
   const portfolio = parsePortfolio(data.portfolio);
-  const block = connected ? periodBlock(portfolio, portPeriod) : null;
+  const perpsOnly = portAcct === "perps";
+  const block = connected ? summaryBlock(portfolio, portPeriod, portAcct) : null;
+  syncPortChrome();
 
   const vol14 = connected ? sum14DayVolume(fees && fees.dailyUserVlm) : null;
   const volEl = document.getElementById("port-14d-vol");
@@ -470,19 +646,23 @@ export function renderDashboard(el, state) {
   const spotMaker = document.getElementById("port-fee-spot-maker");
   if (perpTaker) perpTaker.textContent = feeTxt(connected, fees, fees && fees.userCrossRate);
   if (perpMaker) perpMaker.textContent = feeTxt(connected, fees, fees && fees.userAddRate);
-  if (spotTaker) spotTaker.textContent = feeTxt(connected, fees, fees && fees.userSpotCrossRate);
-  if (spotMaker) spotMaker.textContent = feeTxt(connected, fees, fees && fees.userSpotAddRate);
+  if (spotTaker) spotTaker.textContent = feeTxt(connected && !perpsOnly, fees, fees && fees.userSpotCrossRate);
+  if (spotMaker) spotMaker.textContent = feeTxt(connected && !perpsOnly, fees, fees && fees.userSpotAddRate);
+  const spotFeeRow = document.getElementById("port-fee-spot-row");
+  if (spotFeeRow) spotFeeRow.classList.toggle("hidden", perpsOnly);
 
   const pnl = connected ? lastPnl(block) : null;
   const vol = connected ? periodVolume(block) : null;
   const perpEq = connected && data.perps ? perpsEquity(perps) : null;
-  const spotEq = connected && data.spot ? spotEquityUsd(spotBalances, mids, state.markets) : null;
-  const vaultEq = connected
+  const spotEq = connected && data.spot && !perpsOnly ? spotEquityUsd(spotBalances, mids, state.markets) : null;
+  const vaultEq = connected && !perpsOnly
     ? sumVaultEquity([].concat(data.userVaultEquities || [], data.leadingVaults || []))
     : null;
-  const stake = connected ? stakingUsd(data.staking, mids.HYPE) : null;
+  const stake = connected && !perpsOnly ? stakingUsd(data.staking, mids.HYPE) : null;
   const upnl = connected ? upnlSum(perps) : null;
-  const totalParts = [perpEq, spotEq, vaultEq, stake].filter((n) => n != null && Number.isFinite(n));
+  const totalParts = perpsOnly
+    ? [perpEq].filter((n) => n != null && Number.isFinite(n))
+    : [perpEq, spotEq, vaultEq, stake].filter((n) => n != null && Number.isFinite(n));
   const totalEq = connected && totalParts.length ? totalParts.reduce((a, b) => a + b, 0) : null;
 
   const setRow = (id, text, cls) => {
@@ -499,10 +679,9 @@ export function renderDashboard(el, state) {
   setRow("port-upnl", moneySigned(upnl), upnl == null ? "" : pnlClass(upnl));
   setRow("port-vault-eq", money(vaultEq));
   setRow("port-earn", missingMoney());
-  setRow("port-stake", stakeText(connected, data.staking, mids.HYPE));
-
-  const periodSel = document.getElementById("port-period");
-  if (periodSel && PORT_PERIODS.some((p) => p.id === portPeriod)) periodSel.value = portPeriod;
+  setRow("port-stake", perpsOnly ? missingMoney() : stakeText(connected, data.staking, mids.HYPE));
+  const spotEqRow = document.getElementById("port-spot-eq-row");
+  if (spotEqRow) spotEqRow.classList.toggle("hidden", perpsOnly);
 
   if (el && el.dashUpdated) {
     const time = perps.time;
@@ -510,7 +689,7 @@ export function renderDashboard(el, state) {
   }
 
   const canvas = document.getElementById("port-pnl-chart");
-  const series = connected ? pnlSeries(block) : [];
+  const series = connected ? chartSeries(portfolio, portPeriod, portChart, portAcct) : [];
   drawPnlChart(canvas, series);
   if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(() => drawPnlChart(canvas, series));

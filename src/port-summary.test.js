@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  chartSeries,
+  chartTickUsd,
   lastPnl,
   missingMoney,
+  niceTicks,
   parsePortfolio,
   periodBlock,
   periodVolume,
   perpsEquity,
   pnlSeries,
+  PORT_CHARTS,
   PORT_PERIODS,
   spotEquityUsd,
   stakingUsd,
@@ -88,7 +92,70 @@ describe("volume and equity", () => {
     expect(stakingUsd(null, "3")).toBeNull();
   });
 
-  it("keeps the three live portfolio periods", () => {
-    expect(PORT_PERIODS.map((p) => p.id)).toEqual(["week", "month", "allTime"]);
+  it("keeps 24h / 7D / 30D / All-time windows", () => {
+    expect(PORT_PERIODS.map((p) => p.id)).toEqual(["day", "week", "month", "allTime"]);
+    expect(PORT_CHARTS.map((c) => c.label)).toEqual(["Account Value", "PNL", "Perps PNL"]);
+  });
+});
+
+describe("chart series", () => {
+  const pack = {
+    week: {
+      accountValueHistory: [[10, "100"], [20, "110"]],
+      pnlHistory: [[10, "1"], [20, "2"]],
+      vlm: "9",
+    },
+    perpWeek: {
+      accountValueHistory: [[10, "80"], [20, "90"]],
+      pnlHistory: [[10, "3"], [20, "4"]],
+      vlm: "5",
+    },
+  };
+
+  it("reads accountValueHistory, pnlHistory, and perp pnlHistory from live windows", () => {
+    expect(chartSeries(pack, "week", "account")).toEqual([
+      { t: 10, v: 100 },
+      { t: 20, v: 110 },
+    ]);
+    expect(chartSeries(pack, "week", "pnl")).toEqual([
+      { t: 10, v: 1 },
+      { t: 20, v: 2 },
+    ]);
+    expect(chartSeries(pack, "week", "perpPnl")).toEqual([
+      { t: 10, v: 3 },
+      { t: 20, v: 4 },
+    ]);
+  });
+
+  it("uses perp windows for Account Value and PNL when Only Perps is selected", () => {
+    expect(chartSeries(pack, "week", "account", "perps")).toEqual([
+      { t: 10, v: 80 },
+      { t: 20, v: 90 },
+    ]);
+    expect(chartSeries(pack, "week", "pnl", "perps")).toEqual([
+      { t: 10, v: 3 },
+      { t: 20, v: 4 },
+    ]);
+    expect(chartSeries(pack, "week", "perpPnl", "perps")).toEqual([
+      { t: 10, v: 3 },
+      { t: 20, v: 4 },
+    ]);
+  });
+
+  it("returns an empty series when history is missing — never invents points", () => {
+    expect(chartSeries({}, "week", "pnl")).toEqual([]);
+    expect(chartSeries({ week: { pnlHistory: [] } }, "week", "pnl")).toEqual([]);
+    expect(chartSeries({ week: { pnlHistory: [["x", "nope"]] } }, "week", "account")).toEqual([]);
+    expect(chartSeries(null, "week", "perpPnl")).toEqual([]);
+  });
+
+  it("formats compact USD ticks and nice steps from the selected series", () => {
+    expect(chartTickUsd(0)).toBe("$0");
+    expect(chartTickUsd(12400)).toBe("$12.4k");
+    expect(chartTickUsd(1200)).toBe("$1.2k");
+    const ticks = niceTicks(0, 165, 4);
+    expect(ticks[0]).toBeLessThanOrEqual(0);
+    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(165);
+    expect(ticks.length).toBeGreaterThanOrEqual(3);
   });
 });
