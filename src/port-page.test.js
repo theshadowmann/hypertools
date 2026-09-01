@@ -140,10 +140,14 @@ describe("portfolio disconnected and live numbers", () => {
     expect(document.getElementById("port-fee-perp-taker").textContent).toContain("0.0450%");
   });
 
-  it("draws a navy PNL line on a grey canvas, including a flat $0 series", () => {
+  it("draws a white PNL line on a grey canvas, including a flat $0 series", () => {
+    const js = readFileSync(join(root, "src/dashboard.js"), "utf8");
     const canvas = document.createElement("canvas");
     canvas.width = 100;
     canvas.height = 40;
+    expect(js).toMatch(/ctx\.strokeStyle = "#ffffff"/);
+    expect(js).toMatch(/ctx\.fillStyle = "#2a2b2b"/);
+    expect(js).not.toMatch(/ctx\.strokeStyle = "#1A2B56"/);
     expect(() => drawPnlChart(canvas, [])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 1 }, { t: 2, v: 3 }])).not.toThrow();
   });

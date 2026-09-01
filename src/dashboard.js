@@ -417,7 +417,7 @@ export function drawPnlChart(canvas, series) {
   const w = cssW - pad * 2;
   const h = cssH - pad * 2;
   ctx.beginPath();
-  ctx.strokeStyle = "#1A2B56";
+  ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 1.6;
   pts.forEach((p, i) => {
     const x = pad + (pts.length === 1 ? w / 2 : (i / (pts.length - 1)) * w);
