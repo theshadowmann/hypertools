@@ -20,8 +20,13 @@ describe("TradingView embed", () => {
     expect(script.getAttribute("src")).toBe(TV_SCRIPT);
     expect(TV_SCRIPT).toBe("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js");
     expect(script.textContent).toContain("HYPERLIQUID:BTCUSDC.P");
-    expect(script.textContent).toContain('"hide_top_toolbar":true');
-    expect(script.textContent).toContain('"hide_side_toolbar":true');
+    expect(script.textContent).toContain('"hide_top_toolbar":false');
+    expect(script.textContent).toContain('"hide_legend":false');
+    expect(script.textContent).toContain('"hide_side_toolbar":false');
+    expect(script.textContent).toContain('"allow_symbol_change":false');
+    expect(script.textContent).toContain('"hide_volume":false');
+    expect(script.textContent).toContain('"backgroundColor":"#242525"');
+    expect(script.textContent).not.toContain('"studies"');
     expect(script.textContent).toContain('"withdateranges":false');
     expect(script.textContent).toContain('"save_image":false');
     expect(host.innerHTML).not.toContain("<img");
