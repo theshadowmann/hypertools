@@ -125,6 +125,10 @@ describe("deep teal theme", () => {
     expect(hl).not.toContain("#1A2B56");
     expect(html).toContain('content="#080D1A"');
     expect(css).toMatch(/\.chk \{[\s\S]*?color: var\(--text-primary\)/);
+    expect(css).toContain("--accent-primary: #06B6D4");
+    expect(css).toContain("--border-color: #334155");
+    expect(css).toContain("--bg-surface: #0F172A");
+    expect(css).toContain("--text-primary: #F8FAFC");
     expect(css).toMatch(/\.chk-box \{[\s\S]*?border: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.chk-box \{[\s\S]*?background: var\(--bg-surface\)/);
     expect(css).toMatch(/:checked \+ \.chk-box \{[\s\S]*?border-color: var\(--accent-primary\)/);
@@ -133,6 +137,9 @@ describe("deep teal theme", () => {
     expect(css).toMatch(/:checked \+ \.chk-box::after \{[\s\S]*?inset: 2px/);
     expect(css).not.toMatch(/chk-box::after[\s\S]*?rotate\(45deg\)/);
     expect(css).not.toMatch(/chk-box::after[\s\S]*?content:\s*["'][✓✔]["']/);
+    const chkCss = css.slice(css.indexOf(".chk-box {"), css.indexOf("input[type=\"checkbox\"]"));
+    expect(chkCss).not.toMatch(/#7dd3c0|#1A2B56|#00c853|#0891B2/i);
+    expect(chkCss).not.toMatch(/#[0-9A-Fa-f]{3,8}/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?background: var\(--accent-primary\)/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?color: var\(--bg-main\)/);
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?background: var\(--accent-primary\)/);
