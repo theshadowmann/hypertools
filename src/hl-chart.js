@@ -3,7 +3,7 @@ import { loadCandles } from "./api.js";
 
 const BG = "#242525";
 const GRID = "rgba(54, 55, 55, 0.45)";
-const UP = "#00c853";
+const UP = "#1A2B56";
 const DOWN = "#e57373";
 const AXIS = "#A4A5A5";
 const PAD = { top: 8, right: 48, bottom: 22, left: 4 };

@@ -21,15 +21,15 @@ export default {
           100: "#F1F1F1",
         },
         accent: {
-          DEFAULT: "#00c853",
-          dim: "#00b34a",
-          muted: "rgba(0, 200, 83, 0.12)",
-          line: "rgba(0, 200, 83, 0.28)",
+          DEFAULT: "#1A2B56",
+          dim: "#243562",
+          muted: "rgba(26, 43, 86, 0.22)",
+          line: "rgba(26, 43, 86, 0.4)",
         },
         buy: {
-          DEFAULT: "#00c853",
-          dim: "#00b34a",
-          muted: "rgba(0, 200, 83, 0.12)",
+          DEFAULT: "#1A2B56",
+          dim: "#243562",
+          muted: "rgba(26, 43, 86, 0.22)",
         },
         sell: {
           DEFAULT: "#e57373",
@@ -50,7 +50,7 @@ export default {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 80px rgba(0, 200, 83, 0.08)",
+        glow: "0 0 80px rgba(26, 43, 86, 0.18)",
         card: "0 1px 0 rgba(54,55,55,0.45), 0 18px 40px rgba(0,0,0,0.35)",
       },
     },
