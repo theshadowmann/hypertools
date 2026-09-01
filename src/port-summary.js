@@ -1,3 +1,4 @@
+import { balanceMarkPx, usdValue } from "./balances.js";
 import { num } from "./format.js";
 
 export const PORT_PERIODS = [
@@ -100,36 +101,21 @@ export function sumVaultEquity(rows) {
   return any ? sum : null;
 }
 
-function usdcParts(balances) {
-  let total = 0;
+export function spotEquityUsd(spotBalances, mids, markets) {
+  if (!spotBalances) return null;
+  let sum = 0;
   let any = false;
-  (balances || []).forEach((b) => {
-    if (!b || String(b.coin).toUpperCase() !== "USDC") return;
-    const t = num(b.total);
-    if (!Number.isFinite(t)) return;
-    total += t;
-    any = true;
-  });
-  return { total, any };
-}
-
-export function spotEquityUsd(spotBalances, mids) {
-  const parts = usdcParts(spotBalances);
-  let extra = 0;
-  let anyExtra = false;
   (spotBalances || []).forEach((b) => {
     if (!b) return;
-    const coin = String(b.coin || "");
-    if (coin.toUpperCase() === "USDC") return;
     const sz = num(b.total);
-    const px = num(mids && (mids[coin] || mids[coin + "/USDC"]));
-    if (!Number.isFinite(sz) || !Number.isFinite(px) || px <= 0) return;
-    extra += sz * px;
-    anyExtra = true;
+    if (!Number.isFinite(sz)) return;
+    const px = balanceMarkPx(b.coin, mids, markets);
+    const value = usdValue(sz, px);
+    if (!Number.isFinite(value)) return;
+    sum += value;
+    any = true;
   });
-  const usdc = Number.isFinite(parts.total) ? parts.total : 0;
-  if (!anyExtra && !Number.isFinite(parts.total)) return null;
-  return usdc + extra;
+  return any ? sum : null;
 }
 
 export function perpsEquity(perps) {

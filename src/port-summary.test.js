@@ -73,7 +73,8 @@ describe("volume and equity", () => {
 
   it("computes spot, perps, upnl, staking from live fields only", () => {
     expect(spotEquityUsd([{ coin: "USDC", total: "10" }, { coin: "HYPE", total: "2" }], { HYPE: "4" })).toBe(18);
-    expect(spotEquityUsd(null, {})).toBe(0);
+    expect(spotEquityUsd(null, {})).toBeNull();
+    expect(spotEquityUsd([], {})).toBeNull();
     expect(perpsEquity({ marginSummary: { accountValue: "33.1" } })).toBe(33.1);
     expect(perpsEquity({})).toBeNull();
     expect(

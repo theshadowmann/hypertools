@@ -476,7 +476,7 @@ export function renderDashboard(el, state) {
   const pnl = connected ? lastPnl(block) : null;
   const vol = connected ? periodVolume(block) : null;
   const perpEq = connected && data.perps ? perpsEquity(perps) : null;
-  const spotEq = connected && data.spot ? spotEquityUsd(spotBalances, mids) : null;
+  const spotEq = connected && data.spot ? spotEquityUsd(spotBalances, mids, state.markets) : null;
   const vaultEq = connected
     ? sumVaultEquity([].concat(data.userVaultEquities || [], data.leadingVaults || []))
     : null;
