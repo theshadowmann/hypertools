@@ -29,13 +29,18 @@ describe("CSP", () => {
     const csp = json.globalHeaders["Content-Security-Policy"];
     expect(csp).toMatch(/script-src 'self' https:\/\/s3\.tradingview\.com https:\/\/s\.tradingview\.com/);
     expect(csp).not.toMatch(/script-src[^;]*\*/);
-    expect(csp).toMatch(/frame-src https:\/\/www\.tradingview-widget\.com/);
+    expect(csp).toMatch(/frame-src 'self' https:\/\/www\.tradingview-widget\.com/);
     expect(csp).toMatch(/frame-ancestors 'none'/);
     expect(csp).toMatch(/connect-src 'self' https:\/\/api\.hyperliquid\.xyz wss:\/\/api\.hyperliquid\.xyz/);
     expect(csp).toMatch(/img-src 'self' data: https:\/\/app\.hyperliquid\.xyz/);
     expect(csp).not.toMatch(/img-src[^;]*\*/);
     expect(csp).not.toMatch(/cdnjs|jsdelivr|unpkg|googleapis/);
     expect(json.navigationFallback.rewrite).toBe("/index.html");
+    expect(json.navigationFallback.exclude).toContain("/embed-widget/*");
+    const embed = json.routes.find((r) => r.route === "/embed-widget/*");
+    expect(embed.headers["X-Frame-Options"]).toBe("SAMEORIGIN");
+    expect(embed.headers["Content-Security-Policy"]).toMatch(/frame-ancestors 'self'/);
+    expect(embed.headers["Content-Security-Policy"]).toMatch(/unsafe-inline/);
   });
 });
 

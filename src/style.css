@@ -204,7 +204,6 @@ html.desk #trade:not(.hidden) {
   margin: 0;
   border: 0;
   background: var(--bg-surface);
-  isolation: isolate;
 }
 .tradingview-widget-container,
 .tradingview-widget-container__widget {
@@ -222,8 +221,7 @@ html.desk #trade:not(.hidden) {
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
-  background: transparent !important;
-  mix-blend-mode: lighten;
+  background: var(--bg-surface) !important;
 }
 .hl-chart-host,
 .hl-chart {

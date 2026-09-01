@@ -4,10 +4,47 @@ import { mountHlChart } from "./hl-chart.js";
 
 /** Official TradingView Advanced Chart iframe widget. Not user-configurable. */
 export const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+export const TV_WIDGET_PAGE = "https://www.tradingview-widget.com/embed-widget/advanced-chart/";
+/** Same-origin snapshot of TV_WIDGET_PAGE. Path must match TV's onWidget() embed regex. */
+export const TV_EMBED_PAGE = "/embed-widget/advanced-chart/";
 export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 
 /** Same navy as the chart pane (`--bg-surface`). Toolbars must match this, not black. */
 export const TV_CHROME = "#0F172A";
+
+/**
+ * Official TV chrome tokens plus layout-area paint. Applied on a same-origin
+ * snapshot of the Advanced Chart page because the public iframe strips toolbar_bg
+ * and `--tv-color-pane-background` cannot be set across origin.
+ */
+export const TV_CHROME_CSS = `
+html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body {
+  --color-header-bg: ${TV_CHROME} !important;
+  --color-body-bg: ${TV_CHROME} !important;
+  --color-pane-bg: ${TV_CHROME} !important;
+  --color-chart-page-bg: ${TV_CHROME} !important;
+  --tv-color-platform-background: ${TV_CHROME} !important;
+  --tv-color-pane-background: ${TV_CHROME} !important;
+  --tv-color-pane-background-secondary: ${TV_CHROME} !important;
+  background: ${TV_CHROME} !important;
+  background-color: ${TV_CHROME} !important;
+}
+.chart-page,
+.chart-container,
+.layout__area--center,
+.layout__area--top,
+.layout__area--left,
+.layout__area--top > *,
+.layout__area--left > *,
+.layout__area--top *,
+.layout__area--left *,
+[class^="toolbar-"],
+[class*=" toolbar-"] {
+  background: ${TV_CHROME} !important;
+  background-color: ${TV_CHROME} !important;
+  background-image: none !important;
+}
+`;
 
 export const TV_OVERRIDES = {
   "paneProperties.background": TV_CHROME,
@@ -25,6 +62,7 @@ export function tvWidgetConfig({ symbol, interval }) {
     interval: tvInterval(interval),
     timezone: "Etc/UTC",
     theme: "dark",
+    colorTheme: "dark",
     style: "1",
     locale: "en",
     backgroundColor: TV_CHROME,
@@ -47,6 +85,11 @@ export function tvWidgetConfig({ symbol, interval }) {
   };
 }
 
+function serializeTvSrc(url, relative) {
+  if (relative) return url.pathname + url.search + url.hash;
+  return url.toString();
+}
+
 /**
  * The public embed script allowlists `backgroundColor` but strips `toolbar_bg`.
  * Stamp toolbar_bg onto the iframe hash, and put overrides on the query string
@@ -55,10 +98,11 @@ export function tvWidgetConfig({ symbol, interval }) {
 export function stampTvChrome(iframe) {
   if (!iframe || typeof iframe.getAttribute !== "function") return;
   const raw = iframe.getAttribute("src") || "";
-  if (!raw || !/tradingview/i.test(raw)) return;
+  if (!raw || !/tradingview|embed-widget|tv-embed/i.test(raw)) return;
+  const relative = raw.startsWith("/") || !/^https?:\/\//i.test(raw);
   let url;
   try {
-    url = new URL(raw, "https://www.tradingview-widget.com/");
+    url = relative ? new URL(raw, "http://ht.invalid") : new URL(raw);
   } catch {
     return;
   }
@@ -89,24 +133,7 @@ export function stampTvChrome(iframe) {
   if (sameHash && sameQuery) return;
   url.hash = nextHash;
   url.searchParams.set("overrides", overrideStr);
-  iframe.setAttribute("src", url.toString());
-}
-
-function watchWidgetIframe(root) {
-  const apply = (node) => {
-    if (!node) return;
-    if (node.tagName === "IFRAME") stampTvChrome(node);
-    else if (node.querySelectorAll) node.querySelectorAll("iframe").forEach(stampTvChrome);
-  };
-  apply(root);
-  if (typeof MutationObserver === "undefined") return;
-  const mo = new MutationObserver((recs) => {
-    recs.forEach((r) => {
-      r.addedNodes.forEach(apply);
-      if (r.type === "attributes" && r.target && r.target.tagName === "IFRAME") stampTvChrome(r.target);
-    });
-  });
-  mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["src"] });
+  iframe.setAttribute("src", serializeTvSrc(url, relative));
 }
 
 export function mountTvChart(container, { coin, interval, kind, base, quote }) {
@@ -131,13 +158,15 @@ export function mountTvChart(container, { coin, interval, kind, base, quote }) {
   widget.style.width = "100%";
   widget.style.background = TV_CHROME;
   wrap.appendChild(widget);
-  const script = document.createElement("script");
-  script.src = TV_SCRIPT;
-  script.async = true;
-  script.type = "text/javascript";
-  script.textContent = JSON.stringify(tvWidgetConfig({ symbol, interval }));
-  wrap.appendChild(script);
-  watchWidgetIframe(wrap);
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "TradingView chart");
+  iframe.setAttribute("allowtransparency", "true");
+  iframe.setAttribute("scrolling", "no");
+  iframe.style.cssText = "width:100%;height:100%;border:0;margin:0;display:block;background:" + TV_CHROME;
+  const cfg = tvWidgetConfig({ symbol, interval });
+  iframe.setAttribute("src", TV_EMBED_PAGE + "#" + encodeURIComponent(JSON.stringify(cfg)));
+  stampTvChrome(iframe);
+  widget.appendChild(iframe);
   container.appendChild(wrap);
 }
 

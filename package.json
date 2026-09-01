@@ -4,8 +4,8 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && cp staticwebapp.config.json dist/",
+    "dev": "node scripts/prepare-tv-embed.mjs && vite",
+    "build": "node scripts/prepare-tv-embed.mjs && vite build && cp staticwebapp.config.json dist/",
     "preview": "vite preview --host --port 4173",
     "test": "vitest run"
   },

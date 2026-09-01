@@ -5,35 +5,50 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { mountChart, mountTvChart, stampTvChrome, TV_CHROME, TV_SCRIPT } from "./tv-chart.js";
+import { mountChart, mountTvChart, stampTvChrome, TV_CHROME, TV_CHROME_CSS, TV_EMBED_PAGE, TV_SCRIPT } from "./tv-chart.js";
 import { drawCandles } from "./hl-chart.js";
 import { candleSnapshotBody, candlesToBars, hlCandleInterval, prevDayFromDailyBars } from "./api.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("TradingView embed", () => {
-  it("loads the official Advanced Chart script and JSON via textContent", () => {
+  it("loads the official Advanced Chart via a same-origin snapshot with navy chrome CSS", () => {
     const host = document.createElement("div");
     mountTvChart(host, { coin: "BTC", interval: "15m" });
-    const script = host.querySelector("script");
-    expect(script).toBeTruthy();
-    expect(script.getAttribute("src")).toBe(TV_SCRIPT);
+    const iframe = host.querySelector("iframe");
+    expect(iframe).toBeTruthy();
     expect(TV_SCRIPT).toBe("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js");
-    expect(script.textContent).toContain("HYPERLIQUID:BTCUSDC.P");
-    expect(script.textContent).toContain('"hide_top_toolbar":false');
-    expect(script.textContent).toContain('"hide_legend":false');
-    expect(script.textContent).toContain('"hide_side_toolbar":false');
-    expect(script.textContent).toContain('"allow_symbol_change":false');
-    expect(script.textContent).toContain('"hide_volume":false');
-    expect(script.textContent).toContain('"backgroundColor":"#0F172A"');
-    expect(script.textContent).toContain('"toolbar_bg":"#0F172A"');
-    expect(script.textContent).toContain('"paneProperties.background":"#0F172A"');
-    expect(script.textContent).toContain('"paneProperties.backgroundType":"solid"');
-    expect(script.textContent).toContain('"scalesProperties.backgroundColor":"#0F172A"');
-    expect(script.textContent).not.toContain('"studies"');
-    expect(script.textContent).toContain('"withdateranges":false');
-    expect(script.textContent).toContain('"save_image":false');
+    expect(TV_EMBED_PAGE).toBe("/embed-widget/advanced-chart/");
+    const src = iframe.getAttribute("src");
+    expect(src).toContain("/embed-widget/advanced-chart/");
+    const parsed = new URL(src, "http://localhost");
+    expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
+    const hash = decodeURIComponent(parsed.hash.slice(1));
+    expect(hash).toContain("HYPERLIQUID:BTCUSDC.P");
+    expect(hash).toContain('"hide_top_toolbar":false');
+    expect(hash).toContain('"hide_legend":false');
+    expect(hash).toContain('"hide_side_toolbar":false');
+    expect(hash).toContain('"allow_symbol_change":false');
+    expect(hash).toContain('"hide_volume":false');
+    expect(hash).toContain('"backgroundColor":"#0F172A"');
+    expect(hash).toContain('"toolbar_bg":"#0F172A"');
+    expect(hash).toContain('"colorTheme":"dark"');
+    expect(hash).toContain('"paneProperties.background":"#0F172A"');
+    expect(hash).toContain('"paneProperties.backgroundType":"solid"');
+    expect(hash).toContain('"scalesProperties.backgroundColor":"#0F172A"');
+    expect(hash).not.toContain('"studies"');
+    expect(hash).toContain('"withdateranges":false');
+    expect(hash).toContain('"save_image":false');
+    expect(TV_CHROME_CSS).toContain(".layout__area--top");
+    expect(TV_CHROME_CSS).toContain(".layout__area--left");
+    expect(TV_CHROME_CSS).toContain("--tv-color-pane-background");
+    expect(TV_CHROME_CSS).toContain("--color-header-bg");
     expect(host.innerHTML).not.toContain("<img");
+    const snap = readFileSync(join(root, "public/embed-widget/advanced-chart/index.html"), "utf8");
+    expect(snap).toContain('id="ht-tv-chrome"');
+    expect(snap).toContain("#0F172A");
+    expect(snap).toContain(".layout__area--left");
+    expect(snap).not.toMatch(/\snonce="/);
   });
 
   it("skips TradingView for outcome markets instead of embedding a BTC chart", () => {
@@ -79,6 +94,18 @@ describe("TradingView embed", () => {
     expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
     expect(TV_CHROME).toBe("#0F172A");
   });
+
+  it("stamps navy chrome onto a same-origin embed-widget path", () => {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", "/embed-widget/advanced-chart/#" + encodeURIComponent(JSON.stringify({ symbol: "HYPERLIQUID:BTCUSDC.P", theme: "dark" })));
+    stampTvChrome(iframe);
+    const src = iframe.getAttribute("src");
+    expect(src.startsWith("/embed-widget/advanced-chart/")).toBe(true);
+    expect(src).not.toContain("tradingview-widget.com");
+    const parsed = new URL(src, "http://localhost");
+    expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
+    expect(decodeURIComponent(parsed.hash.slice(1))).toContain('"toolbar_bg":"#0F172A"');
+  });
 });
 
 describe("Hyperliquid candles", () => {
@@ -114,12 +141,12 @@ describe("chart chrome", () => {
     expect(css).toMatch(/\.trade-iv \{[\s\S]*?height: 22px/);
     expect(css).toMatch(/\.trade-iv \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?border: 0 !important/);
-    expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?mix-blend-mode: lighten/);
-    expect(css).toMatch(/\.tv-host \{[\s\S]*?isolation: isolate/);
     expect(css).toMatch(/\.trade-chart \{[^}]*padding: 0;/);
     expect(css).toMatch(/\.trade-chart \{[^}]*background: var\(--bg-surface\)/);
     expect(css).toMatch(/\.trade-chart \{[^}]*border-right: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.hl-chart-host,[\s\S]*?background: var\(--bg-surface\)/);
+    expect(css).not.toContain("mix-blend-mode");
+    expect(css).toMatch(/\.iv-btn\[aria-pressed="true"\] \{[\s\S]*?box-shadow: inset 0 -1px 0 var\(--accent-primary\)/);
   });
 });
 
