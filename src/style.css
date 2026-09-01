@@ -287,11 +287,11 @@ html.desk #trade:not(.hidden) {
   flex-shrink: 0;
   color: #fff;
   -webkit-text-fill-color: #fff;
-  transition: transform 0.12s ease;
+  overflow: visible;
 }
-.market-chip[aria-expanded="true"] .chip-chevron {
-  transform: rotate(180deg);
-}
+.chip-chevron-up { display: none; }
+.market-chip[aria-expanded="true"] .chip-chevron-down { display: none; }
+.market-chip[aria-expanded="true"] .chip-chevron-up { display: inline; }
 .coin-icon {
   width: 20px;
   height: 20px;

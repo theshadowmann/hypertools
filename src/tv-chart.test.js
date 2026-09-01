@@ -139,7 +139,13 @@ describe("grey canvas theme", () => {
     expect(css).not.toMatch(/\.market-chip[^{]*\{[^}]*color:\s*var\(--navy\)/);
     expect(css).not.toMatch(/#market-chip-pair[^{]*\{[^}]*color:\s*var\(--navy\)/);
     expect(css).not.toMatch(/\.mp-pair[^{]*\{[^}]*color:\s*var\(--navy\)/);
-    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \.chip-chevron \{[\s\S]*?transform: rotate\(180deg\)/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \.chip-chevron-down \{[\s\S]*?display: none/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \.chip-chevron-up \{[\s\S]*?display: inline/);
+    expect(css).toMatch(/\.chip-chevron-up \{ display: none/);
+    expect(html).toContain('class="chip-chevron-down"');
+    expect(html).toContain('class="chip-chevron-up"');
+    expect(html).toContain("M2.5 4.5 L6 8 L9.5 4.5");
+    expect(html).toContain("M2.5 7.5 L6 4 L9.5 7.5");
     expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?background: var\(--navy\)/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: #fff/);
