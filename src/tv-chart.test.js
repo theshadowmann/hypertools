@@ -104,9 +104,11 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?background: var\(--navy\)/);
     expect(css).toMatch(/\.ticket-submit\.connect,[\s\S]*?color: #fff/);
     expect(css).toContain("--green: #1A2B56");
+    expect(css).toContain("--navy: #1A2B56");
     expect(css).not.toContain("#00c853");
     expect(tw).not.toContain("#00c853");
     expect(hl).not.toContain("#00c853");
+    expect(hl).toContain('const UP = "#1A2B56"');
     expect(css).toMatch(/\.ticket-submit\.buy \{[^}]*background: var\(--navy\)/);
     expect(css).toMatch(/\.ticket-submit\.buy \{[^}]*color: #fff/);
     expect(css).toMatch(/\.mp-tab\[aria-selected="true"\] \{[\s\S]*?color: var\(--navy\)/);
@@ -116,7 +118,11 @@ describe("grey canvas theme", () => {
     expect(css).toMatch(/\.hist-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--navy\)/);
     expect(css).toMatch(/\.ls-tab\.short\[aria-pressed="true"\] \{[\s\S]*?color: var\(--red\)/);
     expect(css).toMatch(/\.ticket-submit\.sell \{[^}]*background: var\(--red-fill\)/);
+    expect(css).toMatch(/\.market-chip\[aria-expanded="true"\] \{ color: var\(--navy\)/);
+    expect(css).toMatch(/\.mp-star\.on \{ color: var\(--navy\)/);
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?color: var\(--green\)/);
+    expect(css).toMatch(/\.mp-chg\.up \{ color: var\(--green\)/);
+    expect(css).toMatch(/\.book-row\.bid \.px \{ color: var\(--green\)/);
   });
 });
 
