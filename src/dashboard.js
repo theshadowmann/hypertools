@@ -12,12 +12,12 @@ import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import { outcomePositionMetrics, outcomePositionsFromSpot } from "./outcomes.js";
 import {
+  axisTicks,
   chartSeries,
   chartTickUsd,
   formatChartDate,
   lastPnl,
   missingMoney,
-  niceTicks,
   parsePortfolio,
   periodVolume,
   perpsEquity,
@@ -512,16 +512,9 @@ export function drawPnlChart(canvas, series) {
   const plotW = Math.max(1, cssW - padL - padR);
   const plotH = Math.max(1, cssH - padT - padB);
 
-  const ys = pts.map((p) => p.v);
-  let min = Math.min.apply(null, ys);
-  let max = Math.max.apply(null, ys);
-  if (min > 0 && max > 0 && min / max < 0.15) min = 0;
-  if (min < 0 && max > 0) {
-    /* keep 0 in range so PNL crosses the axis */
-  }
-  const ticks = niceTicks(min, max, 4);
-  const yMin = ticks.length ? Math.min(min, ticks[0]) : min;
-  const yMax = ticks.length ? Math.max(max, ticks[ticks.length - 1]) : max;
+  const ticks = axisTicks(pts, 4);
+  const yMin = ticks.length ? ticks[0] : 0;
+  const yMax = ticks.length ? ticks[ticks.length - 1] : 1;
   const ySpan = yMax - yMin || 1;
   const t0 = pts[0].t;
   const t1 = pts[pts.length - 1].t;
@@ -544,7 +537,7 @@ export function drawPnlChart(canvas, series) {
   ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  (ticks.length ? ticks : [min, max]).forEach((tick) => {
+  (ticks.length ? ticks : []).forEach((tick) => {
     const y = yOf(tick);
     ctx.beginPath();
     ctx.strokeStyle = "rgba(164, 165, 165, 0.45)";

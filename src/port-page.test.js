@@ -166,6 +166,7 @@ describe("portfolio disconnected and live numbers", () => {
     expect(js).toMatch(/ctx\.lineTo\(x, prevY\)/);
     expect(js).not.toMatch(/ctx\.strokeStyle = "#1A2B56"/);
     expect(js).not.toMatch(/\{ t: 0, v: 0 \}/);
+    expect(js).toMatch(/axisTicks\(/);
     expect(js).toMatch(/chartSeries\(/);
     expect(() => drawPnlChart(canvas, [])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 0 }, { t: 2, v: 0 }])).not.toThrow();

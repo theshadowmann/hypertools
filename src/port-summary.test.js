@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  axisTicks,
   chartSeries,
   chartTickUsd,
   lastPnl,
@@ -158,5 +159,26 @@ describe("chart series", () => {
     expect(ticks[0]).toBeLessThanOrEqual(0);
     expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(165);
     expect(ticks.length).toBeGreaterThanOrEqual(3);
+    expect(ticks.length).toBeLessThanOrEqual(6);
+  });
+
+  it("builds Y ticks from the current series only — Account Value and PNL do not share an axis", () => {
+    const account = [
+      { t: 1, v: 0 },
+      { t: 2, v: 165 },
+    ];
+    const pnl = [
+      { t: 1, v: -0.1 },
+      { t: 2, v: 0.2 },
+    ];
+    const aTicks = axisTicks(account, 4);
+    const pTicks = axisTicks(pnl, 4);
+    expect(aTicks.length).toBeGreaterThanOrEqual(3);
+    expect(aTicks[aTicks.length - 1]).toBeGreaterThanOrEqual(165);
+    expect(pTicks.some((t) => t === 0)).toBe(true);
+    expect(Math.max.apply(null, pTicks)).toBeLessThan(10);
+    expect(Math.max.apply(null, aTicks)).toBeGreaterThan(Math.max.apply(null, pTicks) * 10);
+    expect(axisTicks([], 4)).toEqual([]);
+    expect(axisTicks(null, 4)).toEqual([]);
   });
 });

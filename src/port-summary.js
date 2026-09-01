@@ -124,20 +124,57 @@ export function niceTicks(min, max, count = 4) {
     hi += pad;
   }
   const span = hi - lo;
-  const raw = span / Math.max(1, count - 1);
+  const gaps = Math.max(2, count - 1);
+  const raw = span / gaps;
   const exp = Math.floor(Math.log10(raw));
   const mag = Math.pow(10, exp);
-  const f = raw / mag;
-  const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
-  const step = nf * mag;
-  const start = Math.floor(lo / step) * step;
-  const end = Math.ceil(hi / step) * step;
+  const steps = [];
+  [0.5, 1, 2, 5, 10].forEach((n) => {
+    const s = n * mag;
+    if (s > 0) steps.push(s);
+  });
+  if (exp >= 1) steps.push(Math.pow(10, exp - 1) * 5);
+  let best = null;
+  steps.forEach((step) => {
+    const start = Math.floor(lo / step) * step;
+    const end = Math.ceil(hi / step) * step;
+    const ticks = [];
+    for (let v = start; v <= end + step * 0.5; v += step) {
+      ticks.push(Number(v.toPrecision(8)));
+    }
+    if (ticks.length < 3 || ticks.length > 7) return;
+    const overshoot = end - hi + (lo - start);
+    const score = Math.abs(ticks.length - count) * span + overshoot;
+    if (!best || score < best.score) best = { ticks, score };
+  });
+  if (best) {
+    const ticks = best.ticks.slice();
+    if (lo < 0 && hi > 0 && ticks.every((t) => t !== 0)) {
+      ticks.push(0);
+      ticks.sort((a, b) => a - b);
+    }
+    return ticks;
+  }
   const ticks = [];
-  for (let v = start; v <= end + step * 0.5; v += step) {
-    const n = Number(v.toPrecision(8));
-    ticks.push(n);
+  for (let i = 0; i <= gaps; i++) {
+    ticks.push(Number((lo + (span * i) / gaps).toPrecision(8)));
   }
   return ticks;
+}
+
+/** Y ticks from this series only. Empty series → no ticks (never reuse another tab). */
+export function axisTicks(points, count = 4) {
+  if (!Array.isArray(points) || !points.length) return [];
+  const ys = [];
+  points.forEach((p) => {
+    if (p && Number.isFinite(p.v)) ys.push(p.v);
+  });
+  if (!ys.length) return [];
+  let min = Math.min.apply(null, ys);
+  let max = Math.max.apply(null, ys);
+  if (min > 0 && max > 0 && min / max < 0.15) min = 0;
+  if (min < 0 && max < 0 && max / min < 0.15) max = 0;
+  return niceTicks(min, max, count);
 }
 
 export function chartTickUsd(raw) {
