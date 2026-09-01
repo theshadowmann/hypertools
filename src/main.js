@@ -250,6 +250,8 @@ async function connectWallet(provider) {
 function renderChrome() {
   const connected = !!state.address;
   const onDesk = state.view === "trade" || state.view === "outcome";
+  document.documentElement.classList.toggle("desk", onDesk);
+  document.body.classList.toggle("desk", onDesk);
   el.landing.classList.toggle("hidden", connected || onDesk);
   el.dashboard.classList.toggle("hidden", !connected || onDesk);
   el.trade.classList.toggle("hidden", !onDesk);

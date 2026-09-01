@@ -180,6 +180,10 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.ticket:not\(\.has-pro-extra\) \.ticket-scroll \{[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow-y: auto/);
     expect(css).toMatch(/\.ticket-foot \{[\s\S]*?flex: 0 0 auto/);
+    expect(css).toMatch(/html\.desk,[\s\S]*?overflow: hidden/);
+    expect(css).toMatch(/\.trade-shell \{[\s\S]*?overflow: hidden/);
     expect(js).toContain('classList.toggle("has-pro-extra", proOn)');
+    const mainJs = readFileSync(join(root, "src/main.js"), "utf8");
+    expect(mainJs).toContain('classList.toggle("desk", onDesk)');
   });
 });
