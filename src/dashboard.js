@@ -1,15 +1,31 @@
-import { DUST } from "./api.js";
-import { clear, dashedEmpty, h, ths } from "./dom.js";
+import { clear, h, note } from "./dom.js";
 import {
   fmtHype,
   fmtPx,
   fmtQty,
-  fmtRoe,
   fmtUsd,
   formatLocalTime,
   num,
   pnlClass,
 } from "./format.js";
+import { formatFeePct } from "./ticket-math.js";
+import { buildBalanceRows, formatPnlPct } from "./balances.js";
+import { outcomePositionMetrics, outcomePositionsFromSpot } from "./outcomes.js";
+import {
+  lastPnl,
+  missingMoney,
+  parsePortfolio,
+  periodBlock,
+  periodVolume,
+  perpsEquity,
+  pnlSeries,
+  PORT_PERIODS,
+  spotEquityUsd,
+  stakingUsd,
+  sum14DayVolume,
+  sumVaultEquity,
+  upnlSum,
+} from "./port-summary.js";
 
 export function spotUsdcParts(balances) {
   let total = 0;
@@ -45,368 +61,460 @@ export function levLabel(lev) {
   return String(v) + "× " + t;
 }
 
-function cardMini(label, value, hint) {
-  return h(
-    "article",
-    { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card" },
-    h("p", { class: "text-xs font-medium uppercase tracking-wider text-mist-400" }, label),
-    h("p", { class: "mt-2 font-mono text-xl font-medium tracking-tight text-white tabular" }, value),
-    hint ? h("p", { class: "mt-1 text-[10px] tracking-wide text-mist-400/70" }, hint) : null
-  );
+function money(v) {
+  if (v == null || !Number.isFinite(Number(v))) return missingMoney();
+  return fmtUsd(v);
 }
 
-function kvRow(k, v, cls) {
-  return h(
-    "div",
-    { class: "flex items-baseline justify-between gap-3 py-1" },
-    h("span", { class: "text-xs uppercase tracking-wider text-mist-400" }, k),
-    h("span", { class: "font-mono text-sm tabular " + (cls || "text-white") }, v)
-  );
+function moneySigned(v) {
+  if (v == null || !Number.isFinite(Number(v))) return missingMoney();
+  return fmtUsd(v, { signed: true });
 }
 
-function renderOverview(el, perps, spotBalances) {
-  const ms = perps.marginSummary || {};
-  let perpEquity = num(ms.accountValue);
-  if (!Number.isFinite(perpEquity)) perpEquity = 0;
-  let perpWithdrawable = num(perps.withdrawable);
-  if (!Number.isFinite(perpWithdrawable)) perpWithdrawable = 0;
-  const marginUsed = ms.totalMarginUsed;
-  const spot = spotUsdcParts(spotBalances);
-  const accountValue = perpEquity + spot.total;
-  const withdrawable = perpWithdrawable + spot.available;
+function feeTxt(connected, fees, rate) {
+  if (!connected || !fees) return missingMoney();
+  const s = formatFeePct(rate);
+  return s === "—" ? missingMoney() : s;
+}
 
-  const positions = perps.assetPositions || [];
-  let upnlSum = 0;
-  let hasUpnl = false;
-  positions.forEach((ap) => {
-    const p = ap && ap.position;
-    if (!p) return;
-    const n = num(p.unrealizedPnl);
-    if (Number.isFinite(n)) {
-      upnlSum += n;
-      hasUpnl = true;
+function stakeText(connected, staking, hypePx) {
+  if (!connected) return missingMoney();
+  const usd = stakingUsd(staking, hypePx);
+  if (usd != null) return money(usd);
+  if (staking && staking.delegated != null && staking.delegated !== "") {
+    const hype = fmtHype(staking.delegated);
+    return hype === "—" ? missingMoney() : hype;
+  }
+  return missingMoney();
+}
+
+let portPeriod = "week";
+let portHistTab = "balances";
+let portHideSmall = true;
+let chartResizeBound = false;
+
+function bindPortHistOnce() {
+  const dash = document.getElementById("dashboard");
+  if (!dash || dash.dataset.portBound === "1") return;
+  dash.dataset.portBound = "1";
+  dash.addEventListener("click", (ev) => {
+    const btn = ev.target && ev.target.closest && ev.target.closest("[data-port-tab]");
+    if (!btn || !dash.contains(btn)) return;
+    portHistTab = btn.getAttribute("data-port-tab") || "balances";
+    dash.querySelectorAll("[data-port-tab]").forEach((b) => {
+      b.setAttribute("aria-selected", b.getAttribute("data-port-tab") === portHistTab ? "true" : "false");
+    });
+    ["balances", "positions", "outcomes", "orders", "twap", "funding", "history"].forEach((id) => {
+      const pane = document.getElementById("port-" + id);
+      if (pane) pane.classList.toggle("hidden", id !== portHistTab);
+    });
+    const hideWrap = document.getElementById("port-bal-hide-wrap");
+    if (hideWrap) hideWrap.classList.toggle("hidden", portHistTab !== "balances");
+  });
+  dash.addEventListener("change", (ev) => {
+    const t = ev.target;
+    if (!t) return;
+    if (t.id === "port-period") {
+      const next = t.value;
+      if (PORT_PERIODS.some((p) => p.id === next)) portPeriod = next;
+      if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      return;
+    }
+    if (t.id === "port-bal-hide-small") {
+      portHideSmall = !!t.checked;
+      if (dash._lastState) renderPortHist(dash._lastState);
     }
   });
+}
 
-  let usage = "";
-  const mu = num(marginUsed);
-  if (Number.isFinite(accountValue) && accountValue > 0 && Number.isFinite(mu) && mu > 0) {
-    usage =
-      ((mu / accountValue) * 100).toLocaleString("en-US", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }) + "% of portfolio value";
-  }
-
-  const cards = [
-    {
-      label: "Portfolio value",
-      value: fmtUsd(accountValue),
-      hint: "Perps equity + spot USDC",
-      extra: "",
-    },
-    {
-      label: "Withdrawable",
-      value: fmtUsd(withdrawable),
-      hint: "Perps withdrawable + free spot USDC",
-      extra: "",
-    },
-    {
-      label: "Margin used",
-      value: fmtUsd(marginUsed),
-      hint: "Open perp margin",
-      extra: usage,
-    },
-    {
-      label: "Unrealized PnL",
-      value: hasUpnl ? fmtUsd(upnlSum, { signed: true }) : "—",
-      hint: "Open perps",
-      extra: "",
-      pnl: hasUpnl ? upnlSum : null,
-    },
-  ];
-
-  clear(el.overview);
-  cards.forEach((c) => {
-    const color = c.pnl == null ? "text-white" : pnlClass(c.pnl);
-    el.overview.appendChild(
-      h(
-        "article",
-        { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card" },
-        h("p", { class: "text-xs font-medium uppercase tracking-wider text-mist-400" }, c.label),
-        h("p", { class: "mt-2 font-mono text-2xl font-medium tracking-tight tabular " + color }, c.value),
-        c.extra ? h("p", { class: "mt-1 text-xs text-mist-400" }, c.extra) : null,
-        h("p", { class: "mt-1 text-[10px] uppercase tracking-wider text-mist-400/70" }, c.hint)
-      )
-    );
+function bindChartResize() {
+  if (chartResizeBound || typeof window === "undefined") return;
+  chartResizeBound = true;
+  window.addEventListener("resize", () => {
+    const canvas = document.getElementById("port-pnl-chart");
+    if (canvas && canvas._series) drawPnlChart(canvas, canvas._series);
   });
 }
 
-function renderPerps(el, assetPositions, mids) {
-  const rows = positionRows(assetPositions);
-  el.perpsCount.textContent = rows.length ? rows.length + " open" : "";
-  clear(el.perpsRoot);
-
-  if (!rows.length) {
-    el.perpsRoot.appendChild(dashedEmpty("No open perps."));
-    return;
-  }
-
-  const bodyRows = rows.map((p) => {
-    const szi = num(p.szi);
-    const side = szi >= 0 ? "Long" : "Short";
-    const sideCls =
-      szi >= 0 ? "text-buy bg-buy/10 ring-buy/30" : "text-sell bg-sell/10 ring-sell/30";
-    const mark = mids && p.coin != null ? mids[p.coin] : null;
-    const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
-    return h(
-      "tr",
-      { class: "border-t border-chrome/50" },
-      h("td", { class: "px-3 py-2.5 font-normal text-mist-100" }, p.coin || "—"),
-      h(
-        "td",
-        { class: "px-3 py-2.5" },
-        h(
-          "span",
-          { class: "inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider ring-1 " + sideCls },
-          side
-        )
-      ),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtQty(Math.abs(szi))),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtPx(p.entryPx)),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, mark == null ? "—" : fmtPx(mark)),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, liq),
-      h("td", { class: "px-3 py-2.5 text-sm text-mist-300" }, levLabel(p.leverage)),
-      h(
-        "td",
-        { class: "px-3 py-2.5 font-mono text-sm tabular " + pnlClass(p.unrealizedPnl) },
-        fmtUsd(p.unrealizedPnl, { signed: true })
-      ),
-      h(
-        "td",
-        { class: "px-3 py-2.5 font-mono text-sm tabular " + pnlClass(p.returnOnEquity) },
-        fmtRoe(p.returnOnEquity)
-      )
-    );
-  });
-
-  el.perpsRoot.appendChild(
-    h(
-      "div",
-      { class: "hidden overflow-x-auto rounded-xl border border-chrome/50 bg-ink-850 shadow-card md:block" },
-      h(
-        "table",
-        { class: "min-w-full text-sm" },
-        h(
-          "thead",
-          { class: "text-xs font-medium uppercase tracking-wider text-mist-400" },
-          h("tr", null, ...ths(["Market", "Side", "Size", "Entry", "Mark", "Liq. price", "Leverage", "uPnL", "ROE"]))
-        ),
-        h("tbody", null, ...bodyRows)
-      )
-    )
-  );
-
-  const cards = h("div", { class: "grid gap-3 md:hidden" });
-  rows.forEach((p) => {
-    const szi = num(p.szi);
-    const side = szi >= 0 ? "Long" : "Short";
-    const sideCls = szi >= 0 ? "text-buy" : "text-sell";
-    const mark = mids && p.coin != null ? mids[p.coin] : null;
-    const liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
-    cards.appendChild(
-      h(
-        "article",
-        { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card" },
-        h(
-          "div",
-          { class: "mb-3 flex items-center justify-between" },
-          h("p", { class: "text-base font-medium text-mist-100" }, p.coin || "—"),
-          h("span", { class: "text-xs font-medium uppercase tracking-wider " + sideCls }, side + " · " + levLabel(p.leverage))
-        ),
-        kvRow("Size", fmtQty(Math.abs(szi))),
-        kvRow("Entry", fmtPx(p.entryPx)),
-        kvRow("Mark", mark == null ? "—" : fmtPx(mark)),
-        kvRow("Liq. price", liq),
-        kvRow("uPnL", fmtUsd(p.unrealizedPnl, { signed: true }), pnlClass(p.unrealizedPnl)),
-        kvRow("ROE", fmtRoe(p.returnOnEquity), pnlClass(p.returnOnEquity))
-      )
-    );
-  });
-  el.perpsRoot.appendChild(cards);
+function emptyHist(root, msg) {
+  clear(root);
+  root.appendChild(note(msg, "px-3 py-6 text-center text-sm text-mist-400"));
 }
 
-function renderSpot(el, balances) {
-  const rows = (balances || []).filter((b) => {
-    const t = num(b && b.total);
-    return Number.isFinite(t) && Math.abs(t) >= DUST;
-  });
-  rows.sort((a, b) => Math.abs(num(b.total)) - Math.abs(num(a.total)));
-  el.spotCount.textContent = rows.length ? rows.length + " tokens" : "";
-  clear(el.spotRoot);
-
-  if (!rows.length) {
-    el.spotRoot.appendChild(dashedEmpty("No spot balances."));
-    return;
-  }
-
-  const bodyRows = rows.map((b) => {
-    const total = num(b.total);
-    const hold = num(b.hold);
-    const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
-    return h(
-      "tr",
-      { class: "border-t border-chrome/50" },
-      h("td", { class: "px-3 py-2.5 font-normal text-mist-100" }, b.coin || "—"),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtQty(b.total)),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular text-mist-300" }, fmtQty(b.hold)),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, Number.isFinite(avail) ? fmtQty(avail) : "—")
-    );
-  });
-
-  el.spotRoot.appendChild(
+function histTable(headers, rows) {
+  return h(
+    "div",
+    { class: "overflow-x-auto" },
     h(
-      "div",
-      { class: "hidden overflow-x-auto rounded-xl border border-chrome/50 bg-ink-850 shadow-card sm:block" },
-      h(
-        "table",
-        { class: "min-w-full text-sm" },
-        h(
-          "thead",
-          { class: "text-xs font-medium uppercase tracking-wider text-mist-400" },
-          h("tr", null, ...ths(["Token", "Total", "In orders", "Available"]))
-        ),
-        h("tbody", null, ...bodyRows)
-      )
+      "table",
+      { class: "bal-table" },
+      h("thead", null, h("tr", null, ...headers.map((label) => h("th", null, label)))),
+      h("tbody", null, ...rows)
     )
   );
+}
 
-  const cards = h("div", { class: "grid gap-3 sm:hidden" });
-  rows.forEach((b) => {
-    const total = num(b.total);
-    const hold = num(b.hold);
-    const avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
-    cards.appendChild(
-      h(
-        "article",
-        { class: "rounded-xl border border-chrome/50 bg-ink-850 p-4 shadow-card sm:hidden" },
-        h("p", { class: "font-medium text-mist-100" }, b.coin || "—"),
-        h(
-          "div",
-          { class: "mt-2 grid grid-cols-3 gap-2 text-xs" },
-          h(
-            "div",
-            null,
-            h("p", { class: "uppercase tracking-wider text-mist-400" }, "Total"),
-            h("p", { class: "mt-0.5 font-mono tabular" }, fmtQty(b.total))
-          ),
-          h(
-            "div",
-            null,
-            h("p", { class: "uppercase tracking-wider text-mist-400" }, "In orders"),
-            h("p", { class: "mt-0.5 font-mono tabular" }, fmtQty(b.hold))
-          ),
-          h(
-            "div",
-            null,
-            h("p", { class: "uppercase tracking-wider text-mist-400" }, "Available"),
-            h("p", { class: "mt-0.5 font-mono tabular" }, Number.isFinite(avail) ? fmtQty(avail) : "—")
+function renderPortHist(state) {
+  bindPortHistOnce();
+  const connected = !!(state && state.address);
+  const data = (state && state.data) || {};
+  const extras = (state && state.extras) || {};
+  const empty = (rootId, noun) => {
+    const root = document.getElementById(rootId);
+    if (!root) return;
+    emptyHist(root, connected ? "No " + noun + "." : "Connect wallet to view " + noun + ".");
+  };
+
+  const balRoot = document.getElementById("port-balances");
+  if (balRoot) {
+    clear(balRoot);
+    if (!connected) emptyHist(balRoot, "Connect wallet to view balances.");
+    else {
+      const rows = buildBalanceRows({
+        perps: data.perps || {},
+        spotBalances: (data.spot && data.spot.balances) || [],
+        mids: data.mids || {},
+        markets: state.markets || [],
+        hideSmall: portHideSmall,
+      });
+      if (!rows.length) emptyHist(balRoot, "No balances.");
+      else {
+        balRoot.appendChild(
+          histTable(
+            ["Asset", "Total Balance", "Available Balance", "Value (USD)", "PNL %"],
+            rows.map((r) =>
+              h(
+                "tr",
+                null,
+                h("td", null, r.coin),
+                h("td", null, fmtQty(r.total)),
+                h("td", null, fmtQty(r.available)),
+                h("td", null, Number.isFinite(r.value) ? fmtUsd(r.value) : "--"),
+                h("td", { class: r.pnlPct == null ? "" : pnlClass(r.pnlPct) }, formatPnlPct(r.pnlPct) === "—" ? "--" : formatPnlPct(r.pnlPct))
+              )
+            )
           )
-        )
-      )
-    );
-  });
-  el.spotRoot.appendChild(cards);
-}
-
-function renderStaking(el, summary, delegations, validatorNames) {
-  const s = summary || {};
-  const dels = Array.isArray(delegations) ? delegations : [];
-  const names = validatorNames || {};
-  clear(el.stakingRoot);
-
-  el.stakingRoot.appendChild(
-    h(
-      "div",
-      { class: "grid gap-3 sm:grid-cols-3" },
-      cardMini("Delegated", fmtHype(s.delegated), "HYPE staked with validators"),
-      cardMini("Undelegated", fmtHype(s.undelegated), "HYPE not currently staked"),
-      cardMini(
-        "Pending withdrawal",
-        fmtHype(s.totalPendingWithdrawal),
-        s.nPendingWithdrawals != null ? s.nPendingWithdrawals + " pending" : "Waiting to unstake"
-      )
-    )
-  );
-
-  if (!dels.length) {
-    const empty = dashedEmpty("No active delegations.");
-    empty.classList.add("mt-4");
-    el.stakingRoot.appendChild(empty);
-    return;
+        );
+      }
+    }
   }
 
-  const bodyRows = dels.map((d) => {
-    const lock = d.lockedUntilTimestamp != null ? formatLocalTime(d.lockedUntilTimestamp) : "—";
-    const key = String(d.validator || "").toLowerCase();
-    const label = names[key] || d.validator || "—";
-    const showAddr = names[key] ? String(d.validator || "") : "";
-    return h(
-      "tr",
-      { class: "border-t border-chrome/50" },
-      h(
-        "td",
-        { class: "px-3 py-2.5" },
-        h("p", { class: "text-sm font-medium text-white" }, label),
-        showAddr ? h("p", { class: "mt-0.5 font-mono text-[11px] text-mist-400" }, showAddr) : null
-      ),
-      h("td", { class: "px-3 py-2.5 font-mono text-sm tabular" }, fmtHype(d.amount)),
-      h("td", { class: "px-3 py-2.5 text-sm text-mist-300" }, lock)
-    );
-  });
+  const posRoot = document.getElementById("port-positions");
+  if (posRoot) {
+    if (!connected) empty("port-positions", "positions");
+    else {
+      const rows = positionRows((data.perps && data.perps.assetPositions) || []);
+      const mids = data.mids || {};
+      if (!rows.length) emptyHist(posRoot, "No open perps.");
+      else {
+        clear(posRoot);
+        posRoot.appendChild(
+          histTable(
+            ["Market", "Side", "Size", "Entry", "Mark", "Liq.", "Lev", "uPnL"],
+            rows.map((p) => {
+              const szi = num(p.szi);
+              return h(
+                "tr",
+                null,
+                h("td", null, p.coin),
+                h("td", { class: szi >= 0 ? "text-buy" : "text-sell" }, szi >= 0 ? "Long" : "Short"),
+                h("td", null, fmtQty(Math.abs(szi))),
+                h("td", null, fmtPx(p.entryPx)),
+                h("td", null, mids[p.coin] == null ? "--" : fmtPx(mids[p.coin])),
+                h("td", null, p.liquidationPx ? fmtPx(p.liquidationPx) : "--"),
+                h("td", null, levLabel(p.leverage)),
+                h("td", { class: pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true }))
+              );
+            })
+          )
+        );
+      }
+    }
+  }
 
-  el.stakingRoot.appendChild(
-    h(
-      "div",
-      { class: "mt-4 overflow-x-auto rounded-xl border border-chrome/50 bg-ink-850 shadow-card" },
-      h(
-        "table",
-        { class: "min-w-full text-sm" },
-        h(
-          "thead",
-          { class: "text-xs font-medium uppercase tracking-wider text-mist-400" },
-          h("tr", null, ...ths(["Validator", "Amount", "Locked until"]))
-        ),
-        h("tbody", null, ...bodyRows)
-      )
-    )
-  );
+  const outRoot = document.getElementById("port-outcomes");
+  if (outRoot) {
+    if (!connected) empty("port-outcomes", "outcomes");
+    else {
+      const rows = outcomePositionsFromSpot((data.spot && data.spot.balances) || [], state.markets || []);
+      if (!rows || !rows.length) emptyHist(outRoot, "No outcomes yet");
+      else {
+        clear(outRoot);
+        outRoot.appendChild(
+          histTable(
+            ["Market", "Size", "Available Size", "Position Value", "Entry Price", "Mark Price", "PNL (ROE %)"],
+            rows.map((r) => {
+              const m = outcomePositionMetrics(r);
+              const pnlTxt =
+                m.pnlPct == null && !Number.isFinite(m.pnlUsd)
+                  ? "--"
+                  : (Number.isFinite(m.pnlUsd) ? fmtUsd(m.pnlUsd, { signed: true }) : "--") +
+                    " (" +
+                    formatPnlPct(m.pnlPct) +
+                    ")";
+              return h(
+                "tr",
+                null,
+                h("td", null, r.title || r.coin || "--"),
+                h("td", null, fmtQty(r.total)),
+                h("td", null, fmtQty(r.available)),
+                h("td", null, Number.isFinite(m.value) ? fmtUsd(m.value) : "--"),
+                h("td", null, Number.isFinite(m.entryPx) ? fmtPx(m.entryPx) : "--"),
+                h("td", null, r.markPx != null && Number.isFinite(Number(r.markPx)) ? fmtPx(r.markPx) : "--"),
+                h("td", { class: Number.isFinite(m.pnlUsd) ? pnlClass(m.pnlUsd) : "" }, pnlTxt)
+              );
+            })
+          )
+        );
+      }
+    }
+  }
+
+  const ordRoot = document.getElementById("port-orders");
+  if (ordRoot) {
+    if (!connected) empty("port-orders", "open orders");
+    else {
+      const orders = data.openOrders || [];
+      if (!orders.length) emptyHist(ordRoot, "No open orders.");
+      else {
+        clear(ordRoot);
+        ordRoot.appendChild(
+          histTable(
+            ["Time", "Coin", "Direction", "Size", "Price", "Status", "Order ID"],
+            orders.slice(0, 50).map((o) =>
+              h(
+                "tr",
+                null,
+                h("td", null, formatLocalTime(o.timestamp)),
+                h("td", null, o.coin || "--"),
+                h("td", { class: o.side === "B" ? "text-buy" : "text-sell" }, o.side === "B" ? "Buy" : "Sell"),
+                h("td", null, fmtQty(o.origSz || o.sz)),
+                h("td", null, fmtPx(o.limitPx)),
+                h("td", null, "Open"),
+                h("td", null, String(o.oid || ""))
+              )
+            )
+          )
+        );
+      }
+    }
+  }
+
+  const twapRoot = document.getElementById("port-twap");
+  if (twapRoot) {
+    if (!connected) empty("port-twap", "TWAPs");
+    else {
+      const hist = extras.twapHistory || [];
+      if (!hist.length) emptyHist(twapRoot, "No TWAP orders.");
+      else {
+        clear(twapRoot);
+        twapRoot.appendChild(
+          histTable(
+            ["Coin", "Side", "Size", "Minutes", "Status"],
+            hist.slice(0, 50).map((t) => {
+              const st = t.state || t;
+              return h(
+                "tr",
+                null,
+                h("td", null, st.coin || "--"),
+                h("td", { class: st.side === "B" ? "text-buy" : "text-sell" }, st.side === "B" ? "Buy" : "Sell"),
+                h("td", null, fmtQty(st.sz)),
+                h("td", null, String(st.minutes || "")),
+                h("td", null, st.status || "--")
+              );
+            })
+          )
+        );
+      }
+    }
+  }
+
+  const fundRoot = document.getElementById("port-funding");
+  if (fundRoot) {
+    if (!connected) empty("port-funding", "funding history");
+    else {
+      const rows = extras.fundingHistory || [];
+      if (!rows.length) emptyHist(fundRoot, "No funding history.");
+      else {
+        clear(fundRoot);
+        fundRoot.appendChild(
+          histTable(
+            ["Time", "Coin", "Size", "Position", "Payment", "Rate"],
+            rows.slice(0, 50).map((f) => {
+              const d = f.delta || {};
+              return h(
+                "tr",
+                null,
+                h("td", null, formatLocalTime(f.time)),
+                h("td", null, d.coin || "--"),
+                h("td", null, fmtQty(d.szi)),
+                h("td", null, num(d.szi) >= 0 ? "Long" : "Short"),
+                h("td", { class: pnlClass(d.usdc) }, fmtUsd(d.usdc, { signed: true })),
+                h("td", null, formatFeePct(d.fundingRate))
+              );
+            })
+          )
+        );
+      }
+    }
+  }
+
+  const histRoot = document.getElementById("port-history");
+  if (histRoot) {
+    if (!connected) empty("port-history", "order history");
+    else {
+      const rows = extras.historicalOrders || [];
+      if (!rows.length) emptyHist(histRoot, "No order history.");
+      else {
+        clear(histRoot);
+        histRoot.appendChild(
+          histTable(
+            ["Time", "Coin", "Direction", "Size", "Price", "Status", "Order ID"],
+            rows.slice(0, 50).map((row) => {
+              const o = row.order || row;
+              return h(
+                "tr",
+                null,
+                h("td", null, formatLocalTime(o.timestamp)),
+                h("td", null, o.coin || "--"),
+                h("td", { class: o.side === "B" ? "text-buy" : "text-sell" }, o.side === "B" ? "Buy" : "Sell"),
+                h("td", null, fmtQty(o.sz || o.origSz)),
+                h("td", null, fmtPx(o.limitPx)),
+                h("td", null, row.status || "--"),
+                h("td", null, String(o.oid || ""))
+              );
+            })
+          )
+        );
+      }
+    }
+  }
+}
+
+export function drawPnlChart(canvas, series) {
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  canvas._series = Array.isArray(series) ? series : [];
+  const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
+  const cssW = canvas.clientWidth || Number(canvas.getAttribute("width")) || 320;
+  const cssH = canvas.clientHeight || Number(canvas.getAttribute("height")) || 160;
+  canvas.width = Math.max(1, Math.floor(cssW * dpr));
+  canvas.height = Math.max(1, Math.floor(cssH * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  ctx.fillStyle = "#2a2b2b";
+  ctx.fillRect(0, 0, cssW, cssH);
+  const pts = canvas._series.length ? canvas._series : [{ t: 0, v: 0 }, { t: 1, v: 0 }];
+  const ys = pts.map((p) => p.v);
+  let min = Math.min.apply(null, ys);
+  let max = Math.max.apply(null, ys);
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+  const pad = 8;
+  const w = cssW - pad * 2;
+  const h = cssH - pad * 2;
+  ctx.beginPath();
+  ctx.strokeStyle = "#1A2B56";
+  ctx.lineWidth = 1.6;
+  pts.forEach((p, i) => {
+    const x = pad + (pts.length === 1 ? w / 2 : (i / (pts.length - 1)) * w);
+    const y = pad + ((max - p.v) / (max - min)) * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
 }
 
 export function renderDashboard(el, state) {
-  el.loading.classList.add("hidden");
+  const dash = document.getElementById("dashboard");
+  if (dash) {
+    dash._lastState = state;
+    dash._lastEl = el;
+  }
+  bindPortHistOnce();
+  bindChartResize();
 
-  if (state.error) {
-    el.errorBanner.textContent = state.error;
-    el.errorBanner.classList.remove("hidden");
-  } else {
-    el.errorBanner.classList.add("hidden");
+  if (el && el.loading) el.loading.classList.toggle("hidden", !state.loading);
+  if (el && el.errorBanner) {
+    if (state.error) {
+      el.errorBanner.textContent = state.error;
+      el.errorBanner.classList.remove("hidden");
+    } else {
+      el.errorBanner.classList.add("hidden");
+    }
+  }
+  if (el && el.dashContent) el.dashContent.classList.remove("hidden");
+
+  const pasteWrap = document.getElementById("port-paste-wrap");
+  if (pasteWrap) pasteWrap.classList.toggle("hidden", !!(state && state.address));
+
+  const connected = !!(state && state.address);
+  const data = (state && state.data) || {};
+  const perps = data.perps || {};
+  const spotBalances = (data.spot && data.spot.balances) || [];
+  const mids = data.mids || {};
+  const fees = data.userFees;
+  const portfolio = parsePortfolio(data.portfolio);
+  const block = connected ? periodBlock(portfolio, portPeriod) : null;
+
+  const vol14 = connected ? sum14DayVolume(fees && fees.dailyUserVlm) : null;
+  const volEl = document.getElementById("port-14d-vol");
+  if (volEl) volEl.textContent = money(vol14);
+
+  const perpTaker = document.getElementById("port-fee-perp-taker");
+  const perpMaker = document.getElementById("port-fee-perp-maker");
+  const spotTaker = document.getElementById("port-fee-spot-taker");
+  const spotMaker = document.getElementById("port-fee-spot-maker");
+  if (perpTaker) perpTaker.textContent = feeTxt(connected, fees, fees && fees.userCrossRate);
+  if (perpMaker) perpMaker.textContent = feeTxt(connected, fees, fees && fees.userAddRate);
+  if (spotTaker) spotTaker.textContent = feeTxt(connected, fees, fees && fees.userSpotCrossRate);
+  if (spotMaker) spotMaker.textContent = feeTxt(connected, fees, fees && fees.userSpotAddRate);
+
+  const pnl = connected ? lastPnl(block) : null;
+  const vol = connected ? periodVolume(block) : null;
+  const perpEq = connected && data.perps ? perpsEquity(perps) : null;
+  const spotEq = connected && data.spot ? spotEquityUsd(spotBalances, mids) : null;
+  const vaultEq = connected
+    ? sumVaultEquity([].concat(data.userVaultEquities || [], data.leadingVaults || []))
+    : null;
+  const stake = connected ? stakingUsd(data.staking, mids.HYPE) : null;
+  const upnl = connected ? upnlSum(perps) : null;
+  const totalParts = [perpEq, spotEq, vaultEq, stake].filter((n) => n != null && Number.isFinite(n));
+  const totalEq = connected && totalParts.length ? totalParts.reduce((a, b) => a + b, 0) : null;
+
+  const setRow = (id, text, cls) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.textContent = text;
+    node.className = "port-acct-v" + (cls ? " " + cls : "");
+  };
+  setRow("port-pnl", moneySigned(pnl), pnl == null ? "" : pnlClass(pnl));
+  setRow("port-vol", money(vol));
+  setRow("port-total-eq", money(totalEq));
+  setRow("port-spot-eq", money(spotEq));
+  setRow("port-perp-eq", money(perpEq));
+  setRow("port-upnl", moneySigned(upnl), upnl == null ? "" : pnlClass(upnl));
+  setRow("port-vault-eq", money(vaultEq));
+  setRow("port-earn", missingMoney());
+  setRow("port-stake", stakeText(connected, data.staking, mids.HYPE));
+
+  const periodSel = document.getElementById("port-period");
+  if (periodSel && PORT_PERIODS.some((p) => p.id === portPeriod)) periodSel.value = portPeriod;
+
+  if (el && el.dashUpdated) {
+    const time = perps.time;
+    el.dashUpdated.textContent = connected && time ? "Venue snapshot · " + formatLocalTime(time) : "";
   }
 
-  if (!state.data) {
-    el.dashContent.classList.add("hidden");
-    return;
+  const canvas = document.getElementById("port-pnl-chart");
+  const series = connected ? pnlSeries(block) : [];
+  drawPnlChart(canvas, series);
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => drawPnlChart(canvas, series));
   }
 
-  el.dashContent.classList.remove("hidden");
-
-  const perps = state.data.perps || {};
-  const time = perps.time;
-  el.dashUpdated.textContent = time ? "Venue snapshot · " + formatLocalTime(time) : "";
-
-  const spotBalances = (state.data.spot && state.data.spot.balances) || [];
-  renderOverview(el, perps, spotBalances);
-  renderPerps(el, perps.assetPositions || [], state.data.mids || {});
-  renderSpot(el, spotBalances);
-  renderStaking(el, state.data.staking, state.data.delegations, state.data.validatorNames);
+  renderPortHist(state);
 }

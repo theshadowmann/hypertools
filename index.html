@@ -95,29 +95,7 @@
             </div>
           </div>
 
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-wider text-mist-400">or paste an address</p>
-            <form id="paste-form" class="flex flex-col gap-2 sm:flex-row" autocomplete="off" novalidate>
-              <label for="paste-address" class="sr-only">Hyperliquid address</label>
-              <input
-                id="paste-address"
-                name="address"
-                type="text"
-                spellcheck="false"
-                placeholder="0x…"
-                maxlength="42"
-                class="h-11 w-full rounded-lg border border-chrome/60 bg-ink-950 px-3 font-mono text-sm text-white placeholder:text-mist-400/40 focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/20"
-              />
-              <button
-                type="submit"
-                class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-chrome/60 px-4 text-sm font-medium text-mist-100 transition hover:border-accent/40 hover:bg-accent-muted"
-              >
-                Load portfolio
-              </button>
-            </form>
-            <p id="paste-error" class="mt-2 hidden text-sm text-danger" role="alert"></p>
-            <p class="mt-2 text-xs text-mist-400">Orders need a connected wallet. A pasted address loads the portfolio.</p>
-          </div>
+          <p class="text-sm text-mist-400">Paste an address on Portfolio to load balances without connecting a wallet.</p>
         </div>
 
         <ul class="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-chrome/50 pt-6 text-xs font-medium uppercase tracking-wider text-mist-400">
@@ -145,72 +123,137 @@
       </div>
     </section>
 
-    <section id="dashboard" class="hidden border-t border-chrome/50 bg-ink-900">
-      <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-
-        <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section id="dashboard" class="hidden port-page">
+      <div class="port-inner">
+        <div class="port-head">
           <div>
-            <h2 class="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Portfolio</h2>
-            <p id="dash-subtitle" class="mt-1 font-mono text-sm text-mist-400"></p>
+            <h1 class="port-title">Portfolio</h1>
+            <p id="dash-subtitle" class="port-sub"></p>
           </div>
-          <p id="dash-updated" class="text-xs text-mist-400"></p>
+          <p id="dash-updated" class="port-updated"></p>
         </div>
 
-        <div id="error-banner" class="mb-6 hidden rounded-lg border border-danger/30 bg-danger/muted px-4 py-3 text-sm text-rose-100" role="alert"></div>
-
-        <div id="loading" class="hidden space-y-6" aria-busy="true" aria-live="polite">
-          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-          </div>
-          <div class="h-64 animate-pulse rounded-xl bg-ink-800"></div>
-          <p class="text-center text-sm text-mist-400">Loading Hyperliquid portfolio…</p>
+        <div id="port-paste-wrap" class="port-paste">
+          <p class="port-paste-k">Paste an address</p>
+          <form id="paste-form" class="port-paste-form" autocomplete="off" novalidate>
+            <label for="paste-address" class="sr-only">Hyperliquid address</label>
+            <input
+              id="paste-address"
+              name="address"
+              type="text"
+              spellcheck="false"
+              placeholder="0x…"
+              maxlength="42"
+              class="port-paste-input"
+            />
+            <button type="submit" class="btn-ghost port-paste-btn">Load portfolio</button>
+          </form>
+          <p id="paste-error" class="mt-2 hidden text-sm text-danger" role="alert"></p>
         </div>
 
-        <div id="dash-content" class="hidden space-y-10">
+        <div id="error-banner" class="mb-4 hidden rounded-lg border border-danger/30 bg-danger/muted px-4 py-3 text-sm text-rose-100" role="alert"></div>
+        <p id="loading" class="hidden port-loading" aria-busy="true" aria-live="polite">Loading Hyperliquid portfolio…</p>
 
-          <div class="flex gap-3 rounded-lg border border-warn/20 bg-warn/muted px-4 py-3 text-sm text-amber-100/90" role="note">
-            <span class="mt-0.5 shrink-0 font-mono text-[10px] font-medium uppercase tracking-wider text-warn">Note</span>
-            <p>
-              Not financial advice. Not affiliated with Hyperliquid. Figures come from the public Info API
-              and can lag. Liquidation prices are venue-reported (shown as “—” when the API returns null).
-              Perps can result in total loss.
-            </p>
+        <div id="dash-content" class="port-body">
+          <div class="port-cards">
+            <article class="port-card">
+              <h2 class="port-card-title">14 Day Volume</h2>
+              <p id="port-14d-vol" class="port-card-value">--</p>
+              <a class="port-link" href="https://app.hyperliquid.xyz/portfolio" target="_blank" rel="noopener noreferrer">View Volume</a>
+              <h3 class="port-card-k">Fees (Taker / Maker)</h3>
+              <div class="port-fee-row">
+                <span>Perps</span>
+                <span><span id="port-fee-perp-taker">--</span> / <span id="port-fee-perp-maker">--</span></span>
+              </div>
+              <div class="port-fee-row">
+                <span>Spot</span>
+                <span><span id="port-fee-spot-taker">--</span> / <span id="port-fee-spot-maker">--</span></span>
+              </div>
+              <a class="port-link" href="https://hyperliquid.gitbook.io/hyperliquid-docs/trading/fees" target="_blank" rel="noopener noreferrer">View Fee Schedule</a>
+            </article>
+
+            <article class="port-card">
+              <div class="port-acct-head">
+                <div class="port-dd">
+                  <span class="port-dd-k">Accounts</span>
+                  <span class="port-dd-v">All</span>
+                </div>
+                <div class="port-dd">
+                  <label class="port-dd-k" for="port-period">Period</label>
+                  <select id="port-period" class="port-select">
+                    <option value="week">7 Days</option>
+                    <option value="month">30 Days</option>
+                    <option value="allTime">All Time</option>
+                  </select>
+                </div>
+              </div>
+              <div class="port-acct-row">
+                <span class="port-acct-k">PNL</span>
+                <span id="port-pnl" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row">
+                <span class="port-acct-k">Volume</span>
+                <span id="port-vol" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row">
+                <span class="port-acct-k">Total Equity</span>
+                <span id="port-total-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Spot Equity</span>
+                <span id="port-spot-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Perps Equity</span>
+                <span id="port-perp-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">uPNL</span>
+                <span id="port-upnl" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Vault Equity</span>
+                <span id="port-vault-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Earn Balance</span>
+                <span id="port-earn" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Staking Account</span>
+                <span id="port-stake" class="port-acct-v">--</span>
+              </div>
+            </article>
+
+            <article class="port-card">
+              <h2 class="port-card-title">Chart PNL</h2>
+              <canvas id="port-pnl-chart" class="port-chart" width="640" height="200" aria-label="PNL chart"></canvas>
+            </article>
           </div>
 
-          <div id="overview-cards" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
-
-          <section>
-            <div class="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-medium tracking-tight text-mist-100">Perp positions</h3>
-                <p class="mt-1 text-xs text-mist-400">Entry, mark, liq, leverage, uPnL</p>
-              </div>
-              <p id="perps-count" class="text-xs font-medium uppercase tracking-wider text-mist-400"></p>
+          <div class="port-card port-hist">
+            <div class="hist-tabs" role="tablist">
+              <button type="button" data-port-tab="balances" class="hist-tab" aria-selected="true">Balances</button>
+              <button type="button" data-port-tab="positions" class="hist-tab" aria-selected="false">Positions</button>
+              <button type="button" data-port-tab="outcomes" class="hist-tab" aria-selected="false">Outcomes</button>
+              <button type="button" data-port-tab="orders" class="hist-tab" aria-selected="false">Open Orders</button>
+              <button type="button" data-port-tab="twap" class="hist-tab" aria-selected="false">TWAP</button>
+              <button type="button" data-port-tab="funding" class="hist-tab" aria-selected="false">Funding History</button>
+              <button type="button" data-port-tab="history" class="hist-tab" aria-selected="false">Order History</button>
+              <label id="port-bal-hide-wrap" class="chk hist-extra">
+                <input id="port-bal-hide-small" type="checkbox" checked />
+                <span class="chk-box" aria-hidden="true"></span>
+                Hide Small Balances
+              </label>
             </div>
-            <div id="perps-root"></div>
-          </section>
-
-          <section>
-            <div class="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-medium tracking-tight text-mist-100">Spot balances</h3>
-                <p class="mt-1 text-xs text-mist-400">Dust (total ≈ 0) is hidden. Available = total − hold.</p>
-              </div>
-              <p id="spot-count" class="text-xs font-medium uppercase tracking-wider text-mist-400"></p>
-            </div>
-            <div id="spot-root"></div>
-          </section>
-
-          <section>
-            <div class="mb-4">
-              <h3 class="text-lg font-medium tracking-tight text-mist-100">Staking</h3>
-              <p class="mt-1 text-xs text-mist-400">HYPE delegated to validators. Names from validator summaries.</p>
-            </div>
-            <div id="staking-root"></div>
-          </section>
+            <div id="port-balances" class="hist-body"></div>
+            <div id="port-positions" class="hist-body hidden"></div>
+            <div id="port-outcomes" class="hist-body hidden"></div>
+            <div id="port-orders" class="hist-body hidden"></div>
+            <div id="port-twap" class="hist-body hidden"></div>
+            <div id="port-funding" class="hist-body hidden"></div>
+            <div id="port-history" class="hist-body hidden"></div>
+          </div>
         </div>
       </div>
     </section>

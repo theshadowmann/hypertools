@@ -35,6 +35,10 @@ export async function loadAccount(address) {
     hlInfo({ type: "validatorSummaries" }),
     hlInfo({ type: "frontendOpenOrders", user: address }),
     hlInfo({ type: "userFills", user: address }),
+    hlInfo({ type: "portfolio", user: address }),
+    hlInfo({ type: "userFees", user: address }),
+    hlInfo({ type: "userVaultEquities", user: address }),
+    hlInfo({ type: "leadingVaults", user: address }),
   ]);
 
   const errors = [];
@@ -46,6 +50,10 @@ export async function loadAccount(address) {
   const validators = settledValue(results[5], "validatorSummaries", errors);
   const openOrders = settledValue(results[6], "frontendOpenOrders", errors);
   const fills = settledValue(results[7], "userFills", errors);
+  const portfolio = settledValue(results[8], "portfolio", errors);
+  const userFees = settledValue(results[9], "userFees", errors);
+  const userVaultEquities = settledValue(results[10], "userVaultEquities", errors);
+  const leadingVaults = settledValue(results[11], "leadingVaults", errors);
 
   const validatorNames = {};
   if (Array.isArray(validators)) {
@@ -66,6 +74,10 @@ export async function loadAccount(address) {
       validatorNames,
       openOrders: Array.isArray(openOrders) ? openOrders : [],
       fills: Array.isArray(fills) ? fills : [],
+      portfolio,
+      userFees: userFees && typeof userFees === "object" ? userFees : null,
+      userVaultEquities: Array.isArray(userVaultEquities) ? userVaultEquities : [],
+      leadingVaults: Array.isArray(leadingVaults) ? leadingVaults : [],
     },
     errors,
   };

@@ -1,6 +1,6 @@
 import "./style.css";
 import { wipeAgents } from "./agent-store.js";
-import { ADDR_RE, loadAccount, loadMarkets } from "./api.js";
+import { ADDR_RE, loadAccount, loadMarkets, loadTradeExtras } from "./api.js";
 import { renderDashboard } from "./dashboard.js";
 import { clear, h } from "./dom.js";
 import { truncAddr } from "./format.js";
@@ -19,6 +19,8 @@ const state = {
   source: null,
   provider: null,
   data: null,
+  extras: null,
+  markets: [],
   loading: false,
   error: null,
   view: "portfolio",
@@ -43,12 +45,6 @@ const el = {
   dashContent: document.getElementById("dash-content"),
   dashSubtitle: document.getElementById("dash-subtitle"),
   dashUpdated: document.getElementById("dash-updated"),
-  overview: document.getElementById("overview-cards"),
-  perpsRoot: document.getElementById("perps-root"),
-  perpsCount: document.getElementById("perps-count"),
-  spotRoot: document.getElementById("spot-root"),
-  spotCount: document.getElementById("spot-count"),
-  stakingRoot: document.getElementById("staking-root"),
   navPortfolio: document.getElementById("nav-portfolio"),
   navTrade: document.getElementById("nav-trade"),
   navOutcome: document.getElementById("nav-outcome"),
@@ -106,6 +102,8 @@ function setView(view, push) {
   renderChrome();
   if (state.view === "trade" || state.view === "outcome") {
     getTrade().then((t) => t.show(state.view));
+  } else {
+    renderDashboard(el, state);
   }
 }
 
@@ -168,13 +166,28 @@ async function refreshAccount(address) {
   state.error = null;
   renderChrome();
   if (state.view === "portfolio") {
-    el.loading.classList.remove("hidden");
-    el.dashContent.classList.add("hidden");
-    el.errorBanner.classList.add("hidden");
+    if (el.loading) el.loading.classList.remove("hidden");
+    if (el.errorBanner) el.errorBanner.classList.add("hidden");
   }
   try {
-    const { data, errors } = await loadAccount(address);
+    const emptyExtras = {
+      historicalOrders: [],
+      fundingHistory: [],
+      twapHistory: [],
+      twapFills: [],
+      userFees: null,
+    };
+    const [acct, extra, mkts] = await Promise.all([
+      loadAccount(address),
+      loadTradeExtras(address).catch(() => emptyExtras),
+      state.markets && state.markets.length
+        ? Promise.resolve(state.markets)
+        : loadMarkets().catch(() => []),
+    ]);
+    const { data, errors } = acct;
     state.data = data;
+    state.extras = extra || emptyExtras;
+    if (mkts && mkts.length) state.markets = mkts;
     if (errors.length) {
       state.error =
         "Could not load some Hyperliquid data. " +
@@ -185,6 +198,7 @@ async function refreshAccount(address) {
     }
   } catch (err) {
     state.data = null;
+    state.extras = null;
     state.error =
       "Hyperliquid Info API request failed: " +
       ((err && err.message) || String(err)) +
@@ -220,11 +234,15 @@ function disconnect() {
   state.source = null;
   state.provider = null;
   state.data = null;
+  state.extras = null;
   state.error = null;
   state.loading = false;
   renderChrome();
   if (tradeView) tradeView.onAccount();
-  if (state.view === "portfolio") window.scrollTo({ top: 0, behavior: "smooth" });
+  if (state.view === "portfolio") {
+    renderDashboard(el, state);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 async function connectWallet(provider) {
@@ -250,10 +268,11 @@ async function connectWallet(provider) {
 function renderChrome() {
   const connected = !!state.address;
   const onDesk = state.view === "trade" || state.view === "outcome";
+  const onPort = state.view === "portfolio";
   document.documentElement.classList.toggle("desk", onDesk);
   document.body.classList.toggle("desk", onDesk);
-  el.landing.classList.toggle("hidden", connected || onDesk);
-  el.dashboard.classList.toggle("hidden", !connected || onDesk);
+  el.landing.classList.toggle("hidden", connected || onDesk || onPort);
+  el.dashboard.classList.toggle("hidden", !onPort);
   el.trade.classList.toggle("hidden", !onDesk);
   el.navDisc.classList.toggle("hidden", connected);
   el.navConn.classList.toggle("hidden", !connected);
@@ -273,7 +292,9 @@ function renderChrome() {
     el.navAddress.textContent = truncAddr(state.address);
     el.navAddress.title = state.address;
     const via = state.source === "wallet" ? "connected wallet" : "pasted address";
-    el.dashSubtitle.textContent = state.address + "  ·  " + via;
+    if (el.dashSubtitle) el.dashSubtitle.textContent = state.address + "  ·  " + via;
+  } else if (el.dashSubtitle) {
+    el.dashSubtitle.textContent = "";
   }
 }
 
@@ -314,7 +335,7 @@ function connectFromNav() {
   const targets = walletTargets(discoveredList);
   if (!targets.length) {
     if (state.view !== "portfolio") setView("portfolio", true);
-    const section = document.getElementById("connect");
+    const section = document.getElementById("port-paste-wrap") || document.getElementById("paste-form");
     if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
@@ -384,3 +405,4 @@ renderWalletButtons();
 state.view = viewFromLocation();
 renderChrome();
 if (state.view === "trade" || state.view === "outcome") getTrade().then((t) => t.show(state.view));
+else renderDashboard(el, state);
