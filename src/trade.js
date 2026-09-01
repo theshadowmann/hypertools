@@ -1947,8 +1947,6 @@ export function createTradeView(app) {
       });
   }
 
-  }
-
   let bound = false;
   function bind() {
     if (bound) return;
