@@ -1947,12 +1947,6 @@ export function createTradeView(app) {
       });
   }
 
-  function setInterval_(next) {
-    interval = next;
-    document.querySelectorAll("[data-interval]").forEach((btn) => {
-      btn.setAttribute("aria-pressed", btn.getAttribute("data-interval") === interval ? "true" : "false");
-    });
-    ensureChart();
   }
 
   let bound = false;
@@ -1986,9 +1980,6 @@ export function createTradeView(app) {
       });
     });
     document.addEventListener("keydown", onPickerKey);
-    document.querySelectorAll("[data-interval]").forEach((btn) => {
-      btn.addEventListener("click", () => setInterval_(btn.getAttribute("data-interval")));
-    });
     document.querySelectorAll("[data-book-tab]").forEach((btn) => {
       btn.addEventListener("click", () => setBookTab(btn.getAttribute("data-book-tab")));
     });

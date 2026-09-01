@@ -138,15 +138,16 @@ describe("chart chrome", () => {
   it("uses 1px hairlines and a flush TV iframe with no extra widget border", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     expect(css).toMatch(/\.trade-stats \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
-    expect(css).toMatch(/\.trade-iv \{[\s\S]*?height: 22px/);
-    expect(css).toMatch(/\.trade-iv \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
+    expect(css).toMatch(/\.trade-chart \{[^}]*grid-row: 2;/);
+    expect(css).not.toContain(".trade-iv");
+    expect(css).not.toContain(".iv-btn");
     expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?border: 0 !important/);
     expect(css).toMatch(/\.trade-chart \{[^}]*padding: 0;/);
     expect(css).toMatch(/\.trade-chart \{[^}]*background: var\(--bg-surface\)/);
     expect(css).toMatch(/\.trade-chart \{[^}]*border-right: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.hl-chart-host,[\s\S]*?background: var\(--bg-surface\)/);
     expect(css).not.toContain("mix-blend-mode");
-    expect(css).toMatch(/\.iv-btn\[aria-pressed="true"\] \{[\s\S]*?box-shadow: inset 0 -1px 0 var\(--accent-primary\)/);
+    expect(css).toMatch(/grid-template-rows: auto minmax\(0, 1fr\) minmax\(168px, 26vh\)/);
   });
 });
 
@@ -267,7 +268,7 @@ describe("type weight", () => {
     expect(css).toMatch(/\.lev-badge \{[\s\S]*?font-size: 11px/);
     expect(css).toMatch(/\.stat-k \{[^}]*font-size: 10px/);
     expect(css).toMatch(/\.stat-v \{[^}]*font-size: 12px/);
-    expect(css).toMatch(/\.iv-btn \{[\s\S]*?font-size: 11px/);
+    expect(css).not.toContain(".iv-btn");
     expect(css).not.toMatch(/-webkit-text-stroke/);
     expect(css).not.toMatch(/font-weight:\s*(700|800|900)/);
     expect(css).toMatch(/\.stat-k \{[^}]*font-weight: 400/);
