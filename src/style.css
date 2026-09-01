@@ -152,7 +152,7 @@ html.desk #trade:not(.hidden) {
   overflow: hidden;
   padding: 0;
   margin: 0;
-  background: var(--bg-main);
+  background: var(--bg-surface);
   border-right: 1px solid var(--border-color);
 }
 .trade-book {
@@ -203,6 +203,7 @@ html.desk #trade:not(.hidden) {
   padding: 0;
   margin: 0;
   border: 0;
+  background: var(--bg-surface);
 }
 .tradingview-widget-container,
 .tradingview-widget-container__widget {
@@ -211,6 +212,7 @@ html.desk #trade:not(.hidden) {
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
+  background: var(--bg-surface) !important;
 }
 .tv-host iframe {
   display: block;
@@ -229,6 +231,7 @@ html.desk #trade:not(.hidden) {
   padding: 0;
   margin: 0;
   border: 0;
+  background: var(--bg-surface);
 }
 
 .stats-left { display: flex; align-items: center; gap: 8px; min-width: 0; }

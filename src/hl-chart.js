@@ -104,8 +104,10 @@ export function mountHlChart(container, { coin, interval }) {
 
   const wrap = document.createElement("div");
   wrap.className = "hl-chart-host";
+  wrap.style.background = BG;
   const canvas = document.createElement("canvas");
   canvas.className = "hl-chart";
+  canvas.style.background = BG;
   wrap.appendChild(canvas);
   container.appendChild(wrap);
 

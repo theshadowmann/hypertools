@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { mountChart, mountTvChart, TV_SCRIPT } from "./tv-chart.js";
+import { mountChart, mountTvChart, stampTvChrome, TV_CHROME, TV_SCRIPT } from "./tv-chart.js";
 import { drawCandles } from "./hl-chart.js";
 import { candleSnapshotBody, candlesToBars, hlCandleInterval, prevDayFromDailyBars } from "./api.js";
 
@@ -26,6 +26,10 @@ describe("TradingView embed", () => {
     expect(script.textContent).toContain('"allow_symbol_change":false');
     expect(script.textContent).toContain('"hide_volume":false');
     expect(script.textContent).toContain('"backgroundColor":"#0F172A"');
+    expect(script.textContent).toContain('"toolbar_bg":"#0F172A"');
+    expect(script.textContent).toContain('"paneProperties.background":"#0F172A"');
+    expect(script.textContent).toContain('"paneProperties.backgroundType":"solid"');
+    expect(script.textContent).toContain('"scalesProperties.backgroundColor":"#0F172A"');
     expect(script.textContent).not.toContain('"studies"');
     expect(script.textContent).toContain('"withdateranges":false');
     expect(script.textContent).toContain('"save_image":false');
@@ -48,6 +52,29 @@ describe("TradingView embed", () => {
     expect(host.innerHTML).not.toContain("BTCUSDC");
     expect(host.innerHTML).not.toContain("HYPERLIQUID:BTC");
     expect(host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
+  });
+
+  it("stamps toolbar_bg onto the widget iframe hash so drawing and top bars match the pane", () => {
+    const iframe = document.createElement("iframe");
+    const cfg = {
+      symbol: "HYPERLIQUID:BTCUSDC.P",
+      theme: "dark",
+      backgroundColor: "#0F172A",
+      hide_top_toolbar: false,
+      hide_side_toolbar: false,
+    };
+    iframe.setAttribute(
+      "src",
+      "https://www.tradingview-widget.com/embed-widget/advanced-chart/#" + encodeURIComponent(JSON.stringify(cfg))
+    );
+    stampTvChrome(iframe);
+    const hash = decodeURIComponent(new URL(iframe.getAttribute("src")).hash.slice(1));
+    expect(hash).toContain('"toolbar_bg":"#0F172A"');
+    expect(hash).toContain('"paneProperties.background":"#0F172A"');
+    expect(hash).toContain('"paneProperties.backgroundType":"solid"');
+    expect(hash).toContain('"hide_top_toolbar":false');
+    expect(hash).toContain('"hide_side_toolbar":false');
+    expect(TV_CHROME).toBe("#0F172A");
   });
 });
 
@@ -85,7 +112,9 @@ describe("chart chrome", () => {
     expect(css).toMatch(/\.trade-iv \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?border: 0 !important/);
     expect(css).toMatch(/\.trade-chart \{[^}]*padding: 0;/);
+    expect(css).toMatch(/\.trade-chart \{[^}]*background: var\(--bg-surface\)/);
     expect(css).toMatch(/\.trade-chart \{[^}]*border-right: 1px solid var\(--border-color\)/);
+    expect(css).toMatch(/\.hl-chart-host,[\s\S]*?background: var\(--bg-surface\)/);
   });
 });
 
@@ -115,7 +144,9 @@ describe("deep teal theme", () => {
     expect(tw).toContain('chrome: "#334155"');
     expect(tw).not.toContain("#242525");
     expect(tw).not.toContain("#1A2B56");
-    expect(tv).toContain('backgroundColor: "#0F172A"');
+    expect(tv).toContain('export const TV_CHROME = "#0F172A"');
+    expect(tv).toContain("backgroundColor: TV_CHROME");
+    expect(tv).toContain("toolbar_bg: TV_CHROME");
     expect(tv).not.toContain('backgroundColor: "#242525"');
     expect(tv).not.toContain('backgroundColor: "#1A2B56"');
     expect(hl).toContain('const BG = "#0F172A"');
