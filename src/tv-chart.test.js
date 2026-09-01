@@ -48,6 +48,9 @@ describe("TradingView embed", () => {
     expect(snap).toContain('id="ht-tv-chrome"');
     expect(snap).toContain("#0F172A");
     expect(snap).toContain(".layout__area--left");
+    expect(snap).toContain("TradingView Chart Widget");
+    expect(snap).not.toContain("Paste an address");
+    expect(snap).not.toContain('id="dashboard"');
     expect(snap).not.toMatch(/\snonce="/);
   });
 
@@ -139,6 +142,7 @@ describe("chart chrome", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     expect(css).toMatch(/\.trade-stats \{[\s\S]*?border-bottom: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.trade-chart \{[^}]*grid-row: 2;/);
+    expect(css).toMatch(/grid-template-areas:[\s\S]*?"chart book ticket"/);
     expect(css).not.toContain(".trade-iv");
     expect(css).not.toContain(".iv-btn");
     expect(css).toMatch(/\.tv-host iframe \{[\s\S]*?border: 0 !important/);

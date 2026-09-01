@@ -12,7 +12,7 @@ import {
   requestAccounts,
   walletTargets,
 } from "./wallet.js";
-import { guardProvider } from "./wallet-guard.js";
+import { deskUrl, viewFromLocation } from "./routes.js";
 
 const state = {
   address: null,
@@ -77,21 +77,34 @@ async function getTrade() {
   return tradeView;
 }
 
-function viewFromLocation() {
-  const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-  const hash = window.location.hash || "";
-  if (path === "/trade" || hash === "#trade" || hash === "#/trade") return "trade";
-  if (path === "/outcome" || hash === "#outcome" || hash === "#/outcome") return "outcome";
-  return "portfolio";
+function currentView() {
+  return viewFromLocation(window.location.pathname, window.location.hash);
 }
 
-function deskUrl(view) {
-  if (view === "trade") return "/trade";
-  if (view === "outcome") return "/outcome";
-  return "/portfolio";
+function hideAppViews() {
+  if (el.landing) el.landing.classList.add("hidden");
+  if (el.dashboard) el.dashboard.classList.add("hidden");
+  if (el.trade) el.trade.classList.add("hidden");
+  document.documentElement.classList.remove("desk");
+  document.body.classList.remove("desk");
+}
+
+function setEmbedShell(on) {
+  document.documentElement.classList.toggle("tv-embed-frame", on);
+  const header = document.querySelector("body > header");
+  const footer = document.querySelector("footer");
+  if (header) header.classList.toggle("hidden", on);
+  if (footer) footer.classList.toggle("hidden", on);
 }
 
 function setView(view, push) {
+  if (view === "embed") {
+    state.view = "embed";
+    hideAppViews();
+    setEmbedShell(true);
+    return;
+  }
+  setEmbedShell(false);
   state.view = view === "trade" || view === "outcome" ? view : "portfolio";
   if (push) {
     const url = deskUrl(state.view);
@@ -393,7 +406,7 @@ if (el.navConnect) {
 document.addEventListener("click", hideNavWalletMenu);
 
 window.addEventListener("popstate", () => {
-  setView(viewFromLocation(), false);
+  setView(currentView(), false);
 });
 
 createWalletDiscovery((list) => {
@@ -402,7 +415,12 @@ createWalletDiscovery((list) => {
 });
 renderWalletButtons();
 
-state.view = viewFromLocation();
-renderChrome();
-if (state.view === "trade" || state.view === "outcome") getTrade().then((t) => t.show(state.view));
-else renderDashboard(el, state);
+state.view = currentView();
+if (state.view === "embed") {
+  hideAppViews();
+  setEmbedShell(true);
+} else {
+  renderChrome();
+  if (state.view === "trade" || state.view === "outcome") getTrade().then((t) => t.show(state.view));
+  else renderDashboard(el, state);
+}

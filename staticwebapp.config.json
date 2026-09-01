@@ -1,9 +1,37 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "*.css", "*.js", "*.png", "*.svg", "*.webp", "/embed-widget/*", "/tv-embed.html"]
+    "exclude": [
+      "/assets/*",
+      "*.css",
+      "*.js",
+      "*.png",
+      "*.svg",
+      "*.webp",
+      "/embed-widget/*",
+      "/embed-widget/advanced-chart",
+      "/embed-widget/advanced-chart/",
+      "/embed-widget/advanced-chart/index.html",
+      "/tv-embed.html"
+    ]
   },
   "routes": [
+    {
+      "route": "/embed-widget/advanced-chart",
+      "rewrite": "/embed-widget/advanced-chart/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self' https: data: blob: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tradingview-widget.com https://static.tradingview.com https://s3.tradingview.com https://s.tradingview.com https://www.tradingview.com; style-src 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; connect-src https: wss: blob:; worker-src blob: 'self'; frame-src https: blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+        "X-Frame-Options": "SAMEORIGIN"
+      }
+    },
+    {
+      "route": "/embed-widget/advanced-chart/",
+      "rewrite": "/embed-widget/advanced-chart/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self' https: data: blob: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tradingview-widget.com https://static.tradingview.com https://s3.tradingview.com https://s.tradingview.com https://www.tradingview.com; style-src 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; connect-src https: wss: blob:; worker-src blob: 'self'; frame-src https: blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+        "X-Frame-Options": "SAMEORIGIN"
+      }
+    },
     {
       "route": "/embed-widget/*",
       "headers": {

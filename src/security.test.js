@@ -37,6 +37,15 @@ describe("CSP", () => {
     expect(csp).not.toMatch(/cdnjs|jsdelivr|unpkg|googleapis/);
     expect(json.navigationFallback.rewrite).toBe("/index.html");
     expect(json.navigationFallback.exclude).toContain("/embed-widget/*");
+    expect(json.navigationFallback.exclude).toContain("/embed-widget/advanced-chart");
+    expect(json.navigationFallback.exclude).toContain("/embed-widget/advanced-chart/");
+    const chartBare = json.routes.find((r) => r.route === "/embed-widget/advanced-chart");
+    const chartSlash = json.routes.find((r) => r.route === "/embed-widget/advanced-chart/");
+    expect(chartBare.rewrite).toBe("/embed-widget/advanced-chart/index.html");
+    expect(chartSlash.rewrite).toBe("/embed-widget/advanced-chart/index.html");
+    expect(json.routes.findIndex((r) => r.route === "/embed-widget/advanced-chart")).toBeLessThan(
+      json.routes.findIndex((r) => r.route === "/embed-widget/*")
+    );
     const embed = json.routes.find((r) => r.route === "/embed-widget/*");
     expect(embed.headers["X-Frame-Options"]).toBe("SAMEORIGIN");
     expect(embed.headers["Content-Security-Policy"]).toMatch(/frame-ancestors 'self'/);
