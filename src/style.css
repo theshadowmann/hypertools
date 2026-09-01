@@ -30,6 +30,17 @@ html.desk body {
 html.desk body > header {
   height: 3rem;
   box-sizing: border-box;
+  overflow: visible;
+  pointer-events: auto;
+  z-index: 50;
+}
+#nav-disconnected,
+#btn-nav-connect,
+#nav-wallet-menu {
+  pointer-events: auto;
+}
+#nav-wallet-menu {
+  z-index: 80;
 }
 html.desk #trade:not(.hidden) {
   overflow: hidden;
@@ -81,6 +92,10 @@ html.tv-embed-frame footer {
   color: var(--bg-main);
   font-size: 13px;
   font-weight: 600;
+  pointer-events: auto;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 .wallet-connect-btn {
   background: var(--accent-primary);
@@ -1148,6 +1163,7 @@ input[type="checkbox"] {
 .ticket-submit.connect:hover,
 .ticket-submit.connect.buy:hover,
 .ticket-submit.connect.sell:hover { background: color-mix(in srgb, var(--accent-primary) 72%, #000); }
+.ticket-submit.connect { pointer-events: auto; cursor: pointer; }
 .ticket-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .ticket-status { min-height: 0; font-size: 11px; color: var(--text-muted); margin: 0; }

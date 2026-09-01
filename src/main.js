@@ -12,6 +12,7 @@ import {
   requestAccounts,
   walletTargets,
 } from "./wallet.js";
+import { guardProvider } from "./wallet-guard.js";
 import { deskUrl, viewFromLocation } from "./routes.js";
 
 const state = {
@@ -274,7 +275,11 @@ async function connectWallet(provider) {
     });
     setAddress(addr, "wallet");
   } catch (err) {
-    showPasteError((err && err.message) || "Wallet connection was rejected.");
+    const msg = (err && err.message) || "Wallet connection was rejected.";
+    showPasteError(msg);
+    if (tradeView && typeof tradeView.setStatus === "function") {
+      tradeView.setStatus(msg, "err");
+    }
   }
 }
 
@@ -318,6 +323,16 @@ function hideNavWalletMenu() {
   clear(el.navWalletMenu);
 }
 
+function positionNavWalletMenu() {
+  if (!el.navWalletMenu || !el.navConnect) return;
+  const r = el.navConnect.getBoundingClientRect();
+  el.navWalletMenu.style.position = "fixed";
+  el.navWalletMenu.style.top = Math.round(r.bottom + 8) + "px";
+  el.navWalletMenu.style.right = Math.round(window.innerWidth - r.right) + "px";
+  el.navWalletMenu.style.left = "auto";
+  el.navWalletMenu.style.zIndex = "80";
+}
+
 function showNavWalletMenu(targets) {
   if (!el.navWalletMenu) return;
   clear(el.navWalletMenu);
@@ -331,6 +346,7 @@ function showNavWalletMenu(targets) {
             "block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-ink-700 hover:text-white",
           role: "menuitem",
           onClick: (ev) => {
+            ev.preventDefault();
             ev.stopPropagation();
             hideNavWalletMenu();
             connectWallet(t.provider);
@@ -340,6 +356,7 @@ function showNavWalletMenu(targets) {
       )
     );
   });
+  positionNavWalletMenu();
   el.navWalletMenu.classList.remove("hidden");
   el.navWalletMenu.removeAttribute("hidden");
 }
@@ -403,7 +420,13 @@ if (el.navConnect) {
   });
 }
 
-document.addEventListener("click", hideNavWalletMenu);
+document.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (t && typeof t.closest === "function" && t.closest("#btn-nav-connect, #nav-wallet-menu, #ticket-submit")) {
+    return;
+  }
+  hideNavWalletMenu();
+});
 
 window.addEventListener("popstate", () => {
   setView(currentView(), false);

@@ -2058,6 +2058,13 @@ export function createTradeView(app) {
       byId("mode-cross")?.setAttribute("aria-pressed", "true");
       if (enabled) applyLeverage();
     });
+    byId("ticket-submit")?.addEventListener("click", (ev) => {
+      if (!app.state.address || app.state.source !== "wallet") {
+        ev.preventDefault();
+        ev.stopPropagation();
+        app.connectFromNav && app.connectFromNav();
+      }
+    });
     byId("ticket-form")?.addEventListener("submit", onSubmit);
     document.querySelectorAll("[data-bottom-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2151,6 +2158,9 @@ export function createTradeView(app) {
       syncLeverageFromPos();
       renderBottom();
       updateEstimate();
+    },
+    setStatus(text, kind) {
+      ticketMessage(text, kind);
     },
   };
 }
