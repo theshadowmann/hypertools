@@ -7,6 +7,7 @@ import {
   missingMoney,
   niceTicks,
   parsePortfolio,
+  parseSubAccounts,
   periodBlock,
   periodVolume,
   perpsEquity,
@@ -39,6 +40,18 @@ describe("parsePortfolio", () => {
     expect(periodVolume(parsed.month)).toBe(9);
     expect(parsePortfolio(null)).toEqual({});
     expect(parsePortfolio({})).toEqual({});
+  });
+
+  it("lists subAccounts from live Info rows and ignores junk", () => {
+    expect(
+      parseSubAccounts([
+        { name: "Bot", subAccountUser: "0x035605fc2f24d65300227189025e90a0d947f16c" },
+        { name: "nope" },
+        null,
+      ])
+    ).toEqual([{ address: "0x035605fc2f24d65300227189025e90a0d947f16c", name: "Bot" }]);
+    expect(parseSubAccounts(null)).toEqual([]);
+    expect(parseSubAccounts([])).toEqual([]);
   });
 
   it("returns null PNL when the series is missing — never invents", () => {

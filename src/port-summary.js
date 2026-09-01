@@ -15,7 +15,6 @@ export const PORT_CHARTS = [
 ];
 
 export const PORT_ACCOUNTS = [
-  { id: "perps", label: "Only Perps" },
   { id: "all", label: "All" },
 ];
 
@@ -285,6 +284,20 @@ export function stakingUsd(summary, hypePx) {
   const px = num(hypePx);
   if (!Number.isFinite(px) || px <= 0) return null;
   return amt * px;
+}
+
+/** Live Info `subAccounts` rows. Unknown shapes return []. */
+export function parseSubAccounts(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  raw.forEach((row) => {
+    if (!row || typeof row !== "object") return;
+    const addr = String(row.subAccountUser || "");
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) return;
+    const name = String(row.name || "").trim();
+    out.push({ address: addr, name });
+  });
+  return out;
 }
 
 export function missingMoney() {

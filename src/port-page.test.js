@@ -35,6 +35,10 @@ function mount() {
     <span id="port-vault-eq"></span>
     <span id="port-earn"></span>
     <span id="port-stake"></span>
+    <div class="port-menu-wrap">
+      <button type="button" id="port-acct-btn" aria-expanded="false"><span id="port-acct-label">All</span></button>
+      <div id="port-acct-menu" class="port-menu hidden" hidden></div>
+    </div>
     <select id="port-period"><option value="week">7 Days</option></select>
     <canvas id="port-pnl-chart" width="320" height="160"></canvas>
     <button type="button" data-port-tab="balances" aria-selected="true">Balances</button>
@@ -74,7 +78,8 @@ describe("portfolio page structure", () => {
     expect(port).toContain('data-port-chart="account"');
     expect(port).toContain('data-port-chart="pnl"');
     expect(port).toContain('data-port-chart="perpPnl"');
-    expect(port).toContain("Only Perps");
+    expect(port).toContain('id="port-acct-btn"');
+    expect(port).toContain('data-port-acct="all"');
     expect(port).toContain(">24h<");
     expect(port).toContain(">7D<");
     expect(port).toContain(">30D<");
@@ -171,5 +176,25 @@ describe("portfolio disconnected and live numbers", () => {
     expect(() => drawPnlChart(canvas, [])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 0 }, { t: 2, v: 0 }])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 1 }, { t: 2, v: 3 }])).not.toThrow();
+  });
+
+  it("opens the Accounts menu with All plus the loaded address even when there are no subs", () => {
+    const { el } = mount();
+    const addr = "0x999a4b5f268a8fbf33736feff360d462ad248dbf";
+    renderDashboard(el, {
+      address: addr,
+      error: null,
+      data: { perps: {}, spot: { balances: [] }, portfolio: [], subAccounts: null },
+    });
+    const btn = document.getElementById("port-acct-btn");
+    const menu = document.getElementById("port-acct-menu");
+    expect(btn).toBeTruthy();
+    expect(menu.textContent).toContain("All");
+    expect(menu.textContent).toContain("0x999a");
+    expect(menu.classList.contains("hidden")).toBe(true);
+    btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(menu.classList.contains("hidden")).toBe(false);
+    expect(btn.getAttribute("aria-expanded")).toBe("true");
+    expect(menu.querySelectorAll("[data-port-acct]").length).toBeGreaterThanOrEqual(2);
   });
 });

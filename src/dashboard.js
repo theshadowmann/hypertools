@@ -7,6 +7,7 @@ import {
   formatLocalTime,
   num,
   pnlClass,
+  truncAddr,
 } from "./format.js";
 import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
@@ -19,9 +20,9 @@ import {
   lastPnl,
   missingMoney,
   parsePortfolio,
+  parseSubAccounts,
   periodVolume,
   perpsEquity,
-  PORT_ACCOUNTS,
   PORT_CHARTS,
   PORT_PERIODS,
   spotEquityUsd,
@@ -100,6 +101,15 @@ let portHistTab = "balances";
 let portHideSmall = true;
 let chartResizeBound = false;
 let portMenuDocBound = false;
+let loadPortUser = null;
+let cachedMaster = "";
+let cachedSubs = [];
+
+const ADDR_OK = /^0x[a-fA-F0-9]{40}$/i;
+
+export function setPortUserLoader(fn) {
+  loadPortUser = typeof fn === "function" ? fn : null;
+}
 
 function closePortMenus() {
   ["port-tf-menu", "port-acct-menu"].forEach((id) => {
@@ -128,6 +138,45 @@ function togglePortMenu(btnId, menuId, ev) {
   }
 }
 
+function fillAcctMenu(master, subs) {
+  const menu = document.getElementById("port-acct-menu");
+  if (!menu) return;
+  const masterId = master ? String(master).toLowerCase() : "";
+  const selected = String(portAcct || "all").toLowerCase();
+  clear(menu);
+  const addRow = (id, label) => {
+    const on = selected === String(id).toLowerCase();
+    const check = h("span", { class: "port-check" }, "✓");
+    if (!on) check.setAttribute("hidden", "");
+    menu.appendChild(
+      h(
+        "button",
+        { type: "button", "data-port-acct": id, class: on ? "is-on" : "" },
+        h("span", null, label),
+        check
+      )
+    );
+  };
+  addRow("all", "All");
+  if (masterId) addRow(masterId, truncAddr(master));
+  (subs || []).forEach((s) => {
+    const id = String(s.address || "").toLowerCase();
+    if (!ADDR_OK.test(id) || id === masterId) return;
+    const short = truncAddr(s.address);
+    addRow(id, s.name ? s.name + " · " + short : short);
+  });
+}
+
+function acctButtonLabel(master, subs) {
+  if (portAcct === "all") return "All";
+  if (portAcct === "perps") return "Only Perps";
+  const id = String(portAcct || "").toLowerCase();
+  if (master && id === String(master).toLowerCase()) return truncAddr(master);
+  const hit = (subs || []).find((s) => String(s.address || "").toLowerCase() === id);
+  if (hit) return hit.name ? hit.name + " · " + truncAddr(hit.address) : truncAddr(hit.address);
+  return ADDR_OK.test(id) ? truncAddr(portAcct) : "All";
+}
+
 function syncPortChrome() {
   document.querySelectorAll("[data-port-chart]").forEach((b) => {
     b.setAttribute("aria-selected", b.getAttribute("data-port-chart") === portChart ? "true" : "false");
@@ -138,18 +187,9 @@ function syncPortChrome() {
   document.querySelectorAll("[data-port-period]").forEach((b) => {
     b.classList.toggle("is-on", b.getAttribute("data-port-period") === portPeriod);
   });
+  fillAcctMenu(cachedMaster, cachedSubs);
   const acctLabel = document.getElementById("port-acct-label");
-  const acct = PORT_ACCOUNTS.find((a) => a.id === portAcct);
-  if (acctLabel && acct) acctLabel.textContent = acct.label;
-  document.querySelectorAll("[data-port-acct]").forEach((b) => {
-    const on = b.getAttribute("data-port-acct") === portAcct;
-    b.classList.toggle("is-on", on);
-    const check = b.querySelector(".port-check");
-    if (check) {
-      if (on) check.removeAttribute("hidden");
-      else check.setAttribute("hidden", "");
-    }
-  });
+  if (acctLabel) acctLabel.textContent = acctButtonLabel(cachedMaster, cachedSubs);
 }
 
 function bindPortHistOnce() {
@@ -182,10 +222,20 @@ function bindPortHistOnce() {
     }
     const acctItem = t.closest("[data-port-acct]");
     if (acctItem && dash.contains(acctItem)) {
-      const next = acctItem.getAttribute("data-port-acct");
-      if (PORT_ACCOUNTS.some((a) => a.id === next)) portAcct = next;
+      const next = acctItem.getAttribute("data-port-acct") || "";
       closePortMenus();
-      if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      const master = cachedMaster || (dash._lastState && dash._lastState.address);
+      if (next === "all" || next === "perps") {
+        portAcct = next;
+        if (loadPortUser && master) loadPortUser(master);
+        else if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+        return;
+      }
+      if (ADDR_OK.test(next)) {
+        portAcct = next.toLowerCase();
+        if (loadPortUser) loadPortUser(next);
+        else if (dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      }
       return;
     }
     const chartTab = t.closest("[data-port-chart]");
@@ -219,7 +269,11 @@ function bindPortHistOnce() {
   });
   if (!portMenuDocBound && typeof document !== "undefined") {
     portMenuDocBound = true;
-    document.addEventListener("click", () => closePortMenus());
+    document.addEventListener("click", (ev) => {
+      const node = ev.target;
+      if (node && node.closest && node.closest(".port-menu-wrap")) return;
+      closePortMenus();
+    });
   }
 }
 
@@ -608,6 +662,17 @@ export function renderDashboard(el, state) {
   const mids = data.mids || {};
   const fees = data.userFees;
   const portfolio = parsePortfolio(data.portfolio);
+  if (!connected) {
+    cachedMaster = "";
+    cachedSubs = [];
+    portAcct = "all";
+  } else if (portAcct === "all" || portAcct === "perps" || String(portAcct).toLowerCase() === String(state.address).toLowerCase()) {
+    cachedMaster = state.address;
+    cachedSubs = parseSubAccounts(data.subAccounts);
+  } else if (!cachedMaster) {
+    cachedMaster = state.address;
+    cachedSubs = parseSubAccounts(data.subAccounts);
+  }
   const perpsOnly = portAcct === "perps";
   const block = connected ? summaryBlock(portfolio, portPeriod, portAcct) : null;
   syncPortChrome();
