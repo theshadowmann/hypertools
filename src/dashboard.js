@@ -15,8 +15,13 @@ import {
   axisTicks,
   chartSeries,
   chartTickUsd,
+  chartXOf,
   formatChartDate,
+  formatScrubberTip,
   lastPnl,
+  portChartLayout,
+  snapChartPointByT,
+  snapChartPointByX,
   missingMoney,
   parsePortfolio,
   periodVolume,
@@ -227,6 +232,50 @@ function bindPortHistOnce() {
       closePortMenus();
     });
   }
+}
+
+function pointerCanvasX(ev, canvas) {
+  const r = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0 };
+  const src =
+    ev && ev.touches && ev.touches[0]
+      ? ev.touches[0]
+      : ev && ev.changedTouches && ev.changedTouches[0]
+        ? ev.changedTouches[0]
+        : ev;
+  const clientX = src && Number.isFinite(src.clientX) ? src.clientX : 0;
+  return clientX - (r.left || 0);
+}
+
+function scrubFromPointer(canvas, ev) {
+  const pts = canvas && canvas._series;
+  const layout = canvas && canvas._layout;
+  if (!canvas || !pts || !pts.length || !layout) return;
+  const pt = snapChartPointByX(pts, layout, pointerCanvasX(ev, canvas));
+  if (!pt) return;
+  canvas._scrubT = pt.t;
+  drawPnlChart(canvas, pts);
+}
+
+function bindChartPointer(canvas) {
+  if (!canvas || canvas._scrubBound) return;
+  canvas._scrubBound = true;
+  const move = (ev) => {
+    if (ev && ev.cancelable && ev.pointerType === "touch") ev.preventDefault();
+    scrubFromPointer(canvas, ev);
+  };
+  canvas.addEventListener("pointerdown", (ev) => {
+    if (canvas.setPointerCapture && ev && ev.pointerId != null) {
+      try {
+        canvas.setPointerCapture(ev.pointerId);
+      } catch {
+        /* happy-dom */
+      }
+    }
+    move(ev);
+  });
+  canvas.addEventListener("pointermove", move);
+  canvas.addEventListener("touchstart", move, { passive: false });
+  canvas.addEventListener("touchmove", move, { passive: false });
 }
 
 function bindChartResize() {
@@ -494,39 +543,37 @@ function renderPortHist(state) {
 }
 
 export function drawPnlChart(canvas, series) {
-  if (!canvas || !canvas.getContext) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  if (!canvas) return;
   canvas._series = Array.isArray(series) ? series : [];
-  const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
   const cssW = canvas.clientWidth || Number(canvas.getAttribute("width")) || 320;
   const cssH = canvas.clientHeight || Number(canvas.getAttribute("height")) || 160;
+  const pts = canvas._series.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v));
+  canvas._layout = pts.length ? portChartLayout(cssW, cssH, pts) : null;
+  if (!canvas.getContext) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
+  const scrubT = canvas._scrubT;
   canvas.width = Math.max(1, Math.floor(cssW * dpr));
   canvas.height = Math.max(1, Math.floor(cssH * dpr));
+  canvas._series = Array.isArray(series) ? series : [];
+  canvas._layout = pts.length ? portChartLayout(cssW, cssH, pts) : null;
+  canvas._scrubT = scrubT;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
   ctx.fillStyle = "#0F172A";
   ctx.fillRect(0, 0, cssW, cssH);
-
-  const pts = canvas._series.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v));
   if (!pts.length) return;
 
-  const padL = 46;
-  const padR = 36;
-  const padT = 10;
-  const padB = 22;
-  const plotW = Math.max(1, cssW - padL - padR);
-  const plotH = Math.max(1, cssH - padT - padB);
+  const layout = canvas._layout;
+  const { padL, padT, plotW, plotH, t0, tSpan } = layout;
 
   const ticks = axisTicks(pts, 4);
   const yMin = ticks.length ? ticks[0] : 0;
   const yMax = ticks.length ? ticks[ticks.length - 1] : 1;
   const ySpan = yMax - yMin || 1;
-  const t0 = pts[0].t;
-  const t1 = pts[pts.length - 1].t;
-  const tSpan = t1 - t0;
 
-  const xOf = (t) => padL + (tSpan === 0 ? plotW / 2 : ((t - t0) / tSpan) * plotW);
+  const xOf = (t) => chartXOf(layout, t);
   const yOf = (v) => padT + ((yMax - v) / ySpan) * plotH;
 
   ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
@@ -582,6 +629,40 @@ export function drawPnlChart(canvas, series) {
     prevY = y;
   });
   ctx.stroke();
+
+  const scrub = snapChartPointByT(pts, canvas._scrubT);
+  if (!scrub) return;
+  const sx = xOf(scrub.t);
+  const sy = yOf(scrub.v);
+  ctx.beginPath();
+  ctx.strokeStyle = "#F8FAFC";
+  ctx.lineWidth = 1;
+  ctx.moveTo(sx + 0.5, padT);
+  ctx.lineTo(sx + 0.5, padT + plotH);
+  ctx.stroke();
+
+  const tip = formatScrubberTip(scrub.t, scrub.v);
+  if (!tip) return;
+  ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
+  const tw = Math.ceil(ctx.measureText(tip).width) + 16;
+  const th = 24;
+  let tx = sx + 8;
+  let ty = sy - th / 2;
+  if (tx + tw > cssW - 4) tx = sx - 8 - tw;
+  if (tx < 4) tx = 4;
+  if (ty < 4) ty = 4;
+  if (ty + th > cssH - 4) ty = cssH - th - 4;
+  ctx.fillStyle = "#080D1A";
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.rect(tx + 0.5, ty + 0.5, tw, th);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#F8FAFC";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(tip, tx + 8, ty + th / 2);
 }
 
 export function renderDashboard(el, state) {
@@ -673,6 +754,13 @@ export function renderDashboard(el, state) {
 
   const canvas = document.getElementById("port-pnl-chart");
   const series = connected ? chartSeries(portfolio, portPeriod, portChart, portAcct) : [];
+  if (canvas && canvas._scrubT != null && series.length) {
+    const keep = snapChartPointByT(series, canvas._scrubT);
+    canvas._scrubT = keep ? keep.t : null;
+  } else if (canvas && !series.length) {
+    canvas._scrubT = null;
+  }
+  bindChartPointer(canvas);
   drawPnlChart(canvas, series);
   if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(() => drawPnlChart(canvas, series));

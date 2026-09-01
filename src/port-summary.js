@@ -203,6 +203,96 @@ export function formatChartDate(ms, spanMs) {
   return mon + " " + d.getDate();
 }
 
+const SCRUB_MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** UTC calendar date for the scrubber tooltip, e.g. `2026 Mar 11`. */
+export function formatScrubberDate(ms) {
+  const t = num(ms);
+  if (!Number.isFinite(t) || t <= 0) return "";
+  const d = new Date(t);
+  return d.getUTCFullYear() + " " + SCRUB_MON[d.getUTCMonth()] + " " + d.getUTCDate();
+}
+
+/** `$137` when whole dollars; keeps cents for non-integers. Never invents a value. */
+export function formatScrubberUsd(raw) {
+  const n = num(raw);
+  if (!Number.isFinite(n)) return "";
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  const cents = Math.round(abs * 100);
+  if (cents % 100 === 0 && (abs >= 1 || cents === 0)) {
+    return sign + "$" + Math.round(abs).toLocaleString("en-US");
+  }
+  if (abs >= 1) {
+    return sign + "$" + abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return sign + "$" + abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+/** `2026 Mar 11: $137` from a real history sample. */
+export function formatScrubberTip(ms, value) {
+  const date = formatScrubberDate(ms);
+  const usd = formatScrubberUsd(value);
+  if (!date || !usd) return "";
+  return date + ": " + usd;
+}
+
+export const PORT_CHART_PAD = { l: 46, r: 36, t: 10, b: 22 };
+
+export function portChartLayout(cssW, cssH, pts) {
+  const w = Math.max(1, Number(cssW) || 1);
+  const h = Math.max(1, Number(cssH) || 1);
+  const pad = PORT_CHART_PAD;
+  const plotW = Math.max(1, w - pad.l - pad.r);
+  const plotH = Math.max(1, h - pad.t - pad.b);
+  const rows = Array.isArray(pts) ? pts.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v)) : [];
+  const t0 = rows.length ? rows[0].t : 0;
+  const t1 = rows.length ? rows[rows.length - 1].t : 0;
+  const tSpan = t1 - t0;
+  return { cssW: w, cssH: h, padL: pad.l, padR: pad.r, padT: pad.t, padB: pad.b, plotW, plotH, t0, t1, tSpan };
+}
+
+export function chartXOf(layout, t) {
+  if (!layout) return 0;
+  return layout.padL + (layout.tSpan === 0 ? layout.plotW / 2 : ((t - layout.t0) / layout.tSpan) * layout.plotW);
+}
+
+/** Nearest real sample to a canvas X. Empty series → null (never invent). */
+export function snapChartPointByX(pts, layout, x) {
+  const rows = Array.isArray(pts) ? pts.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v)) : [];
+  if (!rows.length || !layout) return null;
+  const px = Number(x);
+  if (!Number.isFinite(px)) return null;
+  let best = rows[0];
+  let bestD = Math.abs(chartXOf(layout, best.t) - px);
+  for (let i = 1; i < rows.length; i++) {
+    const d = Math.abs(chartXOf(layout, rows[i].t) - px);
+    if (d < bestD) {
+      bestD = d;
+      best = rows[i];
+    }
+  }
+  return best;
+}
+
+/** Nearest real sample to a timestamp. Empty series → null. */
+export function snapChartPointByT(pts, t) {
+  const rows = Array.isArray(pts) ? pts.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.v)) : [];
+  if (!rows.length) return null;
+  const ts = num(t);
+  if (!Number.isFinite(ts)) return null;
+  let best = rows[0];
+  let bestD = Math.abs(best.t - ts);
+  for (let i = 1; i < rows.length; i++) {
+    const d = Math.abs(rows[i].t - ts);
+    if (d < bestD) {
+      bestD = d;
+      best = rows[i];
+    }
+  }
+  return best;
+}
+
 /**
  * Sum the user's own taker+maker notional over the last 14 dailyUserVlm rows.
  * Ignores `exchange` (venue-wide). Returns null when the feed is missing.

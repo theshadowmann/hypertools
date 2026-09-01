@@ -45,6 +45,9 @@ function mount() {
       </div>
     </div>
     <select id="port-period"><option value="week">7 Days</option></select>
+    <button type="button" data-port-chart="account" aria-selected="false">Account Value</button>
+    <button type="button" data-port-chart="pnl" aria-selected="true">PNL</button>
+    <button type="button" data-port-chart="perpPnl" aria-selected="false">Perps PNL</button>
     <canvas id="port-pnl-chart" width="320" height="160"></canvas>
     <button type="button" data-port-tab="balances" aria-selected="true">Balances</button>
     <div id="port-balances"></div>
@@ -121,6 +124,9 @@ describe("portfolio page structure", () => {
     expect(css).toMatch(/\.port-page \{[\s\S]*?background: var\(--bg-main\)/);
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?color: var\(--text-primary\)/);
     expect(css).toMatch(/\.port-chart-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--accent-primary\)/);
+    expect(css).toMatch(/\.port-chart \{[\s\S]*?cursor: crosshair/);
+    expect(css).toMatch(/\.port-chart \{[\s\S]*?touch-action: none/);
+    expect(css).toMatch(/\.port-chart \{[\s\S]*?touch-action: none/);
     expect(css).toMatch(/#port-tf-menu button\.is-on \{[\s\S]*?background: var\(--accent-primary\)/);
     expect(css).toMatch(/#port-tf-btn\.port-menu-btn \{[\s\S]*?border: 0/);
     expect(css).toMatch(/#port-acct-btn\.port-menu-btn \{[\s\S]*?border: 0/);
@@ -196,11 +202,18 @@ describe("portfolio disconnected and live numbers", () => {
     expect(js).not.toMatch(/\{ t: 0, v: 0 \}/);
     expect(js).toMatch(/axisTicks\(/);
     expect(js).toMatch(/chartSeries\(/);
+    expect(js).toMatch(/formatScrubberTip\(/);
+    expect(js).toMatch(/snapChartPointByX\(/);
+    expect(js).toMatch(/#080D1A/);
+    expect(js).toMatch(/#F8FAFC/);
     expect(js).not.toMatch(/fillAcctMenu/);
     expect(js).not.toMatch(/setPortUserLoader/);
     expect(() => drawPnlChart(canvas, [])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 0 }, { t: 2, v: 0 }])).not.toThrow();
     expect(() => drawPnlChart(canvas, [{ t: 1, v: 1 }, { t: 2, v: 3 }])).not.toThrow();
+    canvas._scrubT = 2;
+    expect(() => drawPnlChart(canvas, [{ t: 1, v: 1 }, { t: 2, v: 3 }])).not.toThrow();
+    expect(canvas._layout).toBeTruthy();
   });
 
   it("opens the Accounts menu with Only Perps and All, gold check on All", () => {
@@ -273,5 +286,41 @@ describe("portfolio disconnected and live numbers", () => {
     menu.querySelector('[data-port-acct="all"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(document.getElementById("port-acct-label").textContent).toBe("All");
     expect(document.getElementById("port-total-eq").textContent).toBe("$133.00");
+  });
+
+  it("snaps the scrubber to a real history sample and follows the selected tab", () => {
+    const { el } = mount();
+    const a = Date.UTC(2026, 0, 1);
+    const b = Date.UTC(2026, 2, 11);
+    const c = Date.UTC(2026, 8, 1);
+    const addr = "0x999a4b5f268a8fbf33736feff360d462ad248dbf";
+    renderDashboard(el, {
+      address: addr,
+      error: null,
+      data: {
+        perps: { marginSummary: { accountValue: "100" }, assetPositions: [] },
+        spot: { balances: [] },
+        portfolio: [[
+          "week",
+          {
+            pnlHistory: [[a, "1"], [b, "137"], [c, "90"]],
+            accountValueHistory: [[a, "10"], [b, "200"], [c, "80"]],
+            vlm: "50",
+          },
+        ]],
+      },
+    });
+    const canvas = document.getElementById("port-pnl-chart");
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 160, right: 320, bottom: 160 });
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 320 });
+    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 160 });
+    drawPnlChart(canvas, canvas._series);
+    const midX = canvas._layout.padL + canvas._layout.plotW / 2;
+    canvas.dispatchEvent(new MouseEvent("pointermove", { clientX: midX, clientY: 80, bubbles: true }));
+    expect(canvas._scrubT).toBe(b);
+    expect(canvas._series.find((p) => p.t === canvas._scrubT).v).toBe(137);
+    document.querySelector('[data-port-chart="account"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(canvas._scrubT).toBe(b);
+    expect(canvas._series.find((p) => p.t === canvas._scrubT).v).toBe(200);
   });
 });

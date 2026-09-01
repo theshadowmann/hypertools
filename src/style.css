@@ -1675,6 +1675,8 @@ input[type="range"] { accent-color: var(--accent-primary); }
   margin-top: 0;
   background: var(--bg-surface);
   border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none;
 }
 .port-hist {
   padding: 0 0 8px;

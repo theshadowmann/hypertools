@@ -3,6 +3,7 @@ import {
   axisTicks,
   chartSeries,
   chartTickUsd,
+  formatScrubberTip,
   lastPnl,
   missingMoney,
   niceTicks,
@@ -15,6 +16,9 @@ import {
   PORT_ACCOUNTS,
   PORT_CHARTS,
   PORT_PERIODS,
+  portChartLayout,
+  snapChartPointByT,
+  snapChartPointByX,
   spotEquityUsd,
   stakingUsd,
   sum14DayVolume,
@@ -195,5 +199,31 @@ describe("chart series", () => {
     expect(Math.max.apply(null, aTicks)).toBeGreaterThan(Math.max.apply(null, pTicks) * 10);
     expect(axisTicks([], 4)).toEqual([]);
     expect(axisTicks(null, 4)).toEqual([]);
+  });
+
+  it("formats the scrubber tooltip from a real sample and snaps to nearest history x", () => {
+    const mar = Date.UTC(2026, 2, 11, 12, 0, 0);
+    expect(formatScrubberTip(mar, 137)).toBe("2026 Mar 11: $137");
+    expect(formatScrubberTip(mar, 2.25)).toBe("2026 Mar 11: $2.25");
+    expect(formatScrubberTip(mar, -12)).toBe("2026 Mar 11: -$12");
+    expect(formatScrubberTip(0, 137)).toBe("");
+    expect(formatScrubberTip(mar, NaN)).toBe("");
+    const a = Date.UTC(2026, 0, 1);
+    const b = Date.UTC(2026, 5, 1);
+    const c = Date.UTC(2026, 8, 1);
+    const pts = [
+      { t: a, v: 10 },
+      { t: b, v: 137 },
+      { t: c, v: 90 },
+    ];
+    const layout = portChartLayout(320, 160, pts);
+    const mid = (layout.padL + layout.padL + layout.plotW) / 2;
+    expect(snapChartPointByX(pts, layout, mid).v).toBe(137);
+    expect(snapChartPointByX(pts, layout, layout.padL).v).toBe(10);
+    expect(snapChartPointByX(pts, layout, layout.padL + layout.plotW).v).toBe(90);
+    expect(snapChartPointByX([], layout, mid)).toBeNull();
+    expect(snapChartPointByT(pts, b).v).toBe(137);
+    expect(snapChartPointByT(pts, null)).toBeNull();
+    expect(snapChartPointByT([], b)).toBeNull();
   });
 });
