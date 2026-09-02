@@ -19,7 +19,6 @@ import {
   ensureWalletMenu,
   fillWalletMenu,
   hideWalletMenu,
-  isWalletMenuOpen,
   OPENING_WALLET_MSG,
   positionWalletMenu,
   runConnectFromNav,
@@ -358,7 +357,7 @@ function showNavWalletMenu(targets) {
 
 function connectFromNav() {
   el.navConnect = el.navConnect || document.getElementById("btn-nav-connect");
-  const menu = walletMenu();
+  walletMenu();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("eip6963:requestProvider"));
   }
@@ -374,7 +373,6 @@ function connectFromNav() {
     },
     showMenu: showNavWalletMenu,
     hideMenu: hideNavWalletMenu,
-    menuOpen: isWalletMenuOpen(menu),
     refreshDiscovery: () => {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("eip6963:requestProvider"));

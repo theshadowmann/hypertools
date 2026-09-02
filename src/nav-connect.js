@@ -143,10 +143,6 @@ export function runConnectFromNav(opts) {
     o.connectWallet(targets[0].provider);
     return { kind: "connect", provider: targets[0].provider };
   }
-  if (o.menuOpen) {
-    if (typeof o.hideMenu === "function") o.hideMenu();
-    return { kind: "hide" };
-  }
   if (typeof o.showMenu === "function") o.showMenu(targets);
   return { kind: "menu", targets };
 }
