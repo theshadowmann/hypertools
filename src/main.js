@@ -14,7 +14,17 @@ import {
 import { guardProvider } from "./wallet-guard.js";
 import { deskUrl, viewFromLocation } from "./routes.js";
 import { bindAppListeners } from "./app-bind.js";
-import { runConnectFromNav, showConnectStatus } from "./nav-connect.js";
+import {
+  CHECK_POPUP_MSG,
+  ensureWalletMenu,
+  fillWalletMenu,
+  hideWalletMenu,
+  isWalletMenuOpen,
+  OPENING_WALLET_MSG,
+  positionWalletMenu,
+  runConnectFromNav,
+  showConnectStatus,
+} from "./nav-connect.js";
 
 const state = {
   address: null,
@@ -323,65 +333,64 @@ function renderChrome() {
   }
 }
 
-function hideNavWalletMenu() {
-  if (!el.navWalletMenu) return;
-  el.navWalletMenu.classList.add("hidden");
-  el.navWalletMenu.setAttribute("hidden", "");
-  clear(el.navWalletMenu);
+function walletMenu() {
+  el.navWalletMenu = ensureWalletMenu();
+  return el.navWalletMenu;
 }
 
-function positionNavWalletMenu() {
-  if (!el.navWalletMenu || !el.navConnect) return;
-  const r = el.navConnect.getBoundingClientRect();
-  el.navWalletMenu.style.position = "fixed";
-  el.navWalletMenu.style.top = Math.round(r.bottom + 8) + "px";
-  el.navWalletMenu.style.right = Math.round(window.innerWidth - r.right) + "px";
-  el.navWalletMenu.style.left = "auto";
-  el.navWalletMenu.style.zIndex = "80";
+function hideNavWalletMenu() {
+  hideWalletMenu(walletMenu());
 }
 
 function showNavWalletMenu(targets) {
-  if (!el.navWalletMenu) return;
-  clear(el.navWalletMenu);
-  targets.forEach((t) => {
-    el.navWalletMenu.appendChild(
-      h(
-        "button",
-        {
-          type: "button",
-          class:
-            "block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-ink-700 hover:text-white",
-          role: "menuitem",
-          onClick: (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            hideNavWalletMenu();
-            connectWallet(t.provider);
-          },
-        },
-        "Connect " + t.name + " to trade"
-      )
-    );
+  const menu = walletMenu();
+  fillWalletMenu(menu, targets, (t) => {
+    showConnectStatus(CHECK_POPUP_MSG);
+    if (tradeView && typeof tradeView.setStatus === "function") {
+      tradeView.setStatus(CHECK_POPUP_MSG);
+    }
+    connectWallet(t.provider);
   });
-  positionNavWalletMenu();
-  el.navWalletMenu.classList.remove("hidden");
-  el.navWalletMenu.removeAttribute("hidden");
+  positionWalletMenu(menu, el.navConnect || document.getElementById("btn-nav-connect"));
+  menu.classList.remove("hidden");
+  menu.removeAttribute("hidden");
 }
 
 function connectFromNav() {
+  el.navConnect = el.navConnect || document.getElementById("btn-nav-connect");
+  const menu = walletMenu();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+  }
   return runConnectFromNav({
     discoveredList,
     ethereum: typeof window !== "undefined" ? window.ethereum : null,
-    connectWallet,
+    connectWallet: (provider) => {
+      showConnectStatus(CHECK_POPUP_MSG);
+      if (tradeView && typeof tradeView.setStatus === "function") {
+        tradeView.setStatus(CHECK_POPUP_MSG);
+      }
+      return connectWallet(provider);
+    },
     showMenu: showNavWalletMenu,
     hideMenu: hideNavWalletMenu,
-    menuOpen: !!(el.navWalletMenu && !el.navWalletMenu.classList.contains("hidden")),
+    menuOpen: isWalletMenuOpen(menu),
+    refreshDiscovery: () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("eip6963:requestProvider"));
+      }
+    },
+    onOpening: (msg) => {
+      if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg || OPENING_WALLET_MSG);
+    },
     onNoWallet: (msg) => {
       showConnectStatus(msg, "err");
       if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg, "err");
     },
   });
 }
+
+el.navWalletMenu = ensureWalletMenu();
 
 bindAppListeners({
   el,

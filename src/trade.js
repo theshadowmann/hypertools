@@ -2082,13 +2082,19 @@ export function createTradeView(app) {
       byId("mode-cross")?.setAttribute("aria-pressed", "true");
       if (enabled) applyLeverage();
     });
-    byId("ticket-submit")?.addEventListener("click", (ev) => {
-      if (!app.state.address || app.state.source !== "wallet") {
-        ev.preventDefault();
-        ev.stopPropagation();
+    const ticketSubmit = byId("ticket-submit");
+    if (ticketSubmit) {
+      const onTicketConnect = (ev) => {
+        if (app.state.address && app.state.source === "wallet") return;
+        if (ev && ev._htConnectHandled) return;
+        if (ev) ev._htConnectHandled = true;
+        if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
         app.connectFromNav && app.connectFromNav();
-      }
-    });
+      };
+      ticketSubmit.addEventListener("click", onTicketConnect);
+      ticketSubmit.onclick = onTicketConnect;
+    }
     byId("ticket-form")?.addEventListener("submit", onSubmit);
     byId("hl-iv")?.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-hl-iv]");

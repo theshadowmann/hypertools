@@ -27,22 +27,64 @@ html.desk body {
   height: 100%;
   max-height: 100%;
 }
-html.desk body > header {
+html.desk body > header,
+body > header {
   height: 3rem;
   box-sizing: border-box;
   overflow: visible;
   pointer-events: auto;
-  z-index: 50;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 #nav-disconnected,
 #btn-nav-connect,
-#nav-wallet-menu {
+#nav-wallet-menu,
+.nav-wallet-menu {
   pointer-events: auto;
 }
-#nav-wallet-menu {
-  z-index: 80;
+#btn-nav-connect {
+  position: relative;
+  z-index: 110;
+  pointer-events: auto;
+}
+#nav-wallet-menu,
+.nav-wallet-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 13rem;
+  margin: 0;
+  padding: 4px 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+#nav-wallet-menu.hidden,
+.nav-wallet-menu.hidden {
+  display: none !important;
+}
+.nav-wallet-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-wallet-item:hover {
+  background: var(--bg-surface);
+  color: var(--accent-primary);
 }
 html.desk #trade:not(.hidden) {
+  position: relative;
+  z-index: 0;
   overflow: hidden;
   height: calc(100vh - 3rem);
 }
@@ -136,6 +178,7 @@ html.tv-embed-frame footer {
 
 .trade-shell {
   position: relative;
+  z-index: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 256px 300px;
   grid-template-rows: auto minmax(0, 1fr) minmax(168px, 26vh);
@@ -272,6 +315,8 @@ html.tv-embed-frame footer {
 }
 .tv-host iframe {
   display: block;
+  position: relative;
+  z-index: 0;
   height: 100% !important;
   width: 100% !important;
   margin: 0 !important;

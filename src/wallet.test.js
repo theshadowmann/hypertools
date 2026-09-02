@@ -7,7 +7,15 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BUILDER_ADDRESS, sealOrderPayload, assertCanTrade } from "./order-build.js";
 import { bindAppListeners } from "./app-bind.js";
-import { NO_WALLET_MSG, runConnectFromNav, showConnectStatus } from "./nav-connect.js";
+import {
+  CHECK_POPUP_MSG,
+  ensureWalletMenu,
+  fillWalletMenu,
+  NO_WALLET_MSG,
+  OPENING_WALLET_MSG,
+  runConnectFromNav,
+  showConnectStatus,
+} from "./nav-connect.js";
 import {
   createWalletDiscovery,
   walletKind,
@@ -49,12 +57,13 @@ describe("connect wiring", () => {
     const main = readFileSync(join(root, "src/main.js"), "utf8");
     const bind = readFileSync(join(root, "src/app-bind.js"), "utf8");
     const trade = readFileSync(join(root, "src/trade.js"), "utf8");
-    expect(bind).toContain("el.navConnect.addEventListener(\"click\"");
-    expect(bind.indexOf("el.navConnect.addEventListener")).toBeLessThan(bind.indexOf("pasteForm"));
+    expect(bind).toContain("bindConnectClick(navBtn");
+    expect(bind.indexOf("bindConnectClick")).toBeLessThan(bind.indexOf("pasteForm"));
     expect(main).toContain("connectFromNav,");
-    expect(trade).toContain('byId("ticket-submit")?.addEventListener("click"');
-    const clickAt = trade.indexOf('byId("ticket-submit")?.addEventListener("click"');
-    expect(trade.slice(clickAt, clickAt + 280)).toContain("app.connectFromNav && app.connectFromNav()");
+    expect(trade).toContain('const ticketSubmit = byId("ticket-submit")');
+    expect(trade).toContain("ticketSubmit.addEventListener(\"click\", onTicketConnect)");
+    expect(trade).toContain("ticketSubmit.onclick = onTicketConnect");
+    expect(trade).toContain("app.connectFromNav && app.connectFromNav()");
     const submitAt = trade.indexOf("async function onSubmit");
     expect(trade.slice(submitAt, submitAt + 280)).toContain("app.connectFromNav && app.connectFromNav()");
   });
@@ -76,6 +85,33 @@ describe("connect wiring", () => {
     });
     expect(out.kind).toBe("menu");
     expect(shown[0]).toHaveLength(2);
+  });
+
+  it("renders a MetaMask + Rabby menu when both EIP-6963 providers are present", () => {
+    document.body.innerHTML =
+      '<button id="btn-nav-connect" type="button">Connect to trade</button>' +
+      '<p id="ticket-status"></p>';
+    expect(document.getElementById("nav-wallet-menu")).toBeNull();
+    const menu = ensureWalletMenu();
+    expect(menu).toBeTruthy();
+    expect(menu.parentElement).toBe(document.body);
+    const targets = walletTargets([mmEntry(), rabbyEntry()]);
+    fillWalletMenu(menu, targets, () => {});
+    menu.classList.remove("hidden");
+    menu.removeAttribute("hidden");
+    const labels = [...menu.querySelectorAll("[role='menuitem']")].map((b) => b.textContent);
+    expect(labels).toEqual(["Connect MetaMask to trade", "Connect Rabby to trade"]);
+    expect(document.getElementById("ticket-status").textContent).toBe("");
+    const out = runConnectFromNav({
+      discoveredList: [mmEntry(), rabbyEntry()],
+      connectWallet: () => {},
+      showMenu: (t) => fillWalletMenu(ensureWalletMenu(), t, () => {}),
+      hideMenu: () => {},
+    });
+    expect(out.kind).toBe("menu");
+    expect(document.getElementById("ticket-status").textContent).toBe(OPENING_WALLET_MSG);
+    expect(document.getElementById("nav-wallet-menu").textContent).toContain("MetaMask");
+    expect(document.getElementById("nav-wallet-menu").textContent).toContain("Rabby");
   });
 });
 
@@ -114,6 +150,7 @@ describe("connectFromNav", () => {
   });
 
   it("calls eth_requestAccounts on a mock injected provider", async () => {
+    document.body.innerHTML = '<p id="ticket-status"></p>';
     const request = vi.fn().mockResolvedValue(["0x1111111111111111111111111111111111111111"]);
     window.ethereum = { isMetaMask: true, request };
     const calls = [];
@@ -132,6 +169,7 @@ describe("connectFromNav", () => {
     expect(calls[0]).toBe(window.ethereum);
     await Promise.resolve();
     expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
+    expect(document.getElementById("ticket-status").textContent).toBe(CHECK_POPUP_MSG);
   });
 
   it("stays on /trade and writes ticket-status when no wallet is present", () => {
@@ -144,10 +182,21 @@ describe("connectFromNav", () => {
       hideMenu: () => {},
     });
     expect(out.kind).toBe("nowallet");
-    showConnectStatus(NO_WALLET_MSG, "err");
     const st = document.getElementById("ticket-status");
     expect(st.textContent).toBe("Install MetaMask or Rabby");
     expect(st.classList.contains("err")).toBe(true);
+    expect(window.location.pathname).not.toBe("/portfolio");
+  });
+
+  it("writes Opening wallet immediately on every connect click", () => {
+    document.body.innerHTML = '<p id="ticket-status"></p>';
+    runConnectFromNav({
+      discoveredList: [mmEntry(), rabbyEntry()],
+      connectWallet: () => {},
+      showMenu: () => {},
+      hideMenu: () => {},
+    });
+    expect(document.getElementById("ticket-status").textContent).toBe(OPENING_WALLET_MSG);
   });
 });
 
@@ -211,10 +260,18 @@ describe("paste-address still cannot trade; builder seal unchanged", () => {
 describe("desk header does not eat Connect clicks", () => {
   it("keeps pointer-events on the header connect control", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
-    expect(css).toMatch(/html\.desk body > header \{[\s\S]*?pointer-events: auto/);
-    expect(css).toMatch(/#btn-nav-connect,[\s\S]*?#nav-wallet-menu \{[\s\S]*?pointer-events: auto/);
+    expect(css).toMatch(/html\.desk body > header,[\s\S]*?pointer-events: auto/);
+    expect(css).toMatch(/#btn-nav-connect,[\s\S]*?#nav-wallet-menu,[\s\S]*?pointer-events: auto/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?pointer-events: auto/);
     expect(css).toMatch(/\.ticket-submit\.connect \{ pointer-events: auto/);
-    expect(css).toMatch(/#nav-wallet-menu \{[\s\S]*?z-index: 80/);
+    expect(css).toMatch(/#nav-wallet-menu,[\s\S]*?\.nav-wallet-menu \{[\s\S]*?z-index: 200/);
+    expect(css).toMatch(/html\.desk body > header,[\s\S]*?z-index: 100/);
+    expect(css).toMatch(/#nav-wallet-menu,[\s\S]*?background: var\(--bg-input\)/);
+    expect(css).toMatch(/\.nav-wallet-item:hover \{[\s\S]*?color: var\(--accent-primary\)/);
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    expect(html).toContain('id="btn-nav-connect"');
+    expect(html).toContain('id="nav-wallet-menu"');
+    expect(html).toContain('id="ticket-submit"');
+    expect(html).toContain('id="ticket-status"');
   });
 });

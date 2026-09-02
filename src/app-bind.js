@@ -1,3 +1,5 @@
+import { bindConnectClick } from "./nav-connect.js";
+
 /**
  * Page listeners. Landing / Portfolio nodes are optional so a missing
  * #paste-form cannot skip binding #btn-nav-connect.
@@ -14,10 +16,11 @@ export function bindAppListeners({
   connectFromNav,
   hideNavWalletMenu,
 }) {
-  if (el && el.navConnect) {
-    el.navConnect.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
+  const navBtn =
+    (el && el.navConnect) ||
+    (typeof document !== "undefined" ? document.getElementById("btn-nav-connect") : null);
+  if (navBtn) {
+    bindConnectClick(navBtn, () => {
       connectFromNav();
     });
   }
