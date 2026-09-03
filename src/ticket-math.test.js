@@ -275,7 +275,8 @@ describe("ticket DOM", () => {
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
     const html = readFileSync(join(root, "index.html"), "utf8");
     expect(css).toMatch(/\.pct-slider \{[\s\S]*?--fill: 0%/);
-    expect(css).toMatch(/::-webkit-slider-runnable-track \{[\s\S]*linear-gradient\([\s\S]*var\(--accent-primary\)[\s\S]*var\(--fill\)/);
+    expect(css).toMatch(/\.pct-slider \{[\s\S]*background-image: linear-gradient\([\s\S]*var\(--accent-primary\)[\s\S]*var\(--fill\)/);
+    expect(css).toMatch(/::-webkit-slider-runnable-track \{[\s\S]*background: transparent/);
     expect(css).toMatch(/::-moz-range-track \{[\s\S]*linear-gradient\([\s\S]*var\(--accent-primary\)[\s\S]*var\(--fill\)/);
     expect(css).toMatch(/::-webkit-slider-thumb \{[\s\S]*border-radius: 50%/);
     expect(css).toMatch(/\.pct-ticks span\.on \{[\s\S]*background: var\(--accent-primary\)/);

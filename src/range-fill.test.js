@@ -30,6 +30,8 @@ describe("range fill", () => {
     ticks.innerHTML = "<span></span><span></span><span></span><span></span><span></span>";
     expect(paintRangeFill(el, ticks)).toBe(50);
     expect(el.style.getPropertyValue("--fill")).toBe("50%");
+    expect(el.style.backgroundImage).toContain("50%");
+    expect(el.style.backgroundImage).toMatch(/#06B6D4|#1E293B/);
     const on = [...ticks.querySelectorAll("span")].map((s) => s.classList.contains("on"));
     expect(on).toEqual([true, true, true, false, false]);
   });

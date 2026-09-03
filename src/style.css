@@ -1252,18 +1252,22 @@ html.tv-embed-frame footer {
   accent-color: var(--accent-primary);
   -webkit-appearance: none;
   appearance: none;
-  background: transparent;
-}
-.pct-slider::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(
+  background-color: transparent;
+  background-image: linear-gradient(
     to right,
     var(--accent-primary) 0%,
     var(--accent-primary) var(--fill),
     var(--bg-input) var(--fill),
     var(--bg-input) 100%
   );
+  background-size: 100% 4px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.pct-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
 }
 .pct-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -1288,6 +1292,11 @@ html.tv-embed-frame footer {
     var(--bg-input) var(--fill),
     var(--bg-input) 100%
   );
+}
+.pct-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-primary);
 }
 .pct-slider::-moz-range-thumb {
   width: 14px;
