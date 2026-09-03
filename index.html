@@ -533,17 +533,19 @@
 
             <div class="ticket-scroll">
             <div id="ticket-scale-wrap" class="hidden scale-fields">
-              <div class="ticket-field">
-                <label for="ticket-start" class="ticket-label">Start</label>
-                <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
-              </div>
-              <div class="ticket-field">
-                <label for="ticket-end" class="ticket-label">End</label>
-                <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
+              <div class="scale-pair">
+                <div class="ticket-field">
+                  <label for="ticket-start" class="ticket-label">Start price</label>
+                  <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
+                </div>
+                <div class="ticket-field">
+                  <label for="ticket-end" class="ticket-label">End price</label>
+                  <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
+                </div>
               </div>
               <div class="scale-pair">
                 <div class="ticket-field">
-                  <label for="ticket-count" class="ticket-label">Total Orders</label>
+                  <label for="ticket-count" class="ticket-label">Orders count</label>
                   <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" />
                 </div>
                 <div class="ticket-field">

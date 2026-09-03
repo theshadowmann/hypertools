@@ -939,11 +939,27 @@ html.tv-embed-frame footer {
   gap: 0;
 }
 .ticket.has-pro-extra .ticket-scroll {
-  overflow: hidden;
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+}
+.ticket.has-pro-extra .ticket-core-tail {
+  flex: 1 1 auto;
+  min-height: min-content;
+  overflow: visible;
 }
 .ticket.has-tpsl-extra .ticket-core-tail {
   flex: 1 1 0;
   overflow: hidden;
+}
+.ticket.has-pro-extra.has-tpsl-extra .ticket-core-tail {
+  flex: 1 1 auto;
+  min-height: min-content;
+  overflow: visible;
+}
+.ticket.has-pro-extra .tpsl-pad {
+  flex: 1 1 auto;
+  min-height: 56px;
 }
 .ticket-foot {
   flex: 0 0 auto;
@@ -1302,14 +1318,16 @@ html.tv-embed-frame footer {
   pointer-events: none;
 }
 .scale-fields,
-.twap-fields {
+.twap-fields,
+.pro-fields {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 .scale-fields.hidden,
-.twap-fields.hidden { display: none; }
+.twap-fields.hidden,
+.pro-fields.hidden { display: none; }
 .scale-pair,
 .twap-time-row {
   display: grid;

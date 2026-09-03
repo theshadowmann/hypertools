@@ -814,11 +814,12 @@ export function createTradeView(app) {
     byId("ticket-twap-wrap")?.classList.toggle("hidden", next !== "twap");
     byId("ticket-stop-wrap")?.classList.toggle("hidden", next !== "stop-limit" && next !== "stop-market");
     byId("ticket-stop-limit-price")?.classList.toggle("hidden", next !== "stop-limit");
-    const tpslOk = next === "market" || next === "limit";
-    byId("ticket-tpsl-lbl")?.classList.toggle("hidden", !tpslOk);
-    byId("ticket-tpsl-pad")?.classList.toggle("tpsl-collapsed", !tpslOk);
-    setTpslOpen(tpslOk && !!byId("ticket-tpsl")?.checked);
-    byId("ticket-form")?.classList.toggle("has-tpsl-extra", tpslOk);
+    const tpslChk = next === "market" || next === "limit";
+    const packPad = tpslChk || proOn;
+    byId("ticket-tpsl-lbl")?.classList.toggle("hidden", !tpslChk);
+    byId("ticket-tpsl-pad")?.classList.toggle("tpsl-collapsed", !packPad);
+    setTpslOpen(tpslChk && !!byId("ticket-tpsl")?.checked);
+    byId("ticket-form")?.classList.toggle("has-tpsl-extra", packPad);
     byId("ticket-random-lbl")?.classList.toggle("hidden", next !== "twap");
     if (next === "twap") syncTwapMinutes();
     updateEstimate();
