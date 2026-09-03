@@ -177,6 +177,9 @@ describe("picker 24h sort chrome", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     const tabs = css.slice(css.indexOf(".mp-tabs {"), css.indexOf(".mp-tab {"));
     const cells = css.slice(css.lastIndexOf(".mp-table td {"), css.indexOf(".mp-mkt {"));
+    const table = css.slice(css.indexOf(".mp-table {"), css.indexOf(".mp-table col.mp-col-mkt"));
+    expect(table).toContain("border: 0");
+    expect(table).toContain("border-spacing: 0");
     const foot = css.slice(css.indexOf(".mp-foot {"), css.indexOf(".stats-metrics {"));
     expect(tabs).toContain("border-bottom: 0");
     expect(tabs).not.toContain("1px solid");
