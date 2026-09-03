@@ -571,15 +571,25 @@
               <label class="chk"><input id="ticket-reduce" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Reduce Only</label>
               <label class="chk"><input id="ticket-tpsl" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Take Profit / Stop Loss</label>
             </div>
-            <div id="ticket-tpsl-wrap" class="hidden pro-fields">
-              <div class="ticket-field">
-                <label for="ticket-tp" class="ticket-label">Take profit</label>
-                <input id="ticket-tp" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
-              </div>
-              <div class="ticket-field">
-                <label for="ticket-sl" class="ticket-label">Stop loss</label>
-                <input id="ticket-sl" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
-              </div>
+            <div id="ticket-tpsl-wrap" class="hidden tpsl-grid">
+              <input id="ticket-tp" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="TP Price" aria-label="Take profit price" />
+              <label class="tpsl-combo">
+                <span class="tpsl-combo-k">Gain</span>
+                <input id="ticket-tp-gain" type="text" inputmode="decimal" autocomplete="off" class="tpsl-combo-in" aria-label="Take profit gain" />
+                <select id="ticket-tp-unit" class="tpsl-combo-unit" aria-label="Take profit gain unit">
+                  <option value="pct" selected>%</option>
+                  <option value="usd">$</option>
+                </select>
+              </label>
+              <input id="ticket-sl" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="SL Price" aria-label="Stop loss price" />
+              <label class="tpsl-combo">
+                <span class="tpsl-combo-k">Loss</span>
+                <input id="ticket-sl-loss" type="text" inputmode="decimal" autocomplete="off" class="tpsl-combo-in" aria-label="Stop loss" />
+                <select id="ticket-sl-unit" class="tpsl-combo-unit" aria-label="Stop loss unit">
+                  <option value="pct" selected>%</option>
+                  <option value="usd">$</option>
+                </select>
+              </label>
             </div>
             </div>
             <div class="ticket-foot">

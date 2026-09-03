@@ -9,7 +9,13 @@ import {
   fundingCountdown,
   nextFundingMs,
   sealScalePayload,
+  formatTpslField,
   sizeFromAvailablePct,
+  tpslMovePct,
+  tpslPriceFromPct,
+  tpslPriceFromUsd,
+  tpslRefPx,
+  tpslUsdFromPrice,
   tvInterval,
   tvSymbol,
 } from "./ticket-math.js";
@@ -117,6 +123,19 @@ describe("ticket DOM", () => {
     expect(ticket).toContain('id="sum-liq-row"');
     expect(ticket).toContain('id="sum-margin-row"');
     expect(ticket).toContain("chk-box");
+    expect(ticket).toContain("Reduce Only");
+    expect(ticket).toContain("Take Profit / Stop Loss");
+    expect(ticket).toContain('placeholder="TP Price"');
+    expect(ticket).toContain('placeholder="SL Price"');
+    expect(ticket).toContain(">Gain<");
+    expect(ticket).toContain(">Loss<");
+    expect(ticket).toContain('id="ticket-tp-gain"');
+    expect(ticket).toContain('id="ticket-sl-loss"');
+    expect(ticket).toContain('id="ticket-tp-unit"');
+    expect(ticket).toContain('id="ticket-sl-unit"');
+    expect(ticket).toContain('class="hidden tpsl-grid"');
+    expect(ticket).not.toMatch(/ticket-label">Take profit</);
+    expect(ticket).not.toMatch(/ticket-label">Stop loss</);
     expect(html).toContain('id="market-chip-icon"');
     expect(html).toMatch(
       /id="market-chip-pair">[\s\S]*class="chip-chevron"[\s\S]*id="market-chip-lev" class="lev-badge"/
@@ -186,6 +205,13 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/html\.desk,[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.trade-shell \{[\s\S]*?overflow: hidden/);
     expect(js).toContain('classList.toggle("has-pro-extra", proOn)');
+    expect(css).toMatch(/\.ticket\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow: hidden/);
+    expect(css).not.toMatch(/\.ticket\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow-y:\s*auto/);
+    expect(css).toMatch(/\.tpsl-grid \{[\s\S]*?display:\s*grid/);
+    expect(css).toMatch(/\.tpsl-grid \{[\s\S]*?grid-template-columns:/);
+    expect(js).toContain("ticket-tp-gain");
+    expect(js).toContain("ticket-sl-loss");
+    expect(js).toContain("syncTpslFromPrices");
     const mainJs = readFileSync(join(root, "src/main.js"), "utf8");
     expect(mainJs).toContain('classList.toggle("desk", onDesk)');
   });
@@ -200,5 +226,33 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.hist-body th,[\s\S]*?text-decoration: none/);
     expect(js).not.toContain("border-t border-chrome");
     expect(js).toContain('{ class: "bal-table" }');
+  });
+});
+
+describe("TP/SL gain and loss", () => {
+  it("uses limit price when set, otherwise mark", () => {
+    expect(tpslRefPx(100, 99)).toBe(100);
+    expect(tpslRefPx("", 99)).toBe(99);
+    expect(tpslRefPx(0, 50)).toBe(50);
+  });
+
+  it("converts trigger price to gain/loss percent and back", () => {
+    expect(tpslMovePct(100, 110, true, "tp")).toBeCloseTo(10);
+    expect(tpslMovePct(100, 90, true, "sl")).toBeCloseTo(10);
+    expect(tpslMovePct(100, 90, false, "tp")).toBeCloseTo(10);
+    expect(tpslMovePct(100, 110, false, "sl")).toBeCloseTo(10);
+    expect(tpslPriceFromPct(100, 10, true, "tp")).toBeCloseTo(110);
+    expect(tpslPriceFromPct(100, 10, true, "sl")).toBeCloseTo(90);
+    expect(tpslPriceFromPct(100, 10, false, "tp")).toBeCloseTo(90);
+    expect(tpslPriceFromPct(100, 10, false, "sl")).toBeCloseTo(110);
+  });
+
+  it("converts trigger price to dollar PnL when size is known", () => {
+    expect(tpslUsdFromPrice(100, 110, 2, true, "tp")).toBeCloseTo(20);
+    expect(tpslUsdFromPrice(100, 90, 2, true, "sl")).toBeCloseTo(20);
+    expect(tpslPriceFromUsd(100, 20, 2, true, "tp")).toBeCloseTo(110);
+    expect(tpslPriceFromUsd(100, 20, 2, true, "sl")).toBeCloseTo(90);
+    expect(formatTpslField(10)).toBe("10");
+    expect(formatTpslField(1.25)).toBe("1.25");
   });
 });

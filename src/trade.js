@@ -36,10 +36,18 @@ import {
   estimateLiqPx,
   estimateSlippage,
   formatFeePct,
+  formatTpslField,
   fundingCountdown,
   marginRequired,
   orderValue,
+  roundPx,
   sizeFromAvailablePct,
+  toWire,
+  tpslMovePct,
+  tpslPriceFromPct,
+  tpslPriceFromUsd,
+  tpslRefPx,
+  tpslUsdFromPrice,
 } from "./ticket-math.js";
 import { mountChart } from "./tv-chart.js";
 import {
@@ -652,8 +660,63 @@ export function createTradeView(app) {
       setText("sum-payout-k", "Payout if " + legName);
       setText("sum-payout", Number.isFinite(pay) ? fmtUsd(pay) : "—");
     }
+    syncTpslFromPrices();
     renderTicketKind();
     renderTicketButton();
+  }
+
+  function tpslUnitOf(kind) {
+    const id = kind === "tp" ? "ticket-tp-unit" : "ticket-sl-unit";
+    return byId(id)?.value === "usd" ? "usd" : "pct";
+  }
+
+  function tpslSizeForUsd() {
+    const sz = coinSize();
+    return Number.isFinite(sz) && sz > 0 ? sz : 1;
+  }
+
+  function tpslRef() {
+    return tpslRefPx(num(fieldValue("ticket-price")), mark() || mid());
+  }
+
+  function syncTpslFromPrices() {
+    if (!byId("ticket-tpsl")?.checked) return;
+    const ref = tpslRef();
+    const isBuy = side === "buy";
+    const sz = tpslSizeForUsd();
+    const active = typeof document !== "undefined" && document.activeElement && document.activeElement.id;
+    for (const kind of ["tp", "sl"]) {
+      const gainId = kind === "tp" ? "ticket-tp-gain" : "ticket-sl-loss";
+      if (active === gainId) continue;
+      const priceId = kind === "tp" ? "ticket-tp" : "ticket-sl";
+      const px = num(fieldValue(priceId));
+      const el = byId(gainId);
+      if (!el) continue;
+      if (!Number.isFinite(px) || px <= 0 || !Number.isFinite(ref)) continue;
+      const v =
+        tpslUnitOf(kind) === "usd"
+          ? tpslUsdFromPrice(ref, px, sz, isBuy, kind)
+          : tpslMovePct(ref, px, isBuy, kind);
+      el.value = formatTpslField(v);
+    }
+  }
+
+  function applyTpslFromGain(kind) {
+    const ref = tpslRef();
+    const isBuy = side === "buy";
+    const sz = tpslSizeForUsd();
+    const gainId = kind === "tp" ? "ticket-tp-gain" : "ticket-sl-loss";
+    const priceId = kind === "tp" ? "ticket-tp" : "ticket-sl";
+    const raw = num(fieldValue(gainId));
+    const el = byId(priceId);
+    if (!el || !Number.isFinite(raw) || !Number.isFinite(ref)) return;
+    const px =
+      tpslUnitOf(kind) === "usd"
+        ? tpslPriceFromUsd(ref, raw, sz, isBuy, kind)
+        : tpslPriceFromPct(ref, raw, isBuy, kind);
+    if (!Number.isFinite(px) || px <= 0) return;
+    const mkt = currentMarket();
+    el.value = toWire(roundPx(px, mkt ? mkt.szDecimals : 5));
   }
 
   function applyPct(pct) {
@@ -2067,7 +2130,26 @@ export function createTradeView(app) {
       const on = !!byId("ticket-tpsl")?.checked;
       byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !on);
       byId("ticket-form")?.classList.toggle("has-tpsl-extra", on);
+      if (on) syncTpslFromPrices();
     });
+    byId("ticket-tp")?.addEventListener("input", () => {
+      syncTpslFromPrices();
+      updateEstimate();
+    });
+    byId("ticket-sl")?.addEventListener("input", () => {
+      syncTpslFromPrices();
+      updateEstimate();
+    });
+    byId("ticket-tp-gain")?.addEventListener("input", () => {
+      applyTpslFromGain("tp");
+      updateEstimate();
+    });
+    byId("ticket-sl-loss")?.addEventListener("input", () => {
+      applyTpslFromGain("sl");
+      updateEstimate();
+    });
+    byId("ticket-tp-unit")?.addEventListener("change", () => syncTpslFromPrices());
+    byId("ticket-sl-unit")?.addEventListener("change", () => syncTpslFromPrices());
     byId("lev-toggle")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
       byId("lev-pop")?.classList.toggle("hidden");

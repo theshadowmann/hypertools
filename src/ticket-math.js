@@ -105,6 +105,68 @@ export function estimateLiqPx(mark, leverage, isBuy) {
   return isBuy ? m * (1 - dist) : m * (1 + dist);
 }
 
+/** Limit price if set, otherwise mark/mid — used for TP/SL gain and loss %. */
+export function tpslRefPx(limitPx, markPx) {
+  const lim = Number(limitPx);
+  if (Number.isFinite(lim) && lim > 0) return lim;
+  const m = Number(markPx);
+  if (Number.isFinite(m) && m > 0) return m;
+  return NaN;
+}
+
+/**
+ * Favorable move from ref to trigger as a percent of ref.
+ * Long TP / short SL are above ref; long SL / short TP are below.
+ */
+export function tpslMovePct(refPx, triggerPx, isBuy, kind) {
+  const ref = Number(refPx);
+  const px = Number(triggerPx);
+  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(px) || px <= 0) return NaN;
+  const dir = isBuy ? 1 : -1;
+  if (kind === "sl") return (dir * (ref - px) * 100) / ref;
+  return (dir * (px - ref) * 100) / ref;
+}
+
+export function tpslPriceFromPct(refPx, pct, isBuy, kind) {
+  const ref = Number(refPx);
+  const p = Number(pct);
+  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(p)) return NaN;
+  const dir = isBuy ? 1 : -1;
+  const frac = p / 100;
+  if (kind === "sl") return ref * (1 - dir * frac);
+  return ref * (1 + dir * frac);
+}
+
+export function tpslUsdFromPrice(refPx, triggerPx, size, isBuy, kind) {
+  const ref = Number(refPx);
+  const px = Number(triggerPx);
+  const sz = Number(size);
+  if (!Number.isFinite(ref) || !Number.isFinite(px) || !Number.isFinite(sz) || sz <= 0) return NaN;
+  const dir = isBuy ? 1 : -1;
+  if (kind === "sl") return sz * dir * (ref - px);
+  return sz * dir * (px - ref);
+}
+
+export function tpslPriceFromUsd(refPx, usd, size, isBuy, kind) {
+  const ref = Number(refPx);
+  const u = Number(usd);
+  const sz = Number(size);
+  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(u) || !Number.isFinite(sz) || sz <= 0) return NaN;
+  const dir = isBuy ? 1 : -1;
+  const delta = u / sz;
+  if (kind === "sl") return ref - dir * delta;
+  return ref + dir * delta;
+}
+
+export function formatTpslField(n) {
+  if (!Number.isFinite(n)) return "";
+  const abs = Math.abs(n);
+  const digits = abs >= 100 ? 2 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  let s = n.toFixed(digits);
+  if (s.includes(".")) s = s.replace(/0+$/, "").replace(/\.$/, "");
+  return s === "-0" ? "0" : s;
+}
+
 export function estimateSlippage(orderPx, mid, isMarket) {
   const px = Number(orderPx);
   const m = Number(mid);
