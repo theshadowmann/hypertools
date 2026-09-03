@@ -720,6 +720,12 @@ export function createTradeView(app) {
     el.value = toWire(roundPx(px, mkt ? mkt.szDecimals : 5));
   }
 
+  function setTpslOpen(on) {
+    const wrap = byId("ticket-tpsl-wrap");
+    wrap?.classList.toggle("is-idle", !on);
+    wrap?.setAttribute("aria-hidden", on ? "false" : "true");
+  }
+
   function syncTwapMinutes() {
     const total = twapMinutesFromParts(
       fieldValue("ticket-twap-days"),
@@ -806,12 +812,8 @@ export function createTradeView(app) {
     byId("ticket-stop-limit-price")?.classList.toggle("hidden", next !== "stop-limit");
     const tpslOk = next === "market" || next === "limit";
     byId("ticket-tpsl-lbl")?.classList.toggle("hidden", !tpslOk);
-    byId("ticket-tpsl-wrap")?.classList.toggle("tpsl-collapsed", !tpslOk);
-    if (tpslOk) {
-      byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !byId("ticket-tpsl")?.checked);
-    } else {
-      byId("ticket-tpsl-wrap")?.classList.add("hidden");
-    }
+    byId("ticket-tpsl-pad")?.classList.toggle("tpsl-collapsed", !tpslOk);
+    setTpslOpen(tpslOk && !!byId("ticket-tpsl")?.checked);
     byId("ticket-form")?.classList.toggle("has-tpsl-extra", tpslOk);
     byId("ticket-random-lbl")?.classList.toggle("hidden", next !== "twap");
     if (next === "twap") syncTwapMinutes();
@@ -2152,7 +2154,7 @@ export function createTradeView(app) {
     byId("ticket-slip")?.addEventListener("input", updateEstimate);
     byId("ticket-tpsl")?.addEventListener("change", () => {
       const on = !!byId("ticket-tpsl")?.checked;
-      byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !on);
+      setTpslOpen(on);
       if (on) syncTpslFromPrices();
     });
     byId("ticket-tp")?.addEventListener("input", () => {

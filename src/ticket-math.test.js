@@ -142,7 +142,10 @@ describe("ticket DOM", () => {
     expect(ticket).toContain('id="ticket-sl-loss"');
     expect(ticket).toContain('id="ticket-tp-unit"');
     expect(ticket).toContain('id="ticket-sl-unit"');
-    expect(ticket).toContain('class="hidden tpsl-grid"');
+    expect(ticket).toContain('id="ticket-tpsl-pad"');
+    expect(ticket).toContain('class="tpsl-pad"');
+    expect(ticket).toContain('class="tpsl-grid is-idle"');
+    expect(ticket).not.toContain('class="hidden tpsl-grid"');
     expect(ticket).not.toMatch(/ticket-label">Take profit</);
     expect(ticket).not.toMatch(/ticket-label">Stop loss</);
     expect(html).toContain('id="market-chip-icon"');
@@ -212,7 +215,10 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.ticket:not\(\.has-pro-extra\) \.ticket-scroll \{[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow: hidden/);
     expect(css).not.toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow-y:\s*auto/);
-    expect(css).toMatch(/#ticket-tpsl-wrap\.tpsl-grid\.hidden \{[\s\S]*?visibility: hidden/);
+    expect(css).toMatch(/\.tpsl-pad \{[\s\S]*?min-height: 56px/);
+    expect(css).toMatch(/\.tpsl-grid\.is-idle \{[\s\S]*?visibility: hidden/);
+    expect(css).toMatch(/\.chk-row \{[\s\S]*?flex-direction: column/);
+    expect(js).toContain("setTpslOpen");
     expect(css).toMatch(/grid-template-columns: minmax\(0, 1fr\) 248px 360px/);
     expect(html).toContain('placeholder="Day(s)"');
     expect(html).toContain("Running Time (5m - 7d)");

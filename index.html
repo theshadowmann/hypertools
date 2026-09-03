@@ -580,7 +580,8 @@
               <label class="chk"><input id="ticket-reduce" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Reduce Only</label>
               <label id="ticket-tpsl-lbl" class="chk"><input id="ticket-tpsl" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Take Profit / Stop Loss</label>
             </div>
-            <div id="ticket-tpsl-wrap" class="hidden tpsl-grid">
+            <div id="ticket-tpsl-pad" class="tpsl-pad">
+            <div id="ticket-tpsl-wrap" class="tpsl-grid is-idle" aria-hidden="true">
               <input id="ticket-tp" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="TP Price" aria-label="Take profit price" />
               <label class="tpsl-combo">
                 <span class="tpsl-combo-k">Gain</span>
@@ -599,6 +600,7 @@
                   <option value="usd">$</option>
                 </select>
               </label>
+            </div>
             </div>
             </div>
             <div class="ticket-foot">
