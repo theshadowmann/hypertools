@@ -172,6 +172,21 @@ describe("picker 24h sort chrome", () => {
     expect(css).toMatch(/th button \{[\s\S]*width: 100%;/);
     expect(css).not.toMatch(/\.mp-row td \{\s*padding: 5px 10px/);
   });
+
+  it("has no divider lines under picker tabs or between pair rows", () => {
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    const tabs = css.slice(css.indexOf(".mp-tabs {"), css.indexOf(".mp-tab {"));
+    const cells = css.slice(css.lastIndexOf(".mp-table td {"), css.indexOf(".mp-mkt {"));
+    const foot = css.slice(css.indexOf(".mp-foot {"), css.indexOf(".stats-metrics {"));
+    expect(tabs).toContain("border-bottom: 0");
+    expect(tabs).not.toContain("1px solid");
+    expect(css).toMatch(/\.mp-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--accent-primary\)/);
+    expect(cells).toContain("border-top: 0");
+    expect(cells).not.toContain("1px solid");
+    expect(foot).toContain("border-top: 0");
+    expect(foot).not.toContain("1px solid");
+    expect(css).toMatch(/\.mp-row:hover \{ background: var\(--bg-input\); \}/);
+  });
 });
 
 describe("funding and display", () => {

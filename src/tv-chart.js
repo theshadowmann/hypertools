@@ -13,10 +13,12 @@ export const TV_WIDGET_PAGE = "https://www.tradingview-widget.com/embed-widget/a
 export const TV_EMBED_PAGE = "/embed-widget/advanced-chart/";
 export const TV_SUPPORT_HOST = "https://www.tradingview.com";
 
-/** Same navy as the chart pane (`--bg-surface`). Toolbars must match this, not black. */
+/** HyperTools navy. Used only by the unused same-origin snapshot CSS, never the live widget. */
 export const TV_CHROME = "#0F172A";
 export const TV_ACCENT = "#06B6D4";
 export const TV_ICE = "#F8FAFC";
+/** TradingView stock dark pane. Live iframe placeholder only — not a series override. */
+export const TV_PANE = "#131722";
 export const TV_CHROME_CSS_PATH = "/tv-chrome.css";
 export const TV_CHROME_CSS_URL = TV_CHROME_CSS_PATH;
 
@@ -209,14 +211,19 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
 }
 `;
 
-export const TV_OVERRIDES = {
-  "paneProperties.background": TV_CHROME,
-  "paneProperties.backgroundType": "solid",
-  "paneProperties.backgroundGradientStartColor": TV_CHROME,
-  "paneProperties.backgroundGradientEndColor": TV_CHROME,
-  "scalesProperties.backgroundColor": TV_CHROME,
-  "scalesProperties.bgColor": TV_CHROME,
-};
+/** Drop HyperTools navy/cyan plot, scale, and toolbar paints so TV's dark theme wins. */
+export function stripTvPlotPaint(cfg) {
+  if (!cfg || typeof cfg !== "object") return cfg;
+  delete cfg.backgroundColor;
+  delete cfg.toolbar_bg;
+  delete cfg.gridColor;
+  delete cfg.overrides;
+  delete cfg.custom_css_url;
+  delete cfg.loading_screen;
+  cfg.colorTheme = "dark";
+  cfg.theme = "dark";
+  return cfg;
+}
 
 export function tvWidgetConfig({ symbol, interval }) {
   return {
@@ -228,9 +235,6 @@ export function tvWidgetConfig({ symbol, interval }) {
     colorTheme: "dark",
     style: "1",
     locale: "en",
-    backgroundColor: TV_CHROME,
-    toolbar_bg: TV_CHROME,
-    gridColor: "rgba(51, 65, 85, 0.45)",
     hide_top_toolbar: false,
     hide_legend: false,
     hide_side_toolbar: false,
@@ -242,8 +246,6 @@ export function tvWidgetConfig({ symbol, interval }) {
     details: false,
     hotlist: false,
     enable_publishing: false,
-    loading_screen: { backgroundColor: TV_CHROME },
-    overrides: { ...TV_OVERRIDES },
     support_host: TV_SUPPORT_HOST,
   };
 }
@@ -282,19 +284,8 @@ export function stampTvChrome(iframe) {
     }
   }
   if (!cfg || typeof cfg !== "object") cfg = {};
-  const overrides = { ...(cfg.overrides && typeof cfg.overrides === "object" ? cfg.overrides : {}), ...TV_OVERRIDES };
-  cfg.backgroundColor = TV_CHROME;
-  cfg.toolbar_bg = TV_CHROME;
-  delete cfg.custom_css_url;
-  cfg.colorTheme = "dark";
-  cfg.theme = cfg.theme || "dark";
-  cfg.overrides = overrides;
-  cfg.loading_screen = {
-    ...(cfg.loading_screen && typeof cfg.loading_screen === "object" ? cfg.loading_screen : {}),
-    backgroundColor: TV_CHROME,
-  };
+  stripTvPlotPaint(cfg);
   const dest = new URL(TV_WIDGET_PAGE);
-  dest.searchParams.set("overrides", JSON.stringify(TV_OVERRIDES));
   dest.hash = encodeURIComponent(JSON.stringify(cfg));
   iframe.setAttribute("src", dest.toString());
 }
@@ -348,18 +339,18 @@ export function mountTvChart(container, { coin, interval, kind, base, quote, hlC
   wrap.className = "tradingview-widget-container";
   wrap.style.height = "100%";
   wrap.style.width = "100%";
-  wrap.style.background = TV_CHROME;
+  wrap.style.background = TV_PANE;
   const widget = document.createElement("div");
   widget.className = "tradingview-widget-container__widget";
   widget.style.height = "100%";
   widget.style.width = "100%";
-  widget.style.background = TV_CHROME;
+  widget.style.background = TV_PANE;
   wrap.appendChild(widget);
   const iframe = document.createElement("iframe");
   iframe.setAttribute("title", "TradingView chart");
   iframe.setAttribute("allowtransparency", "true");
   iframe.setAttribute("scrolling", "no");
-  iframe.style.cssText = "width:100%;height:100%;border:0;margin:0;display:block;background:" + TV_CHROME;
+  iframe.style.cssText = "width:100%;height:100%;border:0;margin:0;display:block;background:" + TV_PANE;
   const cfg = tvWidgetConfig({ symbol, interval });
   iframe.setAttribute("src", TV_WIDGET_PAGE + "#" + encodeURIComponent(JSON.stringify(cfg)));
   stampTvChrome(iframe);

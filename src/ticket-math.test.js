@@ -269,6 +269,20 @@ describe("ticket DOM", () => {
     expect(js).not.toContain("border-t border-chrome");
     expect(js).toContain('{ class: "bal-table" }');
   });
+
+  it("fills the size slider track left of the thumb with Deep Teal", () => {
+    const css = readFileSync(join(root, "src/style.css"), "utf8");
+    const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    expect(css).toMatch(/\.pct-slider \{[\s\S]*?--fill: 0%/);
+    expect(css).toMatch(/::-webkit-slider-runnable-track \{[\s\S]*linear-gradient\([\s\S]*var\(--accent-primary\)[\s\S]*var\(--fill\)/);
+    expect(css).toMatch(/::-moz-range-track \{[\s\S]*linear-gradient\([\s\S]*var\(--accent-primary\)[\s\S]*var\(--fill\)/);
+    expect(css).toMatch(/::-webkit-slider-thumb \{[\s\S]*border-radius: 50%/);
+    expect(css).toMatch(/\.pct-ticks span\.on \{[\s\S]*background: var\(--accent-primary\)/);
+    expect(js).toContain("paintRangeFill(range, document.querySelector(\".pct-ticks\"))");
+    expect(html).toMatch(/id="ticket-pct"[^>]*class="pct-slider"/);
+    expect(html).toMatch(/id="lev-range"[^>]*class="pct-slider"/);
+  });
 });
 
 describe("TP/SL gain and loss", () => {

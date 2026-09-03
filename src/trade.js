@@ -50,6 +50,7 @@ import {
   tpslUsdFromPrice,
   twapMinutesFromParts,
 } from "./ticket-math.js";
+import { paintRangeFill } from "./range-fill.js";
 import { mountChart } from "./tv-chart.js";
 import {
   coinIconUrl,
@@ -758,6 +759,7 @@ export function createTradeView(app) {
     const range = byId("ticket-pct");
     if (box) box.value = String(Math.round(pct));
     if (range) range.value = String(Math.round(pct));
+    paintRangeFill(range, document.querySelector(".pct-ticks"));
     updateEstimate();
   }
 
@@ -1287,6 +1289,7 @@ export function createTradeView(app) {
     if (range) {
       range.max = String(max);
       range.value = String(leverage);
+      paintRangeFill(range);
     }
     if (inp) inp.value = String(Math.round(leverage));
   }
@@ -2153,7 +2156,9 @@ export function createTradeView(app) {
     const range = byId("ticket-pct");
     const box = byId("ticket-pct-box");
     range?.addEventListener("input", () => applyPct(num(range.value) || 0));
+    box?.addEventListener("input", () => applyPct(num(box.value) || 0));
     box?.addEventListener("change", () => applyPct(num(box.value) || 0));
+    paintRangeFill(range, document.querySelector(".pct-ticks"));
     byId("ticket-size")?.addEventListener("input", updateEstimate);
     byId("ticket-price")?.addEventListener("input", updateEstimate);
     byId("ticket-slip")?.addEventListener("input", updateEstimate);
@@ -2188,8 +2193,10 @@ export function createTradeView(app) {
       byId("lev-pop")?.classList.toggle("hidden");
     });
     byId("lev-range")?.addEventListener("input", () => {
+      const levRange = byId("lev-range");
       const inp = byId("lev-input");
-      if (inp) inp.value = byId("lev-range").value;
+      if (inp && levRange) inp.value = levRange.value;
+      paintRangeFill(levRange);
     });
     byId("lev-apply")?.addEventListener("click", applyLeverage);
     byId("mode-isolated")?.addEventListener("click", () => {

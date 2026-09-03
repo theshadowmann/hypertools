@@ -11,10 +11,12 @@ import {
   officialTvWidgetSrc,
   scheduleTvFallback,
   stampTvChrome,
+  stripTvPlotPaint,
   TV_CHROME,
   TV_CHROME_CSS,
   TV_EMBED_PAGE,
   TV_PAINT_MS,
+  TV_PANE,
   TV_SCRIPT,
   TV_WIDGET_PAGE,
 } from "./tv-chart.js";
@@ -38,7 +40,7 @@ describe("TradingView embed", () => {
     expect(src.startsWith("/embed-widget/")).toBe(false);
     const parsed = new URL(src);
     expect(parsed.origin).toBe("https://www.tradingview-widget.com");
-    expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
+    expect(parsed.searchParams.get("overrides")).toBeNull();
     const hash = decodeURIComponent(parsed.hash.slice(1));
     expect(hash).toContain("HYPERLIQUID:BTCUSDC.P");
     expect(hash).toContain('"hide_top_toolbar":false');
@@ -46,17 +48,23 @@ describe("TradingView embed", () => {
     expect(hash).toContain('"hide_side_toolbar":false');
     expect(hash).toContain('"allow_symbol_change":false');
     expect(hash).toContain('"hide_volume":false');
-    expect(hash).toContain('"backgroundColor":"#0F172A"');
-    expect(hash).toContain('"toolbar_bg":"#0F172A"');
     expect(hash).not.toContain("custom_css_url");
     expect(hash).not.toContain("/tv-chrome.css");
     expect(hash).toContain('"colorTheme":"dark"');
-    expect(hash).toContain('"paneProperties.background":"#0F172A"');
-    expect(hash).toContain('"paneProperties.backgroundType":"solid"');
-    expect(hash).toContain('"scalesProperties.backgroundColor":"#0F172A"');
+    expect(hash).toContain('"theme":"dark"');
+    expect(hash).not.toContain("toolbar_bg");
+    expect(hash).not.toContain("backgroundColor");
+    expect(hash).not.toContain("paneProperties");
+    expect(hash).not.toContain("scalesProperties");
+    expect(hash).not.toContain("#0F172A");
+    expect(hash).not.toContain("#06B6D4");
+    expect(hash).not.toContain("gridColor");
     expect(hash).not.toContain('"studies"');
     expect(hash).toContain('"withdateranges":false');
     expect(hash).toContain('"save_image":false');
+    expect(TV_PANE).toBe("#131722");
+    expect(iframe.getAttribute("style")).toContain("#131722");
+    expect(iframe.getAttribute("style")).not.toContain("#0F172A");
     expect(TV_CHROME_CSS).toContain(".layout__area--top");
     expect(TV_CHROME_CSS).toContain(".layout__area--left");
     expect(TV_CHROME_CSS).toContain("--tv-color-pane-background");
@@ -153,14 +161,21 @@ describe("TradingView embed", () => {
     expect(host.querySelector(".hl-chart-host") || host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
   });
 
-  it("stamps toolbar_bg onto the widget iframe hash so drawing and top bars match the pane", () => {
+  it("strips HyperTools pane/scale/toolbar paints so stock TV dark colors apply", () => {
     const iframe = document.createElement("iframe");
     const cfg = {
       symbol: "HYPERLIQUID:BTCUSDC.P",
       theme: "dark",
       backgroundColor: "#0F172A",
+      toolbar_bg: "#0F172A",
+      gridColor: "rgba(51, 65, 85, 0.45)",
       hide_top_toolbar: false,
       hide_side_toolbar: false,
+      overrides: {
+        "paneProperties.background": "#0F172A",
+        "scalesProperties.backgroundColor": "#0F172A",
+        "mainSeriesProperties.candleStyle.upColor": "#06B6D4",
+      },
     };
     iframe.setAttribute(
       "src",
@@ -170,14 +185,31 @@ describe("TradingView embed", () => {
     const src = iframe.getAttribute("src");
     const parsed = new URL(src);
     const hash = decodeURIComponent(parsed.hash.slice(1));
-    expect(hash).toContain('"toolbar_bg":"#0F172A"');
+    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
     expect(hash).not.toContain("custom_css_url");
-    expect(hash).toContain('"paneProperties.background":"#0F172A"');
-    expect(hash).toContain('"paneProperties.backgroundType":"solid"');
+    expect(hash).not.toContain("toolbar_bg");
+    expect(hash).not.toContain("backgroundColor");
+    expect(hash).not.toContain("paneProperties");
+    expect(hash).not.toContain("scalesProperties");
+    expect(hash).not.toContain("candleStyle");
+    expect(hash).not.toContain("#0F172A");
+    expect(hash).not.toContain("#06B6D4");
+    expect(hash).toContain('"colorTheme":"dark"');
+    expect(hash).toContain('"theme":"dark"');
     expect(hash).toContain('"hide_top_toolbar":false');
     expect(hash).toContain('"hide_side_toolbar":false');
-    expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
+    expect(parsed.searchParams.get("overrides")).toBeNull();
     expect(TV_CHROME).toBe("#0F172A");
+    const stripped = stripTvPlotPaint({
+      backgroundColor: "#0F172A",
+      toolbar_bg: "#0F172A",
+      overrides: { "scalesProperties.bgColor": "#0F172A" },
+      theme: "light",
+    });
+    expect(stripped.backgroundColor).toBeUndefined();
+    expect(stripped.overrides).toBeUndefined();
+    expect(stripped.colorTheme).toBe("dark");
+    expect(stripped.theme).toBe("dark");
   });
 
   it("rewrites a same-origin embed-widget src to the official widget host", () => {
@@ -188,8 +220,9 @@ describe("TradingView embed", () => {
     expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
     expect(src.startsWith("/embed-widget/")).toBe(false);
     const parsed = new URL(src);
-    expect(parsed.searchParams.get("overrides")).toContain('"paneProperties.background":"#0F172A"');
-    expect(decodeURIComponent(parsed.hash.slice(1))).toContain('"toolbar_bg":"#0F172A"');
+    expect(parsed.searchParams.get("overrides")).toBeNull();
+    expect(decodeURIComponent(parsed.hash.slice(1))).not.toContain("toolbar_bg");
+    expect(decodeURIComponent(parsed.hash.slice(1))).not.toContain("#0F172A");
     expect(decodeURIComponent(parsed.hash.slice(1))).not.toContain("custom_css_url");
   });
 
@@ -333,8 +366,12 @@ describe("deep teal theme", () => {
     expect(tw).not.toContain("#242525");
     expect(tw).not.toContain("#1A2B56");
     expect(tv).toContain('export const TV_CHROME = "#0F172A"');
-    expect(tv).toContain("backgroundColor: TV_CHROME");
-    expect(tv).toContain("toolbar_bg: TV_CHROME");
+    expect(tv).toContain('export const TV_PANE = "#131722"');
+    expect(tv).not.toContain("backgroundColor: TV_CHROME");
+    expect(tv).not.toContain("toolbar_bg: TV_CHROME");
+    expect(tv).not.toContain("paneProperties.background");
+    expect(tv).not.toContain("scalesProperties.backgroundColor");
+    expect(tv).not.toContain("scalesProperties.bgColor");
     expect(tv).toContain("export const TV_CHROME_CSS_PATH = \"/tv-chrome.css\"");
     expect(tv).toContain("function tvChromeCssUrl");
     expect(tv).toContain("delete cfg.custom_css_url");
