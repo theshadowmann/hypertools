@@ -536,7 +536,10 @@
               <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="Start (USDC)" aria-label="Start (USDC)" />
               <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="End (USDC)" aria-label="End (USDC)" />
               <div class="scale-pair">
-                <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" placeholder="Total Orders" aria-label="Total Orders" />
+                <label class="scale-skew">
+                  <span class="scale-skew-k">Total Orders</span>
+                  <input id="ticket-count" type="text" inputmode="numeric" autocomplete="off" class="scale-skew-in" value="5" placeholder="Total Orders" aria-label="Total Orders" />
+                </label>
                 <label class="scale-skew">
                   <span class="scale-skew-k">Size Skew</span>
                   <input id="ticket-skew" type="text" inputmode="decimal" autocomplete="off" class="scale-skew-in" value="1.00" aria-label="Size Skew" />
