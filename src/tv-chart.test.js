@@ -12,6 +12,7 @@ import {
   scheduleTvFallback,
   stampTvChrome,
   stripTvPlotPaint,
+  tvWidgetConfig,
   TV_CHROME,
   TV_CHROME_CSS,
   TV_EMBED_PAGE,
@@ -202,14 +203,44 @@ describe("TradingView embed", () => {
     expect(TV_CHROME).toBe("#0F172A");
     const stripped = stripTvPlotPaint({
       backgroundColor: "#0F172A",
+      studies_overrides: { "volume.volume.color.0": "#06B6D4" },
       toolbar_bg: "#0F172A",
       overrides: { "scalesProperties.bgColor": "#0F172A" },
       theme: "light",
     });
     expect(stripped.backgroundColor).toBeUndefined();
     expect(stripped.overrides).toBeUndefined();
+    expect(stripped.studies_overrides).toBeUndefined();
     expect(stripped.colorTheme).toBe("dark");
     expect(stripped.theme).toBe("dark");
+  });
+
+  it("leaves price and time scales on stock TV dark, not HyperTools navy or cyan", () => {
+    const cfg = tvWidgetConfig({ symbol: "HYPERLIQUID:BTCUSDC.P", interval: "15m" });
+    expect(cfg.theme).toBe("dark");
+    expect(cfg.colorTheme).toBe("dark");
+    expect(cfg.overrides).toBeUndefined();
+    expect(JSON.stringify(cfg)).not.toMatch(/scalesProperties/);
+    expect(JSON.stringify(cfg)).not.toContain("#0F172A");
+    expect(JSON.stringify(cfg)).not.toContain("#06B6D4");
+    const stripped = stripTvPlotPaint({
+      colorTheme: "dark",
+      overrides: {
+        "scalesProperties.backgroundColor": "#0F172A",
+        "scalesProperties.bgColor": "#0F172A",
+        "scalesProperties.textColor": "#06B6D4",
+        "scalesProperties.lineColor": "#06B6D4",
+      },
+    });
+    expect(stripped.overrides).toBeUndefined();
+    expect(JSON.stringify(stripped)).not.toMatch(/scalesProperties/);
+    expect(JSON.stringify(stripped)).not.toContain("#06B6D4");
+    const host = document.createElement("div");
+    mountTvChart(host, { coin: "BTC", interval: "15m" });
+    const hash = decodeURIComponent(new URL(host.querySelector("iframe").getAttribute("src")).hash.slice(1));
+    expect(hash).not.toContain("scalesProperties");
+    expect(hash).not.toContain("#06B6D4");
+    expect(hash).toContain('"theme":"dark"');
   });
 
   it("rewrites a same-origin embed-widget src to the official widget host", () => {
@@ -370,8 +401,8 @@ describe("deep teal theme", () => {
     expect(tv).not.toContain("backgroundColor: TV_CHROME");
     expect(tv).not.toContain("toolbar_bg: TV_CHROME");
     expect(tv).not.toContain("paneProperties.background");
-    expect(tv).not.toContain("scalesProperties.backgroundColor");
-    expect(tv).not.toContain("scalesProperties.bgColor");
+    expect(tv).not.toMatch(/"scalesProperties\.backgroundColor":/);
+    expect(tv).not.toMatch(/"scalesProperties\.bgColor":/);
     expect(tv).toContain("export const TV_CHROME_CSS_PATH = \"/tv-chrome.css\"");
     expect(tv).toContain("function tvChromeCssUrl");
     expect(tv).toContain("delete cfg.custom_css_url");

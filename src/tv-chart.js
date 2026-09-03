@@ -211,13 +211,18 @@ html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
 }
 `;
 
-/** Drop HyperTools navy/cyan plot, scale, and toolbar paints so TV's dark theme wins. */
+/**
+ * Drop HyperTools navy/cyan plot, scale, and toolbar paints so TV's dark theme wins.
+ * Price/time axes, last-price badge, and scale lines come from `theme: dark` only —
+ * never HyperTools navy scale fills or cyan axis text.
+ */
 export function stripTvPlotPaint(cfg) {
   if (!cfg || typeof cfg !== "object") return cfg;
   delete cfg.backgroundColor;
   delete cfg.toolbar_bg;
   delete cfg.gridColor;
   delete cfg.overrides;
+  delete cfg.studies_overrides;
   delete cfg.custom_css_url;
   delete cfg.loading_screen;
   cfg.colorTheme = "dark";
