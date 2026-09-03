@@ -1,4 +1,4 @@
-import { bindConnectClick } from "./nav-connect.js";
+import { bindConnectCapture, bindConnectClick } from "./nav-connect.js";
 
 /**
  * Page listeners. Landing / Portfolio nodes are optional so a missing
@@ -24,6 +24,7 @@ export function bindAppListeners({
       connectFromNav();
     });
   }
+  bindConnectCapture(connectFromNav);
 
   el?.pasteForm?.addEventListener("submit", (ev) => {
     ev.preventDefault();

@@ -16,11 +16,9 @@ import { deskUrl, viewFromLocation } from "./routes.js";
 import { bindAppListeners } from "./app-bind.js";
 import {
   CHECK_POPUP_MSG,
-  ensureWalletMenu,
-  fillWalletMenu,
-  hideWalletMenu,
   OPENING_WALLET_MSG,
-  positionWalletMenu,
+  bindConnectCapture,
+  closeConnectModal,
   runConnectFromNav,
   showConnectStatus,
 } from "./nav-connect.js";
@@ -289,6 +287,7 @@ async function connectWallet(provider) {
       onDisconnect: disconnect,
     });
     setAddress(addr, "wallet");
+    closeConnectModal();
   } catch (err) {
     const msg = (err && err.message) || "Wallet connection was rejected.";
     showPasteError(msg);
@@ -332,63 +331,50 @@ function renderChrome() {
   }
 }
 
-function walletMenu() {
-  el.navWalletMenu = ensureWalletMenu();
-  return el.navWalletMenu;
-}
-
 function hideNavWalletMenu() {
-  hideWalletMenu(walletMenu());
-}
-
-function showNavWalletMenu(targets) {
-  const menu = walletMenu();
-  fillWalletMenu(menu, targets, (t) => {
-    showConnectStatus(CHECK_POPUP_MSG);
-    if (tradeView && typeof tradeView.setStatus === "function") {
-      tradeView.setStatus(CHECK_POPUP_MSG);
-    }
-    connectWallet(t.provider);
-  });
-  positionWalletMenu(menu, el.navConnect || document.getElementById("btn-nav-connect"));
-  menu.classList.remove("hidden");
-  menu.removeAttribute("hidden");
+  /* dropdown retired; modal is the picker */
 }
 
 function connectFromNav() {
-  el.navConnect = el.navConnect || document.getElementById("btn-nav-connect");
-  walletMenu();
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("eip6963:requestProvider"));
+  try {
+    el.navConnect = el.navConnect || document.getElementById("btn-nav-connect");
+    return runConnectFromNav({
+      getDiscovered: () => discoveredList,
+      discoveredList,
+      ethereum: typeof window !== "undefined" ? window.ethereum : null,
+      connectWallet: (provider) => {
+        showConnectStatus(CHECK_POPUP_MSG);
+        if (tradeView && typeof tradeView.setStatus === "function") {
+          tradeView.setStatus(CHECK_POPUP_MSG);
+        }
+        return connectWallet(provider);
+      },
+      refreshDiscovery: () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("eip6963:requestProvider"));
+        }
+      },
+      onOpening: (msg) => {
+        if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg || OPENING_WALLET_MSG);
+      },
+      onNoWallet: (msg) => {
+        showConnectStatus(msg, "err");
+        if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg, "err");
+      },
+      onError: (msg) => {
+        showConnectStatus(msg, "err");
+        if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg, "err");
+      },
+    });
+  } catch (err) {
+    const msg = (err && err.message) || String(err);
+    showConnectStatus(msg, "err");
+    if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg, "err");
+    return { kind: "error", message: msg };
   }
-  return runConnectFromNav({
-    discoveredList,
-    ethereum: typeof window !== "undefined" ? window.ethereum : null,
-    connectWallet: (provider) => {
-      showConnectStatus(CHECK_POPUP_MSG);
-      if (tradeView && typeof tradeView.setStatus === "function") {
-        tradeView.setStatus(CHECK_POPUP_MSG);
-      }
-      return connectWallet(provider);
-    },
-    showMenu: showNavWalletMenu,
-    hideMenu: hideNavWalletMenu,
-    refreshDiscovery: () => {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("eip6963:requestProvider"));
-      }
-    },
-    onOpening: (msg) => {
-      if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg || OPENING_WALLET_MSG);
-    },
-    onNoWallet: (msg) => {
-      showConnectStatus(msg, "err");
-      if (tradeView && typeof tradeView.setStatus === "function") tradeView.setStatus(msg, "err");
-    },
-  });
 }
 
-el.navWalletMenu = ensureWalletMenu();
+bindConnectCapture(connectFromNav);
 
 bindAppListeners({
   el,

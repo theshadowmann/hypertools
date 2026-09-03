@@ -71,7 +71,8 @@ export default defineConfig({
     target: "es2020",
   },
   server: {
-    port: 4173,
+    port: 5173,
+    strictPort: false,
     host: true,
     headers: { "Content-Security-Policy": csp },
   },

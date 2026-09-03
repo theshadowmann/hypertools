@@ -9,13 +9,12 @@ import { BUILDER_ADDRESS, sealOrderPayload, assertCanTrade } from "./order-build
 import { bindAppListeners } from "./app-bind.js";
 import {
   CHECK_POPUP_MSG,
-  ensureWalletMenu,
-  fillWalletMenu,
   NO_WALLET_MSG,
   OPENING_WALLET_MSG,
+  resetConnectInFlightForTests,
   runConnectFromNav,
-  showConnectStatus,
 } from "./nav-connect.js";
+import { closeConnectModal, resetConnectCaptureForTests } from "./connect-modal.js";
 import {
   createWalletDiscovery,
   walletKind,
@@ -24,19 +23,33 @@ import {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function mmEntry() {
+function mmEntry(request) {
   return {
     info: { uuid: "mm", name: "MetaMask", rdns: "io.metamask" },
-    provider: { isMetaMask: true, request: () => {} },
+    provider: { isMetaMask: true, request: request || (() => {}) },
   };
 }
 
-function rabbyEntry() {
+function rabbyEntry(request) {
   return {
     info: { uuid: "rb", name: "Rabby Wallet", rdns: "io.rabby" },
-    provider: { isRabby: true, request: () => {} },
+    provider: { isRabby: true, request: request || (() => {}) },
   };
 }
+
+function connectDom() {
+  document.body.innerHTML =
+    '<span id="nav-connect-status"></span>' +
+    '<button id="btn-nav-connect" type="button">Connect to trade</button>' +
+    '<p id="ticket-status"></p>' +
+    '<button id="ticket-submit" type="button" class="ticket-submit connect">Connect wallet</button>';
+}
+
+afterEach(() => {
+  resetConnectInFlightForTests();
+  closeConnectModal();
+  delete window.ethereum;
+});
 
 describe("connect wiring", () => {
   it("keeps guardProvider on the connectWallet path (embed-shell import must not drop it)", () => {
@@ -45,12 +58,16 @@ describe("connect wiring", () => {
     expect(src).toMatch(/const guarded = guardProvider\(provider\)/);
     expect(src).toMatch(/connectFromNav: \(\) => connectFromNav\(\)/);
     expect(src).toMatch(/bindAppListeners\(/);
+    expect(src).toMatch(/bindConnectCapture\(connectFromNav\)/);
     const bind = readFileSync(join(root, "src/app-bind.js"), "utf8");
     expect(bind).toMatch(/el\?\.pasteForm\?\.addEventListener/);
     expect(bind).not.toMatch(/el\.pasteForm\.addEventListener/);
     const nav = readFileSync(join(root, "src/nav-connect.js"), "utf8");
+    const modal = readFileSync(join(root, "src/connect-modal.js"), "utf8");
     expect(nav).not.toMatch(/setView/);
-    expect(nav).toContain("Install MetaMask or Rabby");
+    expect(nav).toContain("NO_WALLET_MSG");
+    expect(nav).toContain("openConnectModal");
+    expect(modal).toContain("Install MetaMask or Rabby");
   });
 
   it("header Connect and ticket Connect wallet both call connectFromNav", () => {
@@ -58,65 +75,22 @@ describe("connect wiring", () => {
     const bind = readFileSync(join(root, "src/app-bind.js"), "utf8");
     const trade = readFileSync(join(root, "src/trade.js"), "utf8");
     expect(bind).toContain("bindConnectClick(navBtn");
+    expect(bind).toContain("bindConnectCapture(connectFromNav)");
     expect(bind.indexOf("bindConnectClick")).toBeLessThan(bind.indexOf("pasteForm"));
     expect(main).toContain("connectFromNav,");
     expect(trade).toContain('const ticketSubmit = byId("ticket-submit")');
     expect(trade).toContain("ticketSubmit.addEventListener(\"click\", onTicketConnect)");
     expect(trade).toContain("ticketSubmit.onclick = onTicketConnect");
     expect(trade).toContain("app.connectFromNav && app.connectFromNav()");
+    expect(trade).toContain('submit.type = "button"');
     const submitAt = trade.indexOf("async function onSubmit");
     expect(trade.slice(submitAt, submitAt + 280)).toContain("app.connectFromNav && app.connectFromNav()");
-  });
-
-  it("opens the EIP-6963 picker when MetaMask and Rabby are both present", () => {
-    const main = readFileSync(join(root, "src/main.js"), "utf8");
-    expect(main).toMatch(/function connectFromNav\(\)/);
-    expect(main).toMatch(/runConnectFromNav\(/);
-    const targets = walletTargets([mmEntry(), rabbyEntry()]);
-    expect(targets.map((t) => t.kind).sort()).toEqual(["metamask", "rabby"]);
-    expect(targets).toHaveLength(2);
-    const shown = [];
-    const out = runConnectFromNav({
-      discoveredList: [mmEntry(), rabbyEntry()],
-      connectWallet: () => {},
-      showMenu: (t) => shown.push(t),
-      hideMenu: () => {},
-      onNoWallet: () => {},
-    });
-    expect(out.kind).toBe("menu");
-    expect(shown[0]).toHaveLength(2);
-  });
-
-  it("renders a MetaMask + Rabby menu when both EIP-6963 providers are present", () => {
-    document.body.innerHTML =
-      '<button id="btn-nav-connect" type="button">Connect to trade</button>' +
-      '<p id="ticket-status"></p>';
-    expect(document.getElementById("nav-wallet-menu")).toBeNull();
-    const menu = ensureWalletMenu();
-    expect(menu).toBeTruthy();
-    expect(menu.parentElement).toBe(document.body);
-    const targets = walletTargets([mmEntry(), rabbyEntry()]);
-    fillWalletMenu(menu, targets, () => {});
-    menu.classList.remove("hidden");
-    menu.removeAttribute("hidden");
-    const labels = [...menu.querySelectorAll("[role='menuitem']")].map((b) => b.textContent);
-    expect(labels).toEqual(["Connect MetaMask to trade", "Connect Rabby to trade"]);
-    expect(document.getElementById("ticket-status").textContent).toBe("");
-    const out = runConnectFromNav({
-      discoveredList: [mmEntry(), rabbyEntry()],
-      connectWallet: () => {},
-      showMenu: (t) => fillWalletMenu(ensureWalletMenu(), t, () => {}),
-      hideMenu: () => {},
-    });
-    expect(out.kind).toBe("menu");
-    expect(document.getElementById("ticket-status").textContent).toBe(OPENING_WALLET_MSG);
-    expect(document.getElementById("nav-wallet-menu").textContent).toContain("MetaMask");
-    expect(document.getElementById("nav-wallet-menu").textContent).toContain("Rabby");
   });
 });
 
 describe("main.js boot without landing paste-form", () => {
   it("binds #btn-nav-connect when #paste-form is missing", () => {
+    resetConnectCaptureForTests();
     document.body.innerHTML =
       '<button id="btn-nav-connect" type="button">Connect to trade</button>' +
       '<p id="ticket-status"></p>';
@@ -140,71 +114,98 @@ describe("main.js boot without landing paste-form", () => {
     ).not.toThrow();
     expect(document.getElementById("paste-form")).toBeNull();
     document.getElementById("btn-nav-connect").click();
-    expect(connectFromNav).toHaveBeenCalledTimes(1);
+    expect(connectFromNav).toHaveBeenCalled();
   });
 });
 
-describe("connectFromNav", () => {
-  afterEach(() => {
-    delete window.ethereum;
-  });
-
-  it("calls eth_requestAccounts on a mock injected provider", async () => {
-    document.body.innerHTML = '<p id="ticket-status"></p>';
-    const request = vi.fn().mockResolvedValue(["0x1111111111111111111111111111111111111111"]);
-    window.ethereum = { isMetaMask: true, request };
-    const calls = [];
-    const out = runConnectFromNav({
-      discoveredList: [],
-      ethereum: window.ethereum,
-      connectWallet: (p) => {
-        calls.push(p);
-        return p.request({ method: "eth_requestAccounts" });
-      },
-      showMenu: () => {},
-      hideMenu: () => {},
-      onNoWallet: () => {},
-    });
-    expect(out.kind).toBe("connect");
-    expect(calls[0]).toBe(window.ethereum);
-    await Promise.resolve();
-    expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
-    expect(document.getElementById("ticket-status").textContent).toBe(CHECK_POPUP_MSG);
-  });
-
-  it("stays on /trade and writes ticket-status when no wallet is present", () => {
-    document.body.innerHTML = '<p id="ticket-status" class="ticket-status"></p>';
-    const out = runConnectFromNav({
+describe("connect modal", () => {
+  it("opens the modal with Install copy when no wallet is present", async () => {
+    connectDom();
+    const connectWallet = vi.fn();
+    const out = await runConnectFromNav({
       discoveredList: [],
       ethereum: null,
-      connectWallet: () => {},
-      showMenu: () => {},
-      hideMenu: () => {},
+      connectWallet,
+      discoverMs: 0,
     });
     expect(out.kind).toBe("nowallet");
-    const st = document.getElementById("ticket-status");
-    expect(st.textContent).toBe("Install MetaMask or Rabby");
-    expect(st.classList.contains("err")).toBe(true);
+    expect(connectWallet).not.toHaveBeenCalled();
+    const modal = document.getElementById("ht-connect-modal");
+    expect(modal).toBeTruthy();
+    expect(modal.classList.contains("is-open")).toBe(true);
+    expect(modal.textContent).toContain("Connect a wallet");
+    expect(modal.textContent).toContain(NO_WALLET_MSG);
+    expect(modal.querySelector('a[href="https://metamask.io"]')).toBeTruthy();
+    expect(modal.querySelector('a[href="https://rabby.io"]')).toBeTruthy();
+    expect(document.getElementById("ticket-status").textContent).toBe(NO_WALLET_MSG);
+    expect(document.getElementById("nav-connect-status").textContent).toBe(NO_WALLET_MSG);
+    expect(document.getElementById("btn-nav-connect").textContent).toBe(OPENING_WALLET_MSG);
     expect(window.location.pathname).not.toBe("/portfolio");
   });
 
-  it("writes Opening wallet immediately on every connect click", () => {
-    document.body.innerHTML = '<p id="ticket-status"></p>';
-    runConnectFromNav({
+  it("lists MetaMask and Rabby and does not request until a row is clicked", async () => {
+    connectDom();
+    const request = vi.fn().mockResolvedValue(["0x1111111111111111111111111111111111111111"]);
+    const connectWallet = vi.fn((p) => p.request({ method: "eth_requestAccounts" }));
+    const out = await runConnectFromNav({
+      discoveredList: [mmEntry(request), rabbyEntry(request)],
+      connectWallet,
+      discoverMs: 0,
+    });
+    expect(out.kind).toBe("modal");
+    expect(out.targets).toHaveLength(2);
+    expect(connectWallet).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    const modal = document.getElementById("ht-connect-modal");
+    expect(modal.classList.contains("is-open")).toBe(true);
+    expect(modal.textContent).toContain("Connect MetaMask");
+    expect(modal.textContent).toContain("Connect Rabby");
+    expect(document.getElementById("btn-nav-connect").textContent).toBe(OPENING_WALLET_MSG);
+    expect(document.getElementById("ticket-submit").textContent).toBe(OPENING_WALLET_MSG);
+    modal.querySelector("[data-wallet='metamask']").click();
+    expect(connectWallet).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
+    expect(document.getElementById("ht-connect-status").textContent).toBe(CHECK_POPUP_MSG);
+  });
+
+  it("opens the modal for a single provider and does not auto-request", async () => {
+    connectDom();
+    const request = vi.fn().mockResolvedValue(["0x1111111111111111111111111111111111111111"]);
+    window.ethereum = { isMetaMask: true, request };
+    const connectWallet = vi.fn((p) => p.request({ method: "eth_requestAccounts" }));
+    const out = await runConnectFromNav({
+      discoveredList: [],
+      ethereum: window.ethereum,
+      connectWallet,
+      discoverMs: 0,
+    });
+    expect(out.kind).toBe("modal");
+    expect(connectWallet).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    const modal = document.getElementById("ht-connect-modal");
+    expect(modal.classList.contains("is-open")).toBe(true);
+    const row = modal.querySelector("[data-wallet='metamask']");
+    expect(row).toBeTruthy();
+    expect(row.textContent).toContain("Connect MetaMask");
+    row.click();
+    expect(connectWallet).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledWith({ method: "eth_requestAccounts" });
+  });
+
+  it("writes Opening wallet immediately on every connect click", async () => {
+    connectDom();
+    await runConnectFromNav({
       discoveredList: [mmEntry(), rabbyEntry()],
       connectWallet: () => {},
-      showMenu: () => {},
-      hideMenu: () => {},
+      discoverMs: 0,
     });
-    expect(document.getElementById("ticket-status").textContent).toBe(OPENING_WALLET_MSG);
+    expect(document.getElementById("ticket-status").textContent).toBe("Choose a wallet");
+    expect(document.getElementById("btn-nav-connect").textContent).toBe(OPENING_WALLET_MSG);
+    expect(document.getElementById("ht-connect-modal").classList.contains("is-open")).toBe(true);
   });
 });
 
 describe("walletTargets", () => {
-  afterEach(() => {
-    delete window.ethereum;
-  });
-
   it("keeps MetaMask and Rabby from EIP-6963 announcements", () => {
     expect(walletKind(mmEntry())).toBe("metamask");
     expect(walletKind(rabbyEntry())).toBe("rabby");
@@ -264,14 +265,26 @@ describe("desk header does not eat Connect clicks", () => {
     expect(css).toMatch(/#btn-nav-connect,[\s\S]*?#nav-wallet-menu,[\s\S]*?pointer-events: auto/);
     expect(css).toMatch(/\.btn-connect \{[\s\S]*?pointer-events: auto/);
     expect(css).toMatch(/\.ticket-submit\.connect \{ pointer-events: auto/);
-    expect(css).toMatch(/#nav-wallet-menu,[\s\S]*?\.nav-wallet-menu \{[\s\S]*?z-index: 200/);
-    expect(css).toMatch(/html\.desk body > header,[\s\S]*?z-index: 100/);
-    expect(css).toMatch(/#nav-wallet-menu,[\s\S]*?background: var\(--bg-input\)/);
-    expect(css).toMatch(/\.nav-wallet-item:hover \{[\s\S]*?color: var\(--accent-primary\)/);
+    expect(css).toMatch(/\.ht-connect-modal \{[\s\S]*?z-index: 99999/);
+    expect(css).toMatch(/\.ht-connect-modal\.is-open \{[\s\S]*?display: flex !important/);
+    expect(css).toMatch(/\.ht-connect-panel \{[\s\S]*?background: var\(--bg-surface\)/);
+    expect(css).toMatch(/\.nav-connect-status \{[\s\S]*?font-size: 12px/);
+    expect(css).toMatch(/\.ticket-status \{ min-height: 16px/);
+    expect(css).toMatch(/\.ticket-foot \{[\s\S]*?overflow: visible/);
     const html = readFileSync(join(root, "index.html"), "utf8");
     expect(html).toContain('id="btn-nav-connect"');
-    expect(html).toContain('id="nav-wallet-menu"');
+    expect(html).toContain('id="nav-connect-status"');
     expect(html).toContain('id="ticket-submit"');
     expect(html).toContain('id="ticket-status"');
+    expect(html).toMatch(/id="ticket-status"[\s\S]*id="ticket-submit"/);
+    expect(html).toContain('type="button" id="ticket-submit"');
+    const vite = readFileSync(join(root, "vite.config.js"), "utf8");
+    expect(vite).toMatch(/server:\s*\{[\s\S]*?port:\s*5173/);
+    expect(vite).toMatch(/strictPort:\s*false/);
+    expect(vite).toMatch(/preview:\s*\{[\s\S]*?port:\s*4173/);
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    expect(pkg.scripts.dev).toBe("node scripts/prepare-tv-embed.mjs && vite");
+    expect(pkg.scripts.dev).not.toMatch(/4173/);
+    expect(pkg.scripts.preview).toContain("4173");
   });
 });

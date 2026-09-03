@@ -28,7 +28,8 @@
       </div>
 
       <div class="flex min-w-0 items-center gap-2 sm:gap-3">
-        <div id="nav-disconnected" class="relative flex items-center">
+        <div id="nav-disconnected" class="relative flex items-center gap-2">
+          <span id="nav-connect-status" class="nav-connect-status" role="status"></span>
           <button
             id="btn-nav-connect"
             type="button"
@@ -589,8 +590,8 @@
                 <option value="Ioc">IOC</option>
               </select>
             </div>
-            <button type="submit" id="ticket-submit" class="ticket-submit buy connect">Connect wallet</button>
             <p id="ticket-status" class="ticket-status" role="status"></p>
+            <button type="button" id="ticket-submit" class="ticket-submit buy connect">Connect wallet</button>
             <p id="ticket-min" class="hidden ticket-warn">Hyperliquid rejects orders under $10 notional.</p>
 
             <div class="summary">

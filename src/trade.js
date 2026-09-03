@@ -756,19 +756,26 @@ export function createTradeView(app) {
     const submit = byId("ticket-submit");
     if (!submit) return;
     if (!app.state.address || app.state.source !== "wallet") {
-      submit.textContent = "Connect wallet";
+      submit.type = "button";
       submit.disabled = false;
       submit.classList.add("connect");
       submit.classList.toggle("buy", side === "buy");
       submit.classList.toggle("sell", side === "sell");
+      const modalOpen =
+        typeof document !== "undefined" &&
+        document.getElementById("ht-connect-modal") &&
+        document.getElementById("ht-connect-modal").classList.contains("is-open");
+      submit.textContent = modalOpen ? "Opening wallet…" : "Connect wallet";
       return;
     }
     if (!enabled) {
+      submit.type = "submit";
       submit.textContent = "Enable trading";
       submit.disabled = ticketBusy;
       submit.classList.add("connect");
       return;
     }
+    submit.type = "submit";
     submit.classList.remove("connect");
     submit.disabled = ticketBusy;
     const verb = side === "buy" ? "Buy" : "Sell";
