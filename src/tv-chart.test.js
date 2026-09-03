@@ -101,39 +101,42 @@ describe("TradingView embed", () => {
   it("skips TradingView for outcome hash ids instead of embedding a BTC chart", () => {
     const host = document.createElement("div");
     mountTvChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
+    expect(host.querySelector("iframe")).toBeNull();
     expect(host.querySelector("script")).toBeNull();
-    expect(host.textContent).toMatch(/No TradingView symbol/);
     expect(host.innerHTML).not.toContain("BTCUSDC");
+    expect(host.innerHTML).not.toContain("tradingview-widget.com");
+    expect(host.querySelector("canvas.hl-chart") || host.querySelector(".hl-chart-host") || host.querySelector(".tv-skip")).toBeTruthy();
   });
 
-  it("tries the official widget for out: HIP-4 coins and never charts BTC", () => {
+  it("never mounts the official widget for HIP-4 outcome markets", () => {
     const host = document.createElement("div");
     mountTvChart(host, {
       coin: "out:pons-touches-1-by-sep-7-at-600-am-utc-yes",
+      hlCoin: "#12880",
       interval: "5m",
       kind: "outcome",
     });
-    const iframe = host.querySelector("iframe");
-    expect(iframe).toBeTruthy();
-    const src = iframe.getAttribute("src") || "";
-    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
-    expect(decodeURIComponent(src)).toContain("HYPERLIQUID:out:pons-touches-1-by-sep-7-at-600-am-utc-yes");
-    expect(src).not.toContain("BTCUSDC");
-    expect(src).not.toContain("HYPERLIQUID:BTC");
+    expect(host.querySelector("iframe")).toBeNull();
+    expect(host.innerHTML).not.toContain("tradingview-widget.com");
+    expect(host.innerHTML).not.toContain("HYPERLIQUID:out:");
+    expect(host.innerHTML).not.toContain("BTCUSDC");
+    expect(host.innerHTML).not.toContain("HYPERLIQUID:BTC");
   });
 
   it("falls back to a Hyperliquid candle canvas for outcome coins", () => {
     const host = document.createElement("div");
     host.style.height = "200px";
-    mountChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
+    const kind = mountChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
+    expect(kind).toBe("hl");
+    expect(host.querySelector("iframe")).toBeNull();
     expect(host.querySelector("script")).toBeNull();
     expect(host.innerHTML).not.toContain("BTCUSDC");
     expect(host.innerHTML).not.toContain("HYPERLIQUID:BTC");
+    expect(host.innerHTML).not.toContain("tradingview-widget.com");
     expect(host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
   });
 
-  it("tries the official widget for a live out: ticker and falls back to that hash coin, never BTC", () => {
-    vi.useFakeTimers();
+  it("charts the outcome hash coin on HL, never a TV iframe or BTC", () => {
     const host = document.createElement("div");
     const kind = mountChart(host, {
       coin: "#12880",
@@ -142,20 +145,12 @@ describe("TradingView embed", () => {
       interval: "5m",
       kind: "outcome",
     });
-    expect(kind).toBe("tv");
-    const iframe = host.querySelector("iframe");
-    expect(iframe).toBeTruthy();
-    const src = iframe.getAttribute("src") || "";
-    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
-    expect(decodeURIComponent(src)).toContain("HYPERLIQUID:out:pons-touches-1-by-sep-7-at-600-am-utc-yes");
-    expect(src).not.toContain("BTCUSDC");
-    iframe.dispatchEvent(new Event("load"));
-    expect(host.querySelector("iframe")).toBeTruthy();
-    vi.advanceTimersByTime(TV_PAINT_MS);
+    expect(kind).toBe("hl");
     expect(host.querySelector("iframe")).toBeNull();
+    expect(host.innerHTML).not.toContain("tradingview-widget.com");
+    expect(host.innerHTML).not.toContain("HYPERLIQUID:out:");
     expect(host.innerHTML).not.toContain("BTCUSDC");
     expect(host.querySelector(".hl-chart-host") || host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
-    vi.useRealTimers();
   });
 
   it("stamps toolbar_bg onto the widget iframe hash so drawing and top bars match the pane", () => {
@@ -461,9 +456,10 @@ describe("HL interval row", () => {
     expect(html).toContain('data-hl-iv="1d"');
     expect(html).not.toContain('class="trade-iv"');
     expect(html).not.toContain("data-interval");
-    expect(trade).toContain("renderHlIntervalRow(kind === \"hl\")");
+    expect(trade).toContain('renderHlIntervalRow(kind === "hl" || !!(m && m.kind === "outcome") || pageKind === "outcome")');
     expect(trade).toContain("onFallback: () => renderHlIntervalRow(true)");
-    expect(trade).toContain("outcomeLegTvCoin");
+    expect(trade).toContain("outcomeLegCoin");
+    expect(trade).not.toContain("outcomeLegTvCoin");
     expect(trade).toContain('byId("hl-iv")');
     expect(trade).toContain("setChartInterval");
     expect(trade).not.toContain(".trade-iv");

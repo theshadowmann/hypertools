@@ -304,9 +304,8 @@ export function officialTvWidgetSrc(src) {
 }
 
 /**
- * Perps: iframe `load` on the official host counts as a paint.
- * Outcomes: public TV usually has no HIP-4 listing, but the iframe still loads
- * an "invalid symbol" page — do not treat that as success (`trustLoad: false`).
+ * Perps/spot: iframe `load` on the official host counts as a paint.
+ * Do not treat a same-origin snapshot load as success.
  */
 export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS, opts) {
   let settled = false;
@@ -331,6 +330,10 @@ export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS, opts) {
 
 export function mountTvChart(container, { coin, interval, kind, base, quote, hlCoin, onFallback } = {}) {
   if (!container) return;
+  if (kind === "outcome") {
+    mountHlChart(container, { coin: hlCoin || coin, interval });
+    return;
+  }
   teardownChartHost(container);
   clear(container);
   const symbol = tvSymbol(coin, kind, base, quote);
@@ -369,17 +372,20 @@ export function mountTvChart(container, { coin, interval, kind, base, quote, hlC
       mountHlChart(container, { coin: fallbackCoin, interval });
       if (typeof onFallback === "function") onFallback();
     },
-    TV_PAINT_MS,
-    { trustLoad: kind !== "outcome" }
+    TV_PAINT_MS
   );
   wrap._chartTeardown = cancel;
 }
 
-/** TV when a Hyperliquid symbol exists; otherwise live HL candles for that coin (never a fake BTC chart). */
+/** Perps/spot: official TV when a Hyperliquid symbol exists. Outcomes: HL candles only, never a TV iframe. */
 export function mountChart(container, opts) {
   if (!container) return "skip";
   const o = opts || {};
   const hlCoin = o.hlCoin || o.coin;
+  if (o.kind === "outcome") {
+    mountHlChart(container, { coin: hlCoin, interval: o.interval });
+    return "hl";
+  }
   const tvCoin = o.tvCoin || o.coin;
   const symbol = tvSymbol(tvCoin, o.kind, o.base, o.quote);
   if (symbol) {

@@ -72,7 +72,6 @@ import {
   outcomeLegAsset,
   outcomeLegBalance,
   outcomeLegCoin,
-  outcomeLegTvCoin,
   outcomePayout,
   outcomePositionMetrics,
   outcomePositionsFromSpot,
@@ -303,13 +302,11 @@ export function createTradeView(app) {
   function ensureChart() {
     const m = currentMarket();
     const chartCoin = m && m.kind === "outcome" ? coin || outcomeLegCoin(m, outcomeLeg) : m ? m.coin : coin;
-    const tvCoin = m && m.kind === "outcome" ? outcomeLegTvCoin(m, outcomeLeg) : "";
-    const key = (m ? m.id : coin) + "|" + chartCoin + "|" + tvCoin + "|" + interval;
+    const key = (m ? m.id : coin) + "|" + chartCoin + "|" + interval;
     if (key === lastTv && byId("chart") && byId("chart").firstChild) return;
     lastTv = key;
     const kind = mountChart(byId("chart"), {
       coin: chartCoin,
-      tvCoin: tvCoin || undefined,
       hlCoin: chartCoin,
       interval,
       kind: m ? m.kind : pageKind === "outcome" ? "outcome" : "perp",
@@ -317,7 +314,7 @@ export function createTradeView(app) {
       quote: m && m.quote,
       onFallback: () => renderHlIntervalRow(true),
     });
-    renderHlIntervalRow(kind === "hl");
+    renderHlIntervalRow(kind === "hl" || !!(m && m.kind === "outcome") || pageKind === "outcome");
   }
 
   function renderHlIntervalRow(show) {

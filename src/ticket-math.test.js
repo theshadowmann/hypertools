@@ -34,13 +34,9 @@ describe("TradingView Hyperliquid symbols", () => {
     expect(tvSymbol("PURR/USDC", "spot", "PURR", "USDC")).toBe("HYPERLIQUID:PURRUSDC");
     expect(tvSymbol("@1", "spot", "HFUN", "USDC")).toBe("HYPERLIQUID:HFUNUSDC");
     expect(tvSymbol("#12100", "outcome")).toBeNull();
-    expect(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-yes", "outcome")).toBe(
-      "HYPERLIQUID:out:pons-touches-1-by-sep-7-at-600-am-utc-yes"
-    );
-    expect(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-no", "outcome")).toBe(
-      "HYPERLIQUID:out:pons-touches-1-by-sep-7-at-600-am-utc-no"
-    );
-    expect(String(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-yes", "outcome"))).not.toMatch(/BTC/i);
+    expect(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-yes", "outcome")).toBeNull();
+    expect(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-no", "outcome")).toBeNull();
+    expect(tvSymbol("BTC", "outcome")).toBeNull();
   });
 
   it("maps intervals to TradingView resolutions", () => {
