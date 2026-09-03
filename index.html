@@ -558,9 +558,18 @@
             <div id="ticket-twap-wrap" class="hidden twap-fields">
               <span class="ticket-label">Running Time (5m - 7d)</span>
               <div class="twap-time-row">
-                <input id="ticket-twap-days" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Day(s)" aria-label="TWAP days" />
-                <input id="ticket-twap-hours" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Hour(s)" aria-label="TWAP hours" />
-                <input id="ticket-twap-mins" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Min(s)" value="30" aria-label="TWAP minutes" />
+                <div class="ticket-field">
+                  <label for="ticket-twap-days" class="ticket-label">Day(s)</label>
+                  <input id="ticket-twap-days" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Day(s)" aria-label="TWAP days" />
+                </div>
+                <div class="ticket-field">
+                  <label for="ticket-twap-hours" class="ticket-label">Hour(s)</label>
+                  <input id="ticket-twap-hours" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Hour(s)" aria-label="TWAP hours" />
+                </div>
+                <div class="ticket-field">
+                  <label for="ticket-twap-mins" class="ticket-label">Minutes</label>
+                  <input id="ticket-twap-mins" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Min(s)" value="30" aria-label="TWAP minutes" />
+                </div>
               </div>
               <input id="ticket-minutes" type="hidden" value="30" />
             </div>

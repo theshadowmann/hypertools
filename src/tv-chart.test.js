@@ -307,6 +307,7 @@ describe("chart chrome", () => {
     expect(css).toMatch(/\.hl-chart-host,[\s\S]*?background: var\(--bg-surface\)/);
     expect(css).not.toContain("mix-blend-mode");
     expect(css).toMatch(/grid-template-rows: auto minmax\(0, 1fr\) minmax\(140px, 18vh\)/);
+    expect(css).toMatch(/grid-template-columns: minmax\(0, 1fr\) 248px 420px/);
   });
 });
 

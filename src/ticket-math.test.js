@@ -226,9 +226,11 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.tpsl-grid\.is-idle \{[\s\S]*?visibility: hidden/);
     expect(css).toMatch(/\.chk-row \{[\s\S]*?flex-direction: column/);
     expect(js).toContain("setTpslOpen");
-    expect(css).toMatch(/grid-template-columns: minmax\(0, 1fr\) 248px 360px/);
+    expect(css).toMatch(/grid-template-columns: minmax\(0, 1fr\) 248px 420px/);
+    expect(css).toMatch(/\.trade-ticket \{[\s\S]*?grid-row: 1 \/ -1/);
     expect(html).toContain('placeholder="Day(s)"');
     expect(html).toContain("Running Time (5m - 7d)");
+    expect(html).toContain(">Minutes<");
     expect(html).toContain("Orders count");
     expect(html).toContain("Size Skew");
     expect(html).toContain('id="ticket-skew"');

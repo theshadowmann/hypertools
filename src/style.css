@@ -273,12 +273,12 @@ html.tv-embed-frame footer {
   position: relative;
   z-index: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 248px 360px;
+  grid-template-columns: minmax(0, 1fr) 248px 420px;
   grid-template-rows: auto minmax(0, 1fr) minmax(140px, 18vh);
   grid-template-areas:
     "stats stats ticket"
     "chart book ticket"
-    "bottom bottom bottom";
+    "bottom bottom ticket";
   gap: 0;
   height: calc(100vh - 3rem);
   max-height: calc(100vh - 3rem);
@@ -356,16 +356,17 @@ html.tv-embed-frame footer {
 .trade-ticket {
   grid-area: ticket;
   grid-column: 3;
-  grid-row: 1 / 3;
+  grid-row: 1 / -1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
   background: var(--bg-surface);
+  border-left: 1px solid var(--border-color);
 }
 .trade-bottom {
   grid-area: bottom;
-  grid-column: 1 / -1;
+  grid-column: 1 / 3;
   grid-row: 3;
   min-height: 0;
   display: flex;
@@ -375,16 +376,17 @@ html.tv-embed-frame footer {
 }
 
 .trade-shell.no-book {
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 420px;
   grid-template-areas:
     "stats ticket"
     "chart ticket"
-    "bottom bottom";
+    "bottom ticket";
 }
 .trade-shell.no-book .trade-stats { grid-column: 1; }
 .trade-shell.no-book .trade-chart { grid-column: 1; }
 .trade-shell.no-book .trade-book { display: none; }
-.trade-shell.no-book .trade-ticket { grid-column: 2; }
+.trade-shell.no-book .trade-ticket { grid-column: 2; grid-row: 1 / -1; }
+.trade-shell.no-book .trade-bottom { grid-column: 1; }
 
 .tv-host {
   flex: 1;
@@ -515,7 +517,7 @@ html.tv-embed-frame footer {
   position: absolute;
   top: 36px;
   left: 0;
-  right: 360px;
+  right: 420px;
   bottom: 18vh;
   z-index: 40;
   display: flex;
@@ -1612,21 +1614,21 @@ input[type="checkbox"] {
 
 @media (max-width: 1180px) {
   .trade-shell {
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1fr) 420px;
     grid-template-rows: auto minmax(220px, 1fr) minmax(140px, 18vh);
     grid-template-areas:
       "stats ticket"
       "chart ticket"
-      "bottom bottom";
+      "bottom ticket";
     height: auto;
     min-height: calc(100vh - 3rem);
   }
   .trade-stats { grid-column: 1; }
   .trade-chart { grid-column: 1; }
   .trade-book { display: none; }
-  .trade-ticket { grid-column: 2; grid-row: 1 / 3; }
-  .trade-bottom { grid-column: 1 / -1; }
-  .market-picker { right: 360px; bottom: 18vh; }
+  .trade-ticket { grid-column: 2; grid-row: 1 / -1; }
+  .trade-bottom { grid-column: 1 / 2; }
+  .market-picker { right: 420px; bottom: 18vh; }
 }
 
 @media (max-width: 840px) {
@@ -1642,7 +1644,7 @@ input[type="checkbox"] {
   .trade-stats, .trade-chart, .trade-ticket, .trade-bottom { grid-column: 1; }
   .trade-stats { grid-row: 1; }
   .trade-chart { grid-row: 2; }
-  .trade-ticket { grid-row: 3; overflow: hidden; min-height: 560px; }
+  .trade-ticket { grid-row: 3; overflow: hidden; min-height: 640px; }
   .trade-bottom { grid-row: 4; }
   .market-picker { right: 0; left: 0; bottom: auto; height: min(70vh, 520px); }
 }
