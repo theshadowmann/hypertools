@@ -98,12 +98,28 @@ describe("TradingView embed", () => {
     expect(hosted).toBe(TV_CHROME_CSS);
   });
 
-  it("skips TradingView for outcome markets instead of embedding a BTC chart", () => {
+  it("skips TradingView for outcome hash ids instead of embedding a BTC chart", () => {
     const host = document.createElement("div");
     mountTvChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
     expect(host.querySelector("script")).toBeNull();
     expect(host.textContent).toMatch(/No TradingView symbol/);
     expect(host.innerHTML).not.toContain("BTCUSDC");
+  });
+
+  it("tries the official widget for out: HIP-4 coins and never charts BTC", () => {
+    const host = document.createElement("div");
+    mountTvChart(host, {
+      coin: "out:pons-touches-1-by-sep-7-at-600-am-utc-yes",
+      interval: "5m",
+      kind: "outcome",
+    });
+    const iframe = host.querySelector("iframe");
+    expect(iframe).toBeTruthy();
+    const src = iframe.getAttribute("src") || "";
+    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
+    expect(decodeURIComponent(src)).toContain("HYPERLIQUID:out:pons-touches-1-by-sep-7-at-600-am-utc-yes");
+    expect(src).not.toContain("BTCUSDC");
+    expect(src).not.toContain("HYPERLIQUID:BTC");
   });
 
   it("falls back to a Hyperliquid candle canvas for outcome coins", () => {

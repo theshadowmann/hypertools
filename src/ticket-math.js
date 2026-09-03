@@ -8,9 +8,14 @@ function sanitizeTicker(s) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
-/** Official TradingView Hyperliquid symbols. Perps: HYPERLIQUID:BTCUSDC.P. Spot: HYPERLIQUID:PURRUSDC. Outcomes have no TV symbol — return null so we never embed a wrong BTC chart. */
+/** Official TradingView Hyperliquid symbols. Perps: HYPERLIQUID:{COIN}USDC.P. Spot: HYPERLIQUID:PURRUSDC. HIP-4 outcomes try HYPERLIQUID:{out:...-yes|no}; hash ids have no public TV ticker. */
 export function tvSymbol(coin, kind = "perp", base, quote) {
-  if (kind === "outcome") return null;
+  if (kind === "outcome") {
+    const raw = String(coin || "").trim();
+    if (!raw || raw.startsWith("#")) return null;
+    if (!/^out:/i.test(raw)) return null;
+    return "HYPERLIQUID:" + raw;
+  }
   if (kind === "spot") {
     const b = sanitizeTicker(base || coin);
     const q = sanitizeTicker(quote || "USDC");
