@@ -167,7 +167,7 @@ describe("picker 24h sort chrome", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     expect(html).toMatch(/<colgroup>[\s\S]*mp-col-mkt[\s\S]*mp-col-oi[\s\S]*<\/colgroup>/);
     expect(css).toMatch(/\.mp-table \{\s*width: 100%;\s*table-layout: fixed;/);
-    expect(css).toMatch(/\.mp-table th,\s*\.mp-table td \{[\s\S]*padding: 6px 12px;[\s\S]*text-align: right;/);
+    expect(css).toMatch(/\.mp-table th,\s*\.mp-table td \{[\s\S]*padding: 8px 12px;[\s\S]*text-align: right;/);
     expect(css).toMatch(/th:first-child,\s*\.mp-table td:first-child \{ text-align: left; \}/);
     expect(css).toMatch(/th button \{[\s\S]*width: 100%;/);
     expect(css).not.toMatch(/\.mp-row td \{\s*padding: 5px 10px/);
@@ -181,14 +181,15 @@ describe("picker 24h sort chrome", () => {
     expect(table).toContain("border: 0");
     expect(table).toContain("border-spacing: 0");
     const foot = css.slice(css.indexOf(".mp-foot {"), css.indexOf(".stats-metrics {"));
-    expect(tabs).toContain("border-bottom: 0");
+    expect(tabs).toContain("border: 0");
     expect(tabs).not.toContain("1px solid");
     expect(css).toMatch(/\.mp-tab\[aria-selected="true"\] \{[\s\S]*?box-shadow: inset 0 -2px 0 var\(--accent-primary\)/);
-    expect(cells).toContain("border-top: 0");
+    expect(cells).toContain("border: 0");
     expect(cells).not.toContain("1px solid");
-    expect(foot).toContain("border-top: 0");
+    expect(foot).toContain("border: 0");
     expect(foot).not.toContain("1px solid");
-    expect(css).toMatch(/\.mp-row:hover \{ background: var\(--bg-input\); \}/);
+    expect(css).toMatch(/\.mp-row:hover,\s*\.mp-row\.is-on \{ background: var\(--bg-input\); \}/);
+    expect(css).not.toMatch(/\.mp-row\.is-on \{ background: rgba\(6, 182, 212/);
   });
 });
 

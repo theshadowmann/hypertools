@@ -554,7 +554,8 @@ html.tv-embed-frame footer {
   display: flex;
   gap: 16px;
   padding: 0 14px;
-  border-bottom: 0;
+  border: 0;
+  box-shadow: none;
 }
 .mp-tab {
   height: 32px;
@@ -564,6 +565,7 @@ html.tv-embed-frame footer {
   font-size: 12px;
   font-weight: 400;
   padding: 0;
+  box-shadow: none;
 }
 .mp-tab[aria-selected="true"] {
   color: var(--accent-primary);
@@ -599,13 +601,23 @@ html.tv-embed-frame footer {
 .mp-table.mp-outcome .mp-outcome-hide { display: none; }
 .mp-table.mp-outcome .mp-head-perp { display: none; }
 .mp-head-outcome.hidden { display: none; }
+.mp-table,
+.mp-table thead,
+.mp-table tbody,
+.mp-table tr {
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
 .mp-table th,
 .mp-table td {
   box-sizing: border-box;
-  padding: 6px 12px;
+  padding: 8px 12px;
   text-align: right;
   white-space: nowrap;
   border: 0;
+  box-shadow: none;
+  outline: none;
 }
 .mp-table th {
   position: sticky;
@@ -648,9 +660,11 @@ html.tv-embed-frame footer {
 .mp-table th button[aria-sort="asc"] .mp-sort-chevron { transform: rotate(180deg); }
 .mp-row {
   cursor: pointer;
+  border: 0;
+  box-shadow: none;
 }
-.mp-row:hover { background: var(--bg-input); }
-.mp-row.is-on { background: rgba(6, 182, 212, 0.22); }
+.mp-row:hover,
+.mp-row.is-on { background: var(--bg-input); }
 .mp-pair,
 .mp-row:hover .mp-pair,
 .mp-row.is-on .mp-pair {
@@ -658,7 +672,7 @@ html.tv-embed-frame footer {
   -webkit-text-fill-color: var(--text-primary);
 }
 .mp-table td {
-  border-top: 0;
+  border: 0;
   color: var(--text-primary);
 }
 .mp-mkt {
@@ -709,7 +723,8 @@ html.tv-embed-frame footer {
   padding: 6px 12px;
   font-size: 11px;
   color: var(--text-muted);
-  border-top: 0;
+  border: 0;
+  box-shadow: none;
 }
 
 .stats-metrics {
