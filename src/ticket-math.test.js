@@ -233,7 +233,7 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.tpsl-grid \{[\s\S]*?grid-template-columns:/);
     expect(js).toContain("ticket-tp-gain");
     expect(js).toContain("ticket-sl-loss");
-    expect(js).toContain("syncTpslFromPrices");
+    expect(css).toMatch(/\.chk\.hidden \{[\s\S]*?display: none/);
     const mainJs = readFileSync(join(root, "src/main.js"), "utf8");
     expect(mainJs).toContain('classList.toggle("desk", onDesk)');
   });
