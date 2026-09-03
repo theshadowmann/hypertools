@@ -188,8 +188,34 @@ export function change24h(mark, prevDay) {
   return (m - p) / p;
 }
 
+export function scaleSizeWeights(count, skew) {
+  const n = Math.max(1, Math.round(Number(count) || 1));
+  const k = Number(skew);
+  const factor = Number.isFinite(k) && k > 0 ? k : 1;
+  const weights = [];
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0 : i / (n - 1);
+    weights.push(Math.pow(factor, t));
+  }
+  const sum = weights.reduce((a, b) => a + b, 0) || 1;
+  return weights.map((w) => w / sum);
+}
+
+export const TWAP_MIN_MINUTES = 5;
+export const TWAP_MAX_MINUTES = 7 * 24 * 60;
+
+export function twapMinutesFromParts(days, hours, mins) {
+  const d = Math.max(0, Number(days) || 0);
+  const h = Math.max(0, Number(hours) || 0);
+  const m = Math.max(0, Number(mins) || 0);
+  let total = Math.round(d * 1440 + h * 60 + m);
+  if (!total) total = 30;
+  return Math.max(TWAP_MIN_MINUTES, Math.min(TWAP_MAX_MINUTES, total));
+}
+
 /**
  * Split total size into `count` limit orders between start and end price.
+ * `skew` > 1 puts more size toward the end price; `skew` < 1 toward the start.
  */
 export function buildScaleWires({
   asset,
@@ -200,6 +226,7 @@ export function buildScaleWires({
   count,
   szDecimals,
   reduceOnly = false,
+  skew = 1,
 }) {
   const n = Math.max(2, Math.min(50, Math.round(Number(count) || 2)));
   const total = Number(size);
@@ -209,16 +236,20 @@ export function buildScaleWires({
   if (!Number.isFinite(start) || start <= 0 || !Number.isFinite(end) || end <= 0) {
     throw new Error("Enter a start and end price");
   }
-  const per = total / n;
+  const weights = scaleSizeWeights(n, skew);
   const wires = [];
+  let used = 0;
   for (let i = 0; i < n; i++) {
     const t = n === 1 ? 0 : i / (n - 1);
     const px = start + (end - start) * t;
+    const raw = i === n - 1 ? total - used : total * weights[i];
+    const sz = roundSz(raw, szDecimals);
+    used += sz;
     wires.push(
       buildOrderWire({
         asset,
         isBuy,
-        size: per,
+        size: sz,
         price: px,
         type: "limit",
         tif: "Gtc",

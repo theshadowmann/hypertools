@@ -16,6 +16,8 @@ import {
   tpslPriceFromUsd,
   tpslRefPx,
   tpslUsdFromPrice,
+  scaleSizeWeights,
+  twapMinutesFromParts,
   tvInterval,
   tvSymbol,
 } from "./ticket-math.js";
@@ -193,14 +195,27 @@ describe("ticket DOM", () => {
     expect(html.split('data-book-tab="trades"').length - 1).toBe(1);
   });
 
-  it("keeps Market and Limit from scrolling; only Pro extras may overflow", () => {
+  it("packs Market, Limit, Scale, and TWAP without a ticket scrollbar", () => {
     const css = readFileSync(join(root, "src/style.css"), "utf8");
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    const html = readFileSync(join(root, "index.html"), "utf8");
     expect(css).toMatch(/\.trade-ticket \{[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.ticket \{[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.ticket-scroll \{[\s\S]*?overflow-y: hidden/);
     expect(css).toMatch(/\.ticket:not\(\.has-pro-extra\) \.ticket-scroll \{[\s\S]*?overflow: hidden/);
-    expect(css).toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow-y: auto/);
+    expect(css).toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow: hidden/);
+    expect(css).not.toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow-y:\s*auto/);
+    expect(css).toMatch(/#ticket-tpsl-wrap\.tpsl-grid\.hidden \{[\s\S]*?visibility: hidden/);
+    expect(css).toMatch(/grid-template-columns: minmax\(0, 1fr\) 248px 360px/);
+    expect(html).toContain('placeholder="Day(s)"');
+    expect(html).toContain("Running Time (5m - 7d)");
+    expect(html).toContain("Total Orders");
+    expect(html).toContain("Size Skew");
+    expect(html).toContain('id="ticket-skew"');
+    expect(html).toContain('id="ticket-random-lbl"');
+    expect(html).toContain("Randomize");
+    expect(html).not.toContain("Randomize slices");
+    expect(html).not.toContain("Advanced Settings");
     expect(css).toMatch(/\.ticket-foot \{[\s\S]*?flex: 0 0 auto/);
     expect(css).toMatch(/html\.desk,[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.trade-shell \{[\s\S]*?overflow: hidden/);
@@ -254,5 +269,24 @@ describe("TP/SL gain and loss", () => {
     expect(tpslPriceFromUsd(100, 20, 2, true, "sl")).toBeCloseTo(90);
     expect(formatTpslField(10)).toBe("10");
     expect(formatTpslField(1.25)).toBe("1.25");
+  });
+});
+
+describe("TWAP running time and scale skew", () => {
+  it("converts days/hours/mins to clamped minutes", () => {
+    expect(twapMinutesFromParts("", "", "30")).toBe(30);
+    expect(twapMinutesFromParts("", "", "")).toBe(30);
+    expect(twapMinutesFromParts("", "1", "")).toBe(60);
+    expect(twapMinutesFromParts("1", "", "")).toBe(1440);
+    expect(twapMinutesFromParts("", "", "1")).toBe(5);
+    expect(twapMinutesFromParts("8", "", "")).toBe(7 * 24 * 60);
+  });
+
+  it("keeps equal sizes at skew 1 and weights the end when skew > 1", () => {
+    const flat = scaleSizeWeights(4, 1);
+    expect(flat.every((w) => Math.abs(w - 0.25) < 1e-9)).toBe(true);
+    const up = scaleSizeWeights(2, 2);
+    expect(up[1]).toBeGreaterThan(up[0]);
+    expect(up[0] + up[1]).toBeCloseTo(1);
   });
 });

@@ -3,7 +3,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
 import { getAgent, rememberAgent } from "./agent-store.js";
 import { HL_API } from "./hosts.js";
-import { DEFAULT_MAX_SLIPPAGE } from "./ticket-math.js";
+import { DEFAULT_MAX_SLIPPAGE, TWAP_MAX_MINUTES, TWAP_MIN_MINUTES } from "./ticket-math.js";
 import {
   AGENT_NAME,
   BUILDER_ADDRESS,
@@ -206,7 +206,7 @@ export async function placeTwapOrder({
 }) {
   assertCanTrade(source);
   const agent = await requireReadyAgent(address);
-  const m = Math.max(5, Math.round(Number(minutes) || 30));
+  const m = Math.max(TWAP_MIN_MINUTES, Math.min(TWAP_MAX_MINUTES, Math.round(Number(minutes) || 30)));
   onStatus && onStatus("Signing TWAP order…");
   const exch = agentExchange(agent);
   const result = await exch.twapOrder({

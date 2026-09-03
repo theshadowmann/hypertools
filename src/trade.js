@@ -48,6 +48,7 @@ import {
   tpslPriceFromUsd,
   tpslRefPx,
   tpslUsdFromPrice,
+  twapMinutesFromParts,
 } from "./ticket-math.js";
 import { mountChart } from "./tv-chart.js";
 import {
@@ -719,6 +720,17 @@ export function createTradeView(app) {
     el.value = toWire(roundPx(px, mkt ? mkt.szDecimals : 5));
   }
 
+  function syncTwapMinutes() {
+    const total = twapMinutesFromParts(
+      fieldValue("ticket-twap-days"),
+      fieldValue("ticket-twap-hours"),
+      fieldValue("ticket-twap-mins")
+    );
+    const hidden = byId("ticket-minutes");
+    if (hidden) hidden.value = String(total);
+    return total;
+  }
+
   function applyPct(pct) {
     const mkt = currentMarket();
     const sz = sizeFromAvailablePct(
@@ -792,6 +804,17 @@ export function createTradeView(app) {
     byId("ticket-twap-wrap")?.classList.toggle("hidden", next !== "twap");
     byId("ticket-stop-wrap")?.classList.toggle("hidden", next !== "stop-limit" && next !== "stop-market");
     byId("ticket-stop-limit-price")?.classList.toggle("hidden", next !== "stop-limit");
+    const tpslOk = next === "market" || next === "limit";
+    byId("ticket-tpsl-lbl")?.classList.toggle("hidden", !tpslOk);
+    byId("ticket-tpsl-wrap")?.classList.toggle("tpsl-collapsed", !tpslOk);
+    if (tpslOk) {
+      byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !byId("ticket-tpsl")?.checked);
+    } else {
+      byId("ticket-tpsl-wrap")?.classList.add("hidden");
+    }
+    byId("ticket-form")?.classList.toggle("has-tpsl-extra", tpslOk);
+    byId("ticket-random-lbl")?.classList.toggle("hidden", next !== "twap");
+    if (next === "twap") syncTwapMinutes();
     updateEstimate();
   }
 
@@ -946,7 +969,7 @@ export function createTradeView(app) {
       if (orderType === "twap") {
         await placeTwapOrder({
           ...args,
-          minutes: fieldValue("ticket-minutes") || 30,
+          minutes: syncTwapMinutes(),
           randomize: byId("ticket-random")?.checked,
         });
         ticketMessage("TWAP accepted.", "ok");
@@ -958,6 +981,7 @@ export function createTradeView(app) {
           startPx: fieldValue("ticket-start"),
           endPx: fieldValue("ticket-end"),
           count: fieldValue("ticket-count"),
+          skew: fieldValue("ticket-skew") || 1,
           szDecimals: mkt.szDecimals,
           reduceOnly: args.reduceOnly,
         });
@@ -2129,7 +2153,6 @@ export function createTradeView(app) {
     byId("ticket-tpsl")?.addEventListener("change", () => {
       const on = !!byId("ticket-tpsl")?.checked;
       byId("ticket-tpsl-wrap")?.classList.toggle("hidden", !on);
-      byId("ticket-form")?.classList.toggle("has-tpsl-extra", on);
       if (on) syncTpslFromPrices();
     });
     byId("ticket-tp")?.addEventListener("input", () => {
@@ -2150,6 +2173,9 @@ export function createTradeView(app) {
     });
     byId("ticket-tp-unit")?.addEventListener("change", () => syncTpslFromPrices());
     byId("ticket-sl-unit")?.addEventListener("change", () => syncTpslFromPrices());
+    ["ticket-twap-days", "ticket-twap-hours", "ticket-twap-mins"].forEach((id) => {
+      byId(id)?.addEventListener("input", () => syncTwapMinutes());
+    });
     byId("lev-toggle")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
       byId("lev-pop")?.classList.toggle("hidden");

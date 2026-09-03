@@ -244,7 +244,7 @@ describe("chart chrome", () => {
     expect(css).toMatch(/\.trade-chart \{[^}]*border-right: 1px solid var\(--border-color\)/);
     expect(css).toMatch(/\.hl-chart-host,[\s\S]*?background: var\(--bg-surface\)/);
     expect(css).not.toContain("mix-blend-mode");
-    expect(css).toMatch(/grid-template-rows: auto minmax\(0, 1fr\) minmax\(168px, 26vh\)/);
+    expect(css).toMatch(/grid-template-rows: auto minmax\(0, 1fr\) minmax\(140px, 18vh\)/);
   });
 });
 

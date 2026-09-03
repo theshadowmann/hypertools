@@ -521,28 +521,46 @@
             </div>
             </div>
 
+            <div class="ticket-core ticket-core-tail">
+            <div class="slider-row">
+              <input id="ticket-pct" type="range" min="0" max="100" step="1" value="0" class="pct-slider" />
+              <div class="pct-ticks" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <input id="ticket-pct-box" class="pct-box" type="text" inputmode="numeric" value="0" aria-label="Percent of available" />
+              <span class="pct-suffix">%</span>
+            </div>
+
             <div class="ticket-scroll">
-            <div id="ticket-scale-wrap" class="hidden pro-fields">
+            <div id="ticket-scale-wrap" class="hidden scale-fields">
               <div class="ticket-field">
-                <label for="ticket-start" class="ticket-label">Start price</label>
-                <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+                <label for="ticket-start" class="ticket-label">Start</label>
+                <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
               </div>
               <div class="ticket-field">
-                <label for="ticket-end" class="ticket-label">End price</label>
-                <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+                <label for="ticket-end" class="ticket-label">End</label>
+                <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
               </div>
-              <div class="ticket-field">
-                <label for="ticket-count" class="ticket-label">Orders</label>
-                <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" />
+              <div class="scale-pair">
+                <div class="ticket-field">
+                  <label for="ticket-count" class="ticket-label">Total Orders</label>
+                  <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" />
+                </div>
+                <div class="ticket-field">
+                  <label for="ticket-skew" class="ticket-label">Size Skew</label>
+                  <input id="ticket-skew" type="text" inputmode="decimal" autocomplete="off" value="1.00" class="ticket-input" />
+                </div>
               </div>
             </div>
 
-            <div id="ticket-twap-wrap" class="hidden pro-fields">
-              <div class="ticket-field">
-                <label for="ticket-minutes" class="ticket-label">Minutes</label>
-                <input id="ticket-minutes" type="number" min="5" step="1" value="30" class="ticket-input" />
+            <div id="ticket-twap-wrap" class="hidden twap-fields">
+              <span class="ticket-label">Running Time (5m - 7d)</span>
+              <div class="twap-time-row">
+                <input id="ticket-twap-days" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Day(s)" aria-label="TWAP days" />
+                <input id="ticket-twap-hours" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Hour(s)" aria-label="TWAP hours" />
+                <input id="ticket-twap-mins" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Min(s)" value="30" aria-label="TWAP minutes" />
               </div>
-              <label class="chk"><input id="ticket-random" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Randomize slices</label>
+              <input id="ticket-minutes" type="hidden" value="30" />
             </div>
 
             <div id="ticket-stop-wrap" class="hidden pro-fields">
@@ -557,19 +575,10 @@
             </div>
             </div>
 
-            <div class="ticket-core ticket-core-tail">
-            <div class="slider-row">
-              <input id="ticket-pct" type="range" min="0" max="100" step="1" value="0" class="pct-slider" />
-              <div class="pct-ticks" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span>
-              </div>
-              <input id="ticket-pct-box" class="pct-box" type="text" inputmode="numeric" value="0" aria-label="Percent of available" />
-              <span class="pct-suffix">%</span>
-            </div>
-
             <div id="ticket-chk-row" class="chk-row">
+              <label id="ticket-random-lbl" class="chk hidden"><input id="ticket-random" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Randomize</label>
               <label class="chk"><input id="ticket-reduce" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Reduce Only</label>
-              <label class="chk"><input id="ticket-tpsl" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Take Profit / Stop Loss</label>
+              <label id="ticket-tpsl-lbl" class="chk"><input id="ticket-tpsl" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Take Profit / Stop Loss</label>
             </div>
             <div id="ticket-tpsl-wrap" class="hidden tpsl-grid">
               <input id="ticket-tp" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="TP Price" aria-label="Take profit price" />
