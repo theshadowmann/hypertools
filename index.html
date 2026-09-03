@@ -533,25 +533,14 @@
 
             <div class="ticket-scroll">
             <div id="ticket-scale-wrap" class="hidden scale-fields">
+              <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="Start (USDC)" aria-label="Start (USDC)" />
+              <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="End (USDC)" aria-label="End (USDC)" />
               <div class="scale-pair">
-                <div class="ticket-field">
-                  <label for="ticket-start" class="ticket-label">Start price</label>
-                  <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
-                </div>
-                <div class="ticket-field">
-                  <label for="ticket-end" class="ticket-label">End price</label>
-                  <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="USDC" />
-                </div>
-              </div>
-              <div class="scale-pair">
-                <div class="ticket-field">
-                  <label for="ticket-count" class="ticket-label">Orders count</label>
-                  <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" />
-                </div>
-                <div class="ticket-field">
-                  <label for="ticket-skew" class="ticket-label">Size Skew</label>
-                  <input id="ticket-skew" type="text" inputmode="decimal" autocomplete="off" value="1.00" class="ticket-input" />
-                </div>
+                <input id="ticket-count" type="number" min="2" max="50" value="5" class="ticket-input" placeholder="Total Orders" aria-label="Total Orders" />
+                <label class="scale-skew">
+                  <span class="scale-skew-k">Size Skew</span>
+                  <input id="ticket-skew" type="text" inputmode="decimal" autocomplete="off" class="scale-skew-in" value="1.00" aria-label="Size Skew" />
+                </label>
               </div>
             </div>
 

@@ -218,9 +218,9 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.ticket\.has-pro-extra \.ticket-core-tail \{[\s\S]*?overflow: visible/);
     expect(css).toMatch(/\.ticket\.has-pro-extra\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow: visible/);
     expect(css).not.toMatch(/\.ticket\.has-pro-extra \.ticket-scroll \{[\s\S]*?overflow-y:\s*auto/);
-    expect(html).toContain(">Start price<");
-    expect(html).toContain(">End price<");
-    expect(html).toContain(">Orders count<");
+    expect(html).toContain('placeholder="Start (USDC)"');
+    expect(html).toContain('placeholder="End (USDC)"');
+    expect(html).toContain('placeholder="Total Orders"');
     expect(html).toContain('id="ticket-count"');
     expect(css).toMatch(/\.tpsl-pad \{[\s\S]*?min-height: 56px/);
     expect(css).toMatch(/\.tpsl-grid\.is-idle \{[\s\S]*?visibility: hidden/);
@@ -234,7 +234,7 @@ describe("ticket DOM", () => {
     expect(html).toContain('value="30"');
     expect(html).toContain("Running Time (5m - 7d)");
     expect(html).not.toContain(">Minutes<");
-    expect(html).toContain("Orders count");
+    expect(html).toContain("Total Orders");
     expect(html).toContain("Size Skew");
     expect(html).toContain('id="ticket-skew"');
     expect(html).toContain('id="ticket-random-lbl"');
@@ -245,10 +245,12 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/html\.desk,[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.trade-shell \{[\s\S]*?overflow: hidden/);
     expect(js).toContain('classList.toggle("has-pro-extra", proOn)');
-    expect(js).toContain("const packPad = tpslChk || (proOn && next !== \"twap\")");
+    expect(js).toContain("const packPad = tpslChk");
     expect(js).toContain('classList.toggle("has-tpsl-extra", packPad)');
     expect(js).toContain('classList.toggle("is-twap", next === "twap")');
     expect(js).toContain('sizeK.textContent = next === "twap" ? "Total Size" : "Size"');
+    expect(js).toContain('next === "scale"');
+    expect(js).toContain("skew: fieldValue(\"ticket-skew\") || 1");
     expect(css).toMatch(/\.ticket\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow: hidden/);
     expect(css).not.toMatch(/\.ticket\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow-y:\s*auto/);
     expect(css).toMatch(/\.tpsl-grid \{[\s\S]*?display:\s*grid/);

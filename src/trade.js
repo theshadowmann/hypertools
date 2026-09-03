@@ -808,14 +808,14 @@ export function createTradeView(app) {
         ? { scale: "Scale", twap: "TWAP", "stop-limit": "Stop Limit", "stop-market": "Stop Market" }[next]
         : "Pro";
     }
-    byId("ticket-price-wrap")?.classList.toggle("hidden", next === "market" || next === "twap" || next === "stop-market");
+    byId("ticket-price-wrap")?.classList.toggle("hidden", next === "market" || next === "twap" || next === "stop-market" || next === "scale");
     byId("ticket-amount-wrap")?.classList.toggle("hidden", false);
     byId("ticket-scale-wrap")?.classList.toggle("hidden", next !== "scale");
     byId("ticket-twap-wrap")?.classList.toggle("hidden", next !== "twap");
     byId("ticket-stop-wrap")?.classList.toggle("hidden", next !== "stop-limit" && next !== "stop-market");
     byId("ticket-stop-limit-price")?.classList.toggle("hidden", next !== "stop-limit");
     const tpslChk = next === "market" || next === "limit";
-    const packPad = tpslChk || (proOn && next !== "twap");
+    const packPad = tpslChk;
     byId("ticket-tpsl-lbl")?.classList.toggle("hidden", !tpslChk);
     byId("ticket-tpsl-pad")?.classList.toggle("tpsl-collapsed", !packPad);
     setTpslOpen(tpslChk && !!byId("ticket-tpsl")?.checked);

@@ -1340,11 +1340,10 @@ html.tv-embed-frame footer {
 .twap-time-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 6px;
 }
 .twap-time-row {
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px;
 }
 .twap-fields .ticket-label {
   color: var(--text-muted);
@@ -1355,8 +1354,36 @@ html.tv-embed-frame footer {
   height: 32px;
   font-size: 13px;
 }
+.scale-fields .ticket-input::placeholder,
 .twap-fields .ticket-input::placeholder {
   color: var(--text-muted);
+}
+.scale-skew {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-input);
+}
+.scale-skew-k {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.scale-skew-in {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: right;
+  outline: none;
 }
 .tpsl-grid .ticket-input {
   height: 26px;
