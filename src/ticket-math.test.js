@@ -229,8 +229,11 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/grid-template-columns: minmax\(0, 1fr\) 248px 420px/);
     expect(css).toMatch(/\.trade-ticket \{[\s\S]*?grid-row: 1 \/ -1/);
     expect(html).toContain('placeholder="Day(s)"');
+    expect(html).toContain('placeholder="Hour(s)"');
+    expect(html).toContain('placeholder="Min(s)"');
+    expect(html).toContain('value="30"');
     expect(html).toContain("Running Time (5m - 7d)");
-    expect(html).toContain(">Minutes<");
+    expect(html).not.toContain(">Minutes<");
     expect(html).toContain("Orders count");
     expect(html).toContain("Size Skew");
     expect(html).toContain('id="ticket-skew"');
@@ -242,8 +245,10 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/html\.desk,[\s\S]*?overflow: hidden/);
     expect(css).toMatch(/\.trade-shell \{[\s\S]*?overflow: hidden/);
     expect(js).toContain('classList.toggle("has-pro-extra", proOn)');
-    expect(js).toContain("const packPad = tpslChk || proOn");
+    expect(js).toContain("const packPad = tpslChk || (proOn && next !== \"twap\")");
     expect(js).toContain('classList.toggle("has-tpsl-extra", packPad)');
+    expect(js).toContain('classList.toggle("is-twap", next === "twap")');
+    expect(js).toContain('sizeK.textContent = next === "twap" ? "Total Size" : "Size"');
     expect(css).toMatch(/\.ticket\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow: hidden/);
     expect(css).not.toMatch(/\.ticket\.has-tpsl-extra \.ticket-core-tail \{[\s\S]*?overflow-y:\s*auto/);
     expect(css).toMatch(/\.tpsl-grid \{[\s\S]*?display:\s*grid/);

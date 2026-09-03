@@ -510,7 +510,7 @@
 
             <div id="ticket-amount-wrap" class="ticket-field">
               <div class="field-head">
-                <label for="ticket-size" class="ticket-label">Size</label>
+                <label for="ticket-size" id="ticket-size-k" class="ticket-label">Size</label>
                 <span class="unit-toggle">
                   <button type="button" id="unit-coin" class="unit-btn" aria-pressed="true">BTC</button>
                   <button type="button" id="unit-usdc" class="unit-btn" aria-pressed="false">USDC</button>
@@ -558,18 +558,9 @@
             <div id="ticket-twap-wrap" class="hidden twap-fields">
               <span class="ticket-label">Running Time (5m - 7d)</span>
               <div class="twap-time-row">
-                <div class="ticket-field">
-                  <label for="ticket-twap-days" class="ticket-label">Day(s)</label>
-                  <input id="ticket-twap-days" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Day(s)" aria-label="TWAP days" />
-                </div>
-                <div class="ticket-field">
-                  <label for="ticket-twap-hours" class="ticket-label">Hour(s)</label>
-                  <input id="ticket-twap-hours" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Hour(s)" aria-label="TWAP hours" />
-                </div>
-                <div class="ticket-field">
-                  <label for="ticket-twap-mins" class="ticket-label">Minutes</label>
-                  <input id="ticket-twap-mins" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Min(s)" value="30" aria-label="TWAP minutes" />
-                </div>
+                <input id="ticket-twap-days" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Day(s)" aria-label="Day(s)" />
+                <input id="ticket-twap-hours" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Hour(s)" aria-label="Hour(s)" />
+                <input id="ticket-twap-mins" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Min(s)" value="30" aria-label="Min(s)" />
               </div>
               <input id="ticket-minutes" type="hidden" value="30" />
             </div>
