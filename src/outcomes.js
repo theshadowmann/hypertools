@@ -3,6 +3,7 @@
  *
  * Live Info:
  *   POST /info  { "type": "outcomeMeta" }     → outcomes[], questions[]
+ *   POST /info  { "type": "outcomeTemplates" } → template names used for out: chart slugs
  *   POST /info  { "type": "allMids" }         → mids keyed "#12090", "#12091", …
  *   POST /info  { "type": "l2Book", coin }    → levels for "#12100"
  *   POST /info  { "type": "recentTrades", coin }
@@ -50,6 +51,101 @@ export function parseOutcomeFields(desc) {
       out[part.slice(0, i)] = part.slice(i + 1);
     });
   return out;
+}
+
+const UTC_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Same kebab rules Hyperliquid uses for Charting Library / URL tickers. */
+export function outcomeSlugify(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/** UTC label Hyperliquid fills into `{time}` before slugifying (`Sep 7 at 6:00 AM UTC`). */
+export function formatOutcomeUtcLabel(raw) {
+  const m = String(raw || "").match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+  if (!m) return String(raw || "");
+  const month = UTC_MONTHS[Number(m[2]) - 1];
+  if (!month) return String(raw || "");
+  const hour = Number(m[4]);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return month + " " + Number(m[3]) + " at " + h12 + ":" + m[5] + " " + ampm + " UTC";
+}
+
+function formatTemplateHint(value, hint) {
+  if (hint === "dateTime") return formatOutcomeUtcLabel(value);
+  return String(value ?? "");
+}
+
+function indexOutcomeTemplates(templates) {
+  const byId = new Map();
+  (Array.isArray(templates) ? templates : []).forEach((t) => {
+    if (t && t.id) byId.set(String(t.id), t);
+  });
+  return byId;
+}
+
+function templateIdFromName(name) {
+  const raw = String(name || "");
+  return raw.startsWith("template:") ? raw.slice(9) : "";
+}
+
+function fillOutcomeTemplate(templateStr, fields, keywords) {
+  const src = String(templateStr || "");
+  if (!src) return "";
+  if (src.indexOf("{") < 0) return src;
+  let out = src;
+  const pairs = Array.isArray(keywords) ? keywords : [];
+  for (let i = 0; i < pairs.length; i++) {
+    const keyword = pairs[i] && pairs[i][0];
+    const hint = pairs[i] && pairs[i][1];
+    if (!keyword) continue;
+    if (fields[keyword] === undefined) return "";
+    out = out.split("{" + keyword + "}").join(formatTemplateHint(fields[keyword], hint));
+  }
+  return out;
+}
+
+function venueTicker(venue, slug) {
+  const body = outcomeSlugify(slug);
+  if (!body) return "";
+  const prefix = outcomeSlugify(venue);
+  return prefix ? prefix + ":" + body : body;
+}
+
+/**
+ * Hyperliquid Charting Library ticker for a Yes/No leg, e.g.
+ * `out:pons-touches-1-by-sep-7-at-600-am-utc-yes`. Built only from
+ * outcomeTemplates + outcomeMeta. Empty when a template cannot be resolved.
+ */
+export function outcomeLegTvTickers(outcome, question, templates) {
+  const o = outcome || {};
+  const byId = templates instanceof Map ? templates : indexOutcomeTemplates(templates);
+  const tmpl = byId.get(templateIdFromName(o.name));
+  if (!tmpl) return { yes: "", no: "" };
+  const fields = Object.assign({}, parseOutcomeFields(question && question.description), parseOutcomeFields(o.description));
+  const filled = fillOutcomeTemplate(tmpl.name, fields, tmpl.keywords);
+  if (!filled) return { yes: "", no: "" };
+  const outcomeSlug = outcomeSlugify(filled);
+  const qTmpl = question ? byId.get(templateIdFromName(question.name)) : null;
+  const qFields = question ? parseOutcomeFields(question.description) : {};
+  const qFilled = qTmpl ? fillOutcomeTemplate(qTmpl.name, qFields, qTmpl.keywords) : "";
+  const qSlug = qFilled ? outcomeSlugify(qFilled) : "";
+  const role = tmpl.role && tmpl.role.standaloneOutcome;
+  const sideNames = role && Array.isArray(role.sideNames) ? role.sideNames : ["Yes", "No"];
+  const yesSide = outcomeSlugify(fillOutcomeTemplate(sideNames[0] || "Yes", fields, tmpl.keywords) || "Yes") || "yes";
+  const noSide = outcomeSlugify(fillOutcomeTemplate(sideNames[1] || "No", fields, tmpl.keywords) || "No") || "no";
+  const stem = qSlug ? qSlug + "-" + outcomeSlug : outcomeSlug;
+  const venue = o.venue || "";
+  return {
+    yes: venueTicker(venue, stem + "-" + yesSide),
+    no: venueTicker(venue, stem + "-" + noSide),
+  };
 }
 
 function padTimeLabel(raw) {
@@ -154,6 +250,12 @@ export function formatOutcomeOdds(px) {
 export function outcomeLegCoin(m, leg) {
   if (!m) return "";
   return Number(leg) === 1 ? m.noCoin || "" : m.coin || "";
+}
+
+/** Charting Library / public-TV ticker for the Yes or No leg. Empty when unknown. */
+export function outcomeLegTvCoin(m, leg) {
+  if (!m) return "";
+  return Number(leg) === 1 ? m.noTvCoin || "" : m.yesTvCoin || "";
 }
 
 export function outcomeLegAsset(m, leg) {
@@ -261,8 +363,9 @@ export function outcomePositionMetrics(row) {
 /**
  * One tradeable Yes-side row per live outcomeMeta entry.
  * Prices come from allMids `#` keys. Missing mids stay blank — never fabricated.
+ * `templates` is the live `outcomeTemplates` list; used only for out: chart tickers.
  */
-export function parseOutcomeMarkets(meta, mids, hip3Marks) {
+export function parseOutcomeMarkets(meta, mids, hip3Marks, templates) {
   const questions = (meta && meta.questions) || [];
   const qById = {};
   questions.forEach((q) => {
@@ -273,6 +376,7 @@ export function parseOutcomeMarkets(meta, mids, hip3Marks) {
     if (q.fallbackOutcome != null) qById[q.fallbackOutcome] = q;
   });
   const px = mids && typeof mids === "object" ? mids : {};
+  const tmplIndex = indexOutcomeTemplates(templates);
   const out = [];
   ((meta && meta.outcomes) || []).forEach((o) => {
     if (!o || o.outcome == null) return;
@@ -288,11 +392,14 @@ export function parseOutcomeMarkets(meta, mids, hip3Marks) {
     const q = qById[id];
     const fields = Object.assign({}, parseOutcomeFields(q && q.description), parseOutcomeFields(o.description));
     const undKey = fields.perp || fields.underlying || "";
+    const tv = outcomeLegTvTickers(o, q, tmplIndex);
     out.push({
       id: "outcome:" + id + ":0",
       kind: "outcome",
       coin: yesCoin,
       noCoin,
+      yesTvCoin: tv.yes,
+      noTvCoin: tv.no,
       balanceCoin: encodeOutcomeBalance(id, 0),
       noBalanceCoin: encodeOutcomeBalance(id, 1),
       outcomeId: id,

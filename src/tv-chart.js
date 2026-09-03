@@ -2,7 +2,11 @@ import { clear } from "./dom.js";
 import { tvInterval, tvSymbol } from "./ticket-math.js";
 import { mountHlChart } from "./hl-chart.js";
 
-/** Official TradingView Advanced Chart iframe widget. Not user-configurable. */
+/**
+ * Official TradingView Advanced Chart iframe widget. Not user-configurable.
+ * Charting Library is proprietary (Hyperliquid hosts a licensed copy) and is
+ * not vendored here. HIP-4 candles come from Hyperliquid `candleSnapshot`.
+ */
 export const TV_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
 export const TV_WIDGET_PAGE = "https://www.tradingview-widget.com/embed-widget/advanced-chart/";
 /** Same-origin snapshot of TV_WIDGET_PAGE. Path must match TV's onWidget() embed regex. */
@@ -299,9 +303,15 @@ export function officialTvWidgetSrc(src) {
   return String(src || "").startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart");
 }
 
-export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS) {
+/**
+ * Perps: iframe `load` on the official host counts as a paint.
+ * Outcomes: public TV usually has no HIP-4 listing, but the iframe still loads
+ * an "invalid symbol" page — do not treat that as success (`trustLoad: false`).
+ */
+export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS, opts) {
   let settled = false;
   let timer = 0;
+  const trustLoad = !opts || opts.trustLoad !== false;
   const finish = (failed) => {
     if (settled) return;
     settled = true;
@@ -311,7 +321,7 @@ export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS) {
   if (iframe && typeof iframe.addEventListener === "function") {
     iframe.addEventListener("load", () => {
       const src = iframe.getAttribute && iframe.getAttribute("src");
-      if (officialTvWidgetSrc(src)) finish(false);
+      if (trustLoad && officialTvWidgetSrc(src)) finish(false);
     });
     iframe.addEventListener("error", () => finish(true));
   }
@@ -319,7 +329,7 @@ export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS) {
   return () => finish(false);
 }
 
-export function mountTvChart(container, { coin, interval, kind, base, quote, onFallback } = {}) {
+export function mountTvChart(container, { coin, interval, kind, base, quote, hlCoin, onFallback } = {}) {
   if (!container) return;
   teardownChartHost(container);
   clear(container);
@@ -352,10 +362,16 @@ export function mountTvChart(container, { coin, interval, kind, base, quote, onF
   stampTvChrome(iframe);
   widget.appendChild(iframe);
   container.appendChild(wrap);
-  const cancel = scheduleTvFallback(iframe, () => {
-    mountHlChart(container, { coin, interval });
-    if (typeof onFallback === "function") onFallback();
-  });
+  const fallbackCoin = hlCoin || coin;
+  const cancel = scheduleTvFallback(
+    iframe,
+    () => {
+      mountHlChart(container, { coin: fallbackCoin, interval });
+      if (typeof onFallback === "function") onFallback();
+    },
+    TV_PAINT_MS,
+    { trustLoad: kind !== "outcome" }
+  );
   wrap._chartTeardown = cancel;
 }
 
@@ -363,11 +379,13 @@ export function mountTvChart(container, { coin, interval, kind, base, quote, onF
 export function mountChart(container, opts) {
   if (!container) return "skip";
   const o = opts || {};
-  const symbol = tvSymbol(o.coin, o.kind, o.base, o.quote);
+  const hlCoin = o.hlCoin || o.coin;
+  const tvCoin = o.tvCoin || o.coin;
+  const symbol = tvSymbol(tvCoin, o.kind, o.base, o.quote);
   if (symbol) {
-    mountTvChart(container, o);
+    mountTvChart(container, { ...o, coin: tvCoin, hlCoin });
     return "tv";
   }
-  mountHlChart(container, o);
+  mountHlChart(container, { coin: hlCoin, interval: o.interval });
   return "hl";
 }

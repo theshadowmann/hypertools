@@ -132,6 +132,32 @@ describe("TradingView embed", () => {
     expect(host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
   });
 
+  it("tries the official widget for a live out: ticker and falls back to that hash coin, never BTC", () => {
+    vi.useFakeTimers();
+    const host = document.createElement("div");
+    const kind = mountChart(host, {
+      coin: "#12880",
+      tvCoin: "out:pons-touches-1-by-sep-7-at-600-am-utc-yes",
+      hlCoin: "#12880",
+      interval: "5m",
+      kind: "outcome",
+    });
+    expect(kind).toBe("tv");
+    const iframe = host.querySelector("iframe");
+    expect(iframe).toBeTruthy();
+    const src = iframe.getAttribute("src") || "";
+    expect(src.startsWith("https://www.tradingview-widget.com/embed-widget/advanced-chart/")).toBe(true);
+    expect(decodeURIComponent(src)).toContain("HYPERLIQUID:out:pons-touches-1-by-sep-7-at-600-am-utc-yes");
+    expect(src).not.toContain("BTCUSDC");
+    iframe.dispatchEvent(new Event("load"));
+    expect(host.querySelector("iframe")).toBeTruthy();
+    vi.advanceTimersByTime(TV_PAINT_MS);
+    expect(host.querySelector("iframe")).toBeNull();
+    expect(host.innerHTML).not.toContain("BTCUSDC");
+    expect(host.querySelector(".hl-chart-host") || host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
+    vi.useRealTimers();
+  });
+
   it("stamps toolbar_bg onto the widget iframe hash so drawing and top bars match the pane", () => {
     const iframe = document.createElement("iframe");
     const cfg = {
@@ -213,6 +239,26 @@ describe("TradingView embed", () => {
     iframe.dispatchEvent(new Event("load"));
     vi.advanceTimersByTime(TV_PAINT_MS);
     expect(failed).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("does not treat official-widget load as success for HIP-4 outcomes", () => {
+    vi.useFakeTimers();
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", TV_WIDGET_PAGE + "#{}");
+    let failed = false;
+    scheduleTvFallback(
+      iframe,
+      () => {
+        failed = true;
+      },
+      TV_PAINT_MS,
+      { trustLoad: false }
+    );
+    iframe.dispatchEvent(new Event("load"));
+    expect(failed).toBe(false);
+    vi.advanceTimersByTime(TV_PAINT_MS);
+    expect(failed).toBe(true);
     vi.useRealTimers();
   });
 });
@@ -416,6 +462,7 @@ describe("HL interval row", () => {
     expect(html).not.toContain("data-interval");
     expect(trade).toContain("renderHlIntervalRow(kind === \"hl\")");
     expect(trade).toContain("onFallback: () => renderHlIntervalRow(true)");
+    expect(trade).toContain("outcomeLegTvCoin");
     expect(trade).toContain('byId("hl-iv")');
     expect(trade).toContain("setChartInterval");
     expect(trade).not.toContain(".trade-iv");

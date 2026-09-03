@@ -105,13 +105,15 @@ export async function loadMarkets() {
     hlInfo({ type: "outcomeMeta" }),
     hlInfo({ type: "allMids" }),
     hlInfo({ type: "metaAndAssetCtxs", dex: "xyz" }),
+    hlInfo({ type: "outcomeTemplates" }),
   ]);
   const perps = results[0].status === "fulfilled" ? parsePerpMarkets(results[0].value) : [];
   const spot = results[1].status === "fulfilled" ? parseSpotMarkets(results[1].value) : [];
   const outcomeMeta = results[2].status === "fulfilled" ? results[2].value : null;
   const mids = results[3].status === "fulfilled" ? results[3].value : {};
   const hip3Marks = marksFromMetaCtxs(results[4].status === "fulfilled" ? results[4].value : null);
-  const outcomes = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids, hip3Marks) : [];
+  const templates = results[5].status === "fulfilled" ? results[5].value : null;
+  const outcomes = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids, hip3Marks, templates) : [];
   const markets = mergeMarkets(perps, spot, outcomes);
   if (!markets.length) throw new Error("Hyperliquid returned no markets");
   return markets;
