@@ -68,7 +68,45 @@ export function levLabel(lev) {
   const v = lev.value;
   const t = lev.type || "";
   if (v == null || v === "") return t || "—";
-  return String(v) + "× " + t;
+  return String(v) + "x " + t;
+}
+
+export const POS_HEADERS = ["MARKET", "SIDE", "SIZE", "ENTRY", "MARK", "LIQ.", "LEV", "UPNL"];
+
+export function buildPositionsTable(rows, mids, opts = {}) {
+  const marks = mids || {};
+  return h(
+    "div",
+    { class: "overflow-x-auto" },
+    h(
+      "table",
+      { class: "bal-table pos-table" },
+      h("thead", null, h("tr", null, ...POS_HEADERS.map((label) => h("th", null, label)))),
+      h(
+        "tbody",
+        null,
+        ...rows.map((p) => {
+          const szi = num(p.szi);
+          const long = szi >= 0;
+          const trAttrs = {};
+          if (opts.rowClass) trAttrs.class = opts.rowClass;
+          if (typeof opts.onRowClick === "function") trAttrs.onClick = () => opts.onRowClick(p);
+          return h(
+            "tr",
+            Object.keys(trAttrs).length ? trAttrs : null,
+            h("td", null, p.coin),
+            h("td", { class: long ? "text-accent" : "text-danger" }, long ? "Long" : "Short"),
+            h("td", null, fmtQty(Math.abs(szi))),
+            h("td", null, fmtPx(p.entryPx)),
+            h("td", null, marks[p.coin] == null ? "—" : fmtPx(marks[p.coin])),
+            h("td", null, p.liquidationPx ? fmtPx(p.liquidationPx) : "—"),
+            h("td", null, levLabel(p.leverage)),
+            h("td", { class: pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true }))
+          );
+        })
+      )
+    )
+  );
 }
 
 function money(v) {
@@ -359,26 +397,7 @@ function renderPortHist(state) {
       if (!rows.length) emptyHist(posRoot, "No open perps.");
       else {
         clear(posRoot);
-        posRoot.appendChild(
-          histTable(
-            ["Market", "Side", "Size", "Entry", "Mark", "Liq.", "Lev", "uPnL"],
-            rows.map((p) => {
-              const szi = num(p.szi);
-              return h(
-                "tr",
-                null,
-                h("td", null, p.coin),
-                h("td", { class: szi >= 0 ? "text-buy" : "text-sell" }, szi >= 0 ? "Long" : "Short"),
-                h("td", null, fmtQty(Math.abs(szi))),
-                h("td", null, fmtPx(p.entryPx)),
-                h("td", null, mids[p.coin] == null ? "--" : fmtPx(mids[p.coin])),
-                h("td", null, p.liquidationPx ? fmtPx(p.liquidationPx) : "--"),
-                h("td", null, levLabel(p.leverage)),
-                h("td", { class: pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true }))
-              );
-            })
-          )
-        );
+        posRoot.appendChild(buildPositionsTable(rows, mids));
       }
     }
   }

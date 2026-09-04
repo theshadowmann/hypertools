@@ -268,6 +268,18 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/\.hist-body th,[\s\S]*?text-decoration: none/);
     expect(js).not.toContain("border-t border-chrome");
     expect(js).toContain('{ class: "bal-table" }');
+    expect(css).toMatch(/\.text-buy \{ color: var\(--accent-primary\)/);
+    expect(css).toMatch(/\.text-sell \{ color: var\(--accent-danger\)/);
+    expect(css).toMatch(/\.text-accent \{ color: var\(--accent-primary\)/);
+    expect(css).toMatch(/\.text-danger \{ color: var\(--accent-danger\)/);
+    expect(css).toMatch(/\.text-success \{ color: var\(--accent-success\)/);
+    expect(css).toMatch(/\.text-white \{ color: var\(--text-primary\)/);
+    expect(css).toMatch(/\.bal-table \.text-success \{ color: var\(--accent-success\)/);
+    expect(css).toMatch(/\.bal-table \.text-accent \{ color: var\(--accent-primary\)/);
+    expect(css).toMatch(/\.pos-table th,[\s\S]*?padding: 10px 20px/);
+    expect(css).toMatch(/\.pos-table th,[\s\S]*?border: 0/);
+    expect(js).toContain("buildPositionsTable");
+    expect(js).not.toContain("× ");
   });
 
   it("fills the size slider track left of the thumb with Deep Teal", () => {

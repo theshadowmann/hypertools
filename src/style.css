@@ -1690,6 +1690,41 @@ input[type="checkbox"] {
 }
 .bal-pnl.up { color: var(--accent-success); }
 .bal-pnl.down { color: var(--accent-danger); }
+.text-buy { color: var(--accent-primary); }
+.text-sell { color: var(--accent-danger); }
+.text-accent { color: var(--accent-primary); }
+.text-danger { color: var(--accent-danger); }
+.text-success { color: var(--accent-success); }
+.text-white { color: var(--text-primary); }
+.bal-table .text-buy,
+.bal-table .text-accent { color: var(--accent-primary); }
+.bal-table .text-sell,
+.bal-table .text-danger { color: var(--accent-danger); }
+.bal-table .text-success { color: var(--accent-success); }
+.bal-table .text-white { color: var(--text-primary); }
+.port-acct-v.text-success { color: var(--accent-success); }
+.port-acct-v.text-danger { color: var(--accent-danger); }
+.port-acct-v.text-white { color: var(--text-primary); }
+.pos-table th,
+.pos-table td {
+  padding: 10px 20px;
+  border: 0;
+  border-top: 0;
+  border-bottom: 0;
+}
+.pos-table td:first-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.pos-table th:nth-child(2),
+.pos-table td:nth-child(2),
+.pos-table th:nth-child(7),
+.pos-table td:nth-child(7) {
+  text-align: center;
+}
+.pos-table tbody tr:hover {
+  background: var(--bg-input);
+}
 .out-table td.out-empty,
 .out-table td[colspan] {
   text-align: center;

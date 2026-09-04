@@ -14,7 +14,7 @@ import {
   num,
   pnlClass,
 } from "./format.js";
-import { levLabel, positionRows, spotUsdcParts } from "./dashboard.js";
+import { buildPositionsTable, positionRows, spotUsdcParts } from "./dashboard.js";
 import {
   cancelOrders,
   cancelTwap,
@@ -1439,24 +1439,10 @@ export function createTradeView(app) {
       return;
     }
     root.appendChild(
-      histTable(
-        ["Market", "Side", "Size", "Entry", "Mark", "Liq.", "Lev", "uPnL"],
-        rows.map((p) => {
-          const szi = num(p.szi);
-          return h(
-            "tr",
-            { class: "cursor-pointer hover:bg-ink-700", onClick: () => setMarket(p.coin) },
-            h("td", { class: "px-2 py-1.5 font-normal text-mist-100" }, p.coin),
-            h("td", { class: "px-2 py-1.5 " + (szi >= 0 ? "text-buy" : "text-sell") }, szi >= 0 ? "Long" : "Short"),
-            h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(Math.abs(szi))),
-            h("td", { class: "px-2 py-1.5 font-mono" }, fmtPx(p.entryPx)),
-            h("td", { class: "px-2 py-1.5 font-mono" }, mids[p.coin] == null ? "—" : fmtPx(mids[p.coin])),
-            h("td", { class: "px-2 py-1.5 font-mono" }, p.liquidationPx ? fmtPx(p.liquidationPx) : "—"),
-            h("td", { class: "px-2 py-1.5" }, levLabel(p.leverage)),
-            h("td", { class: "px-2 py-1.5 font-mono " + pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true }))
-          );
-        })
-      )
+      buildPositionsTable(rows, mids, {
+        rowClass: "cursor-pointer",
+        onRowClick: (p) => setMarket(p.coin),
+      })
     );
   }
 

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it } from "vitest";
-import { drawPnlChart, renderDashboard } from "./dashboard.js";
+import { drawPnlChart, levLabel, renderDashboard } from "./dashboard.js";
 import { h } from "./dom.js";
 import { HL_APP_PORTFOLIO, HL_FEES_DOCS } from "./hosts.js";
 
@@ -322,5 +322,79 @@ describe("portfolio disconnected and live numbers", () => {
     document.querySelector('[data-port-chart="account"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(canvas._scrubT).toBe(b);
     expect(canvas._series.find((p) => p.t === canvas._scrubT).v).toBe(200);
+  });
+});
+
+describe("positions table", () => {
+  it("prints leverage as 3x cross, not a multiplication sign", () => {
+    expect(levLabel({ value: 3, type: "cross" })).toBe("3x cross");
+    expect(levLabel({ value: 3, type: "cross" })).not.toContain("×");
+    expect(levLabel(null)).toBe("—");
+  });
+
+  it("matches MARKET…UPNL columns, Long cyan, green profit uPNL, em dash liq", () => {
+    const { el } = mount();
+    renderDashboard(el, {
+      address: "0x999a4b5f268a8fbf33736feff360d462ad248dbf",
+      error: null,
+      data: {
+        perps: {
+          marginSummary: { accountValue: "1" },
+          assetPositions: [
+            {
+              position: {
+                coin: "PONS",
+                szi: "46",
+                entryPx: "0.6596",
+                leverage: { value: 3, type: "cross" },
+                unrealizedPnl: "0.0212",
+                liquidationPx: null,
+                positionValue: "30",
+              },
+            },
+            {
+              position: {
+                coin: "ETH",
+                szi: "-1",
+                entryPx: "3500",
+                leverage: { value: 5, type: "isolated" },
+                unrealizedPnl: "-12.5",
+                liquidationPx: "4000",
+                positionValue: "3500",
+              },
+            },
+          ],
+        },
+        mids: { PONS: "0.66", ETH: "3480" },
+        spot: { balances: [] },
+      },
+    });
+    const pos = document.getElementById("port-positions");
+    const table = pos.querySelector("table");
+    expect(table.className).toContain("pos-table");
+    expect([...pos.querySelectorAll("th")].map((th) => th.textContent)).toEqual([
+      "MARKET",
+      "SIDE",
+      "SIZE",
+      "ENTRY",
+      "MARK",
+      "LIQ.",
+      "LEV",
+      "UPNL",
+    ]);
+    const rows = [...pos.querySelectorAll("tbody tr")];
+    const pons = rows.find((r) => r.querySelector("td")?.textContent === "PONS");
+    const tds = [...pons.querySelectorAll("td")];
+    expect(tds[1].textContent).toBe("Long");
+    expect(tds[1].className).toBe("text-accent");
+    expect(tds[5].textContent).toBe("—");
+    expect(tds[6].textContent).toBe("3x cross");
+    expect(tds[7].className).toBe("text-success");
+    expect(tds[7].textContent).toMatch(/^\+\$/);
+    const short = rows.find((r) => r.querySelector("td")?.textContent === "ETH");
+    const sTds = [...short.querySelectorAll("td")];
+    expect(sTds[1].textContent).toBe("Short");
+    expect(sTds[1].className).toBe("text-danger");
+    expect(sTds[7].className).toBe("text-danger");
   });
 });

@@ -74,7 +74,7 @@ export function truncAddr(addr) {
 export function pnlClass(raw) {
   const n = num(raw);
   if (!Number.isFinite(n) || n === 0) return "text-white";
-  return n > 0 ? "text-accent" : "text-danger";
+  return n > 0 ? "text-success" : "text-danger";
 }
 
 export function escapeHtml(s) {
