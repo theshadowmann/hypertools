@@ -85,9 +85,18 @@ export function iconCoinFromBalance(coin) {
 }
 
 function isRawTokenId(coin) {
-  const s = String(coin || "");
+  const s = String(coin || "").trim();
   const ch = s.charAt(0);
-  return ch === "+" || ch === "#" || ch === "@";
+  return ch === "+" || ch === "#" || ch === "@" || /^\d+$/.test(s);
+}
+
+function outcomeEncoding(coin) {
+  const s = String(coin || "").trim();
+  const body = /^[+#@]/.test(s) ? s.slice(1) : /^\d+$/.test(s) ? s : "";
+  if (!body) return null;
+  const enc = Number(body);
+  if (!Number.isInteger(enc) || enc < 0) return null;
+  return { enc, outcomeId: Math.floor(enc / 10), side: enc % 10 };
 }
 
 function marketForBalanceCoin(coin, markets) {
@@ -95,7 +104,9 @@ function marketForBalanceCoin(coin, markets) {
   if (!c) return null;
   const hash = c.charAt(0) === "+" ? "#" + c.slice(1) : c;
   const plus = c.charAt(0) === "#" ? "+" + c.slice(1) : c;
+  const parsed = outcomeEncoding(c);
   const list = markets || [];
+  let byId = null;
   for (let i = 0; i < list.length; i++) {
     const x = list[i];
     if (!x) continue;
@@ -107,35 +118,41 @@ function marketForBalanceCoin(coin, markets) {
       x.balanceCoin === c ||
       x.balanceCoin === plus ||
       x.noBalanceCoin === c ||
-      x.noBalanceCoin === plus ||
-      x.base === c
+      x.noBalanceCoin === plus
     ) {
       return x;
     }
+    if (parsed && x.kind === "outcome" && Number(x.outcomeId) === parsed.outcomeId) {
+      byId = byId || x;
+    }
   }
-  return null;
+  return byId;
+}
+
+function outcomeSideLabel(coin) {
+  const parsed = outcomeEncoding(coin);
+  if (!parsed) return "Outcome";
+  return parsed.side === 1 ? "Outcome · No" : "Outcome · Yes";
 }
 
 /** Never show bare `+14090` / `#14090` as the Asset name. */
 export function balanceAssetLabel(coin, markets) {
-  const c = String(coin || "");
+  const c = String(coin || "").trim();
   if (!c) return "";
-  if (String(c).toUpperCase() === "USDC") return "USDC";
+  if (c.toUpperCase() === "USDC") return "USDC";
   const m = marketForBalanceCoin(c, markets);
   if (m) {
-    const title = m.pair || m.base || "";
-    if (m.kind === "outcome" && title) {
-      const enc = Number(String(c).replace(/^[+#]/, ""));
-      const side = Number.isInteger(enc) && enc % 10 === 1 ? "No" : "Yes";
-      return title + " · " + side;
+    const title = m.pair || m.description || "";
+    if (m.kind === "outcome") {
+      const parsed = outcomeEncoding(c);
+      const side = parsed && parsed.side === 1 ? "No" : "Yes";
+      if (title && !isRawTokenId(title)) return title + " · " + side;
+      return "Outcome · " + side;
     }
-    if (title) return title;
-    if (m.base) return m.base;
+    if (title && !isRawTokenId(title)) return title;
+    if (m.base && !isRawTokenId(m.base)) return m.base;
   }
-  if (isRawTokenId(c)) {
-    const enc = Number(String(c).slice(1));
-    if (Number.isInteger(enc)) return enc % 10 === 1 ? "No" : "Yes";
-  }
+  if (isRawTokenId(c)) return outcomeSideLabel(c);
   return c;
 }
 
@@ -173,8 +190,8 @@ export function formatPnlPct(pct) {
 }
 
 /**
- * Live rows from spotClearinghouseState balances + (standard mode) clearinghouse USDC.
- * Unified / portfolio margin: one USDC row from spot, never a second synthetic perps USDC.
+ * Live rows from spotClearinghouseState + optional perps USDC fallback.
+ * At most one USDC row: spot USDC wins; perps clearinghouse USDC only if spot has none.
  * hideSmall drops known USD values under $1; unknown values stay visible.
  */
 export function buildBalanceRows({ perps, spotBalances, mids, markets, hideSmall, abstraction }) {
@@ -208,8 +225,18 @@ export function buildBalanceRows({ perps, spotBalances, mids, markets, hideSmall
   });
 
   const rows = [];
-  const spotSourced = usesSpotTradingBalance(abstraction, perps, spotBalances);
-  if (!spotSourced) {
+  // Hard rule: at most one USDC row. Spot USDC always wins over perps accountValue.
+  if (usdcSeen) {
+    rows.push({
+      coin: "USDC",
+      label: "USDC",
+      iconCoin: "USDC",
+      total: usdcTotal,
+      available: usdcAvail,
+      value: usdcTotal,
+      pnlPct: null,
+    });
+  } else {
     const ms = (perps && perps.marginSummary) || {};
     const acct = num(ms.accountValue);
     const wd = num(perps && perps.withdrawable);
@@ -225,17 +252,6 @@ export function buildBalanceRows({ perps, spotBalances, mids, markets, hideSmall
         pnlPct: null,
       });
     }
-  }
-  if (usdcSeen) {
-    rows.push({
-      coin: "USDC",
-      label: "USDC",
-      iconCoin: "USDC",
-      total: usdcTotal,
-      available: usdcAvail,
-      value: usdcTotal,
-      pnlPct: null,
-    });
   }
   rows.push(...others);
   if (!hideSmall) return rows;

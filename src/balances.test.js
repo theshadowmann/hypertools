@@ -144,7 +144,46 @@ describe("account abstraction", () => {
     expect(balanceAssetLabel("+14091", [{ kind: "outcome", coin: "#14090", noCoin: "#14091", pair: "PONS above 1 on Sep 7?" }])).toBe(
       "PONS above 1 on Sep 7? · No"
     );
-    expect(balanceAssetLabel("+14090", [])).toBe("Yes");
+    expect(balanceAssetLabel("+14570", [])).toBe("Outcome · Yes");
+    expect(balanceAssetLabel("#14571", [])).toBe("Outcome · No");
+    expect(balanceAssetLabel("+14570", [])).not.toMatch(/14570/);
     expect(spotUsdcParts([{ coin: "USDC", total: "10", hold: "2" }]).available).toBe(8);
+  });
+
+  it("never emits two USDC rows when both perps and spot USDC exist", () => {
+    const cases = [
+      { abstraction: "disabled" },
+      { abstraction: "unifiedAccount" },
+      { abstraction: null },
+      { abstraction: "dexAbstraction" },
+    ];
+    cases.forEach((extra) => {
+      const rows = buildBalanceRows({
+        ...extra,
+        perps: { marginSummary: { accountValue: "71.2315" }, withdrawable: "0.705262" },
+        spotBalances: [
+          { coin: "USDC", total: "90.21820076", hold: "71.231528" },
+          { coin: "+14570", total: "25", hold: "0", entryNtl: "17.75" },
+        ],
+        mids: { "#14570": "0.7" },
+        markets: [
+          {
+            kind: "outcome",
+            outcomeId: 1457,
+            coin: "#14570",
+            balanceCoin: "+14570",
+            pair: "Example market?",
+            markPx: "0.7",
+          },
+        ],
+        hideSmall: false,
+      });
+      const usdc = rows.filter((r) => r.coin === "USDC");
+      expect(usdc).toHaveLength(1);
+      expect(usdc[0].total).toBeCloseTo(90.21820076);
+      expect(usdc[0].available).toBeCloseTo(18.98667276);
+      expect(rows.find((r) => r.coin === "+14570").label).toBe("Example market? · Yes");
+      expect(rows.find((r) => r.coin === "+14570").label).not.toMatch(/^\+14570$/);
+    });
   });
 });
