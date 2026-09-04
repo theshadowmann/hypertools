@@ -65,6 +65,7 @@ import {
 } from "./markets.js";
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
 import { buildBalanceRows, formatPnlPct, perpsAvailableCollateral, spotUsdcParts } from "./balances.js";
+import { cancelAllCancels, setOpenOrdersTabLabel } from "./open-orders.js";
 import {
   formatChancePct,
   formatOutcomeCountdown,
@@ -140,6 +141,7 @@ export function createTradeView(app) {
   let extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: null };
   let bottomTab = "balances";
   let hideSmallBalances = true;
+  let cancelBusy = false;
   let outcomeSideFilter = "all";
   let pendingOutcomeSelect = null;
   let fundingTimer = null;
@@ -1332,7 +1334,18 @@ export function createTradeView(app) {
       h(
         "table",
         { class: "bal-table" },
-        h("thead", null, h("tr", null, ...headers.map((label) => h("th", null, label)))),
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            ...headers.map((label, i) => {
+              const isAction = i === headers.length - 1 && label && typeof label === "object";
+              return h("th", isAction ? { class: "orders-cancel-h" } : null, label);
+            })
+          )
+        ),
         h("tbody", null, ...rows)
       )
     );
@@ -1553,23 +1566,57 @@ export function createTradeView(app) {
     return hit.asset;
   }
 
+  function paintOrdersTab(count) {
+    setOpenOrdersTabLabel(document.querySelector("#trade [data-bottom-tab=\"orders\"]"), count);
+  }
+
   function renderOrders() {
     const root = byId("trade-orders");
     if (!root) return;
     clear(root);
     if (!app.state.address) {
+      paintOrdersTab(0);
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load open orders."));
       return;
     }
     const orders = forThisPage((app.state.data && app.state.data.openOrders) || []);
+    paintOrdersTab(orders.length);
     const tradeable = canTrade();
     if (!orders.length) {
       root.appendChild(emptyNote(pageKind === "outcome" ? "No open outcome orders." : "No open orders."));
       return;
     }
+    const showCancelAll = tradeable && orders.length > 0;
+    const headers = [
+      "Time",
+      "Coin",
+      "Direction",
+      "Size",
+      "Filled Size",
+      "Order Value",
+      "Price",
+      "Reduce Only",
+      "Trigger Conditions",
+      "Status",
+      "Order ID",
+    ];
+    if (showCancelAll) {
+      headers.push(
+        h(
+          "button",
+          {
+            type: "button",
+            class: "orders-cancel",
+            disabled: !enabled || cancelBusy,
+            onClick: onCancelAll,
+          },
+          "Cancel All"
+        )
+      );
+    }
     root.appendChild(
       histTable(
-        ["Time", "Coin", "Direction", "Size", "Filled Size", "Order Value", "Price", "Reduce Only", "Trigger Conditions", "Status", "Order ID", ""],
+        headers,
         orders.map((o) => {
           const cash = pageKind === "outcome" || isOutcomeCoin(o.coin);
           const dir = o.side === "B" ? (cash ? "Buy" : "Open Long") : cash ? "Sell" : "Open Short";
@@ -1589,13 +1636,22 @@ export function createTradeView(app) {
             h("td", { class: "px-2 py-1.5" }, o.isTrigger ? String(o.triggerPx || o.orderType || "Trigger") : "—"),
             h("td", { class: "px-2 py-1.5" }, "Open"),
             h("td", { class: "px-2 py-1.5 font-mono" }, String(o.oid)),
-            h(
-              "td",
-              { class: "px-2 py-1.5" },
-              tradeable
-                ? h("button", { type: "button", class: "text-sell hover:underline", onClick: () => onCancel(o.coin, Number(o.oid)) }, "Cancel")
-                : ""
-            )
+            showCancelAll
+              ? h(
+                  "td",
+                  { class: "px-2 py-1.5 orders-cancel-cell" },
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      class: "orders-cancel",
+                      disabled: cancelBusy,
+                      onClick: () => onCancel(o.coin, Number(o.oid)),
+                    },
+                    "Cancel"
+                  )
+                )
+              : null
           );
         })
       )
@@ -1805,6 +1861,42 @@ export function createTradeView(app) {
       await refreshUserTables();
     } catch (err) {
       ticketMessage(userMessage(err), "err");
+    }
+  }
+
+  async function onCancelAll() {
+    if (!canTrade()) {
+      ticketMessage("Connect a wallet to cancel orders.", "err");
+      return;
+    }
+    if (!enabled) {
+      ticketMessage("Enable trading first.", "err");
+      return;
+    }
+    const orders = forThisPage((app.state.data && app.state.data.openOrders) || []);
+    const cancels = cancelAllCancels(orders, (o) => assetForCoin(o.coin));
+    if (!cancels.length) {
+      ticketMessage("No open orders to cancel.", "err");
+      return;
+    }
+    if (cancelBusy) return;
+    cancelBusy = true;
+    renderOrders();
+    try {
+      ticketMessage("Canceling " + cancels.length + " orders…");
+      await cancelOrders({
+        source: app.state.source,
+        address: app.state.address,
+        cancels,
+        onStatus: (s) => ticketMessage(s),
+      });
+      ticketMessage("Canceled " + cancels.length + " orders.", "ok");
+      await refreshUserTables();
+    } catch (err) {
+      ticketMessage(userMessage(err), "err");
+    } finally {
+      cancelBusy = false;
+      renderOrders();
     }
   }
 

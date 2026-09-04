@@ -10,6 +10,7 @@ import {
 } from "./format.js";
 import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
+import { setOpenOrdersTabLabel } from "./open-orders.js";
 import { outcomePositionMetrics, outcomePositionsFromSpot } from "./outcomes.js";
 import {
   axisTicks,
@@ -431,10 +432,14 @@ function renderPortHist(state) {
   }
 
   const ordRoot = document.getElementById("port-orders");
+  const ordersBtn = document.querySelector("#dashboard [data-port-tab=\"orders\"]");
   if (ordRoot) {
-    if (!connected) empty("port-orders", "open orders");
-    else {
+    if (!connected) {
+      setOpenOrdersTabLabel(ordersBtn, 0);
+      empty("port-orders", "open orders");
+    } else {
       const orders = data.openOrders || [];
+      setOpenOrdersTabLabel(ordersBtn, orders.length);
       if (!orders.length) emptyHist(ordRoot, "No open orders.");
       else {
         clear(ordRoot);

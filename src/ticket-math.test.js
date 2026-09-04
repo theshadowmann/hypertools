@@ -178,6 +178,8 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="ticket-tif"');
     expect(html).toContain("Payout if Yes");
     expect(html).toMatch(/data-bottom-tab="positions"[\s\S]*data-bottom-tab="outcomes"[\s\S]*data-bottom-tab="orders"/);
+    expect(html).toContain(">Open Orders (0)<");
+    expect(html).not.toContain("Chase");
     expect(html).toContain('id="trade-outcomes"');
     expect(html).toContain(">Outcomes<");
     const tradeJs = readFileSync(join(root, "src/trade.js"), "utf8");
@@ -272,8 +274,10 @@ describe("ticket DOM", () => {
     expect(css).not.toMatch(/\.bal-table td \{[\s\S]*?border-top: 1px solid var\(--hair\)/);
     expect(css).toMatch(/\.hist-body th,[\s\S]*?border: 0/);
     expect(css).toMatch(/\.hist-body th,[\s\S]*?text-decoration: none/);
-    expect(js).not.toContain("border-t border-chrome");
-    expect(js).toContain('{ class: "bal-table" }');
+    expect(js).toContain("cancelAllCancels");
+    expect(js).toContain("onCancelAll");
+    expect(css).toMatch(/\.orders-cancel \{[\s\S]*?color: var\(--accent-primary\)/);
+    expect(css).toMatch(/\.orders-cancel \{[\s\S]*?text-transform: none/);
     expect(css).toMatch(/\.text-buy \{ color: var\(--accent-primary\)/);
     expect(css).toMatch(/\.text-sell \{ color: var\(--accent-danger\)/);
     expect(css).toMatch(/\.text-accent \{ color: var\(--accent-primary\)/);
