@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   availableBalance,
+  balanceAssetLabel,
   balanceMarkPx,
   buildBalanceRows,
   formatPnlPct,
   iconCoinFromBalance,
+  normalizeAbstraction,
+  perpsAvailableCollateral,
   pnlPctFromEntry,
+  spotUsdcParts,
   usdValue,
+  usesSpotTradingBalance,
 } from "./balances.js";
 
 describe("balance math", () => {
@@ -71,5 +76,75 @@ describe("marks and icons", () => {
       balanceMarkPx("+12101", {}, [{ kind: "outcome", coin: "#12100", noCoin: "#12101", balanceCoin: "+12100", markPx: "0.42", noMarkPx: "0.58" }])
     ).toBe(0.58);
     expect(iconCoinFromBalance("PURR/USDC")).toBe("PURR");
+  });
+});
+
+describe("account abstraction", () => {
+  it("reads userAbstraction camelCase and extra quotes", () => {
+    expect(normalizeAbstraction("unifiedAccount")).toBe("unifiedAccount");
+    expect(normalizeAbstraction('"portfolioMargin"')).toBe("portfolioMargin");
+    expect(normalizeAbstraction({ mode: "disabled" })).toBe("disabled");
+  });
+
+  it("uses spot USDC for unified and portfolio margin, perps withdrawable for standard", () => {
+    const perps = { withdrawable: "0.187", marginSummary: { accountValue: "10.39" } };
+    const spot = [{ coin: "USDC", total: "103.7689", hold: "10.186" }];
+    expect(usesSpotTradingBalance("unifiedAccount", perps, spot)).toBe(true);
+    expect(usesSpotTradingBalance("portfolioMargin", perps, spot)).toBe(true);
+    expect(usesSpotTradingBalance("disabled", perps, spot)).toBe(false);
+    expect(perpsAvailableCollateral({ abstraction: "unifiedAccount", perps, spotBalances: spot })).toBeCloseTo(93.5829);
+    expect(perpsAvailableCollateral({ abstraction: "disabled", perps, spotBalances: spot })).toBeCloseTo(0.187);
+  });
+
+  it("infers unified when withdrawable is dust and spot holds USDC", () => {
+    const perps = { withdrawable: "0.187" };
+    const spot = [{ coin: "USDC", total: "48.43", hold: "10.2" }];
+    expect(usesSpotTradingBalance(null, perps, spot)).toBe(true);
+    expect(usesSpotTradingBalance("disabled", perps, spot)).toBe(false);
+  });
+
+  it("unified account has one USDC row from spot, not a synthetic perps duplicate", () => {
+    const rows = buildBalanceRows({
+      abstraction: "unifiedAccount",
+      perps: { marginSummary: { accountValue: "10.3944" }, withdrawable: "0.187297" },
+      spotBalances: [
+        { coin: "USDC", total: "103.76893176", hold: "10.185933" },
+        { coin: "+14090", total: "56", hold: "0", entryNtl: "52.24" },
+      ],
+      mids: { "#14090": "0.98" },
+      markets: [
+        {
+          kind: "outcome",
+          coin: "#14090",
+          noCoin: "#14091",
+          balanceCoin: "+14090",
+          noBalanceCoin: "+14091",
+          pair: "PONS above 1 on Sep 7?",
+          underlying: "PONS",
+          markPx: "0.98",
+        },
+      ],
+      hideSmall: false,
+    });
+    const usdc = rows.filter((r) => r.coin === "USDC");
+    expect(usdc).toHaveLength(1);
+    expect(usdc[0].total).toBeCloseTo(103.76893176);
+    expect(usdc[0].available).toBeCloseTo(93.58299876);
+    expect(rows.find((r) => r.coin === "+14090").label).toBe("PONS above 1 on Sep 7? · Yes");
+    expect(rows.find((r) => r.coin === "+14090").label).not.toMatch(/^\+14090$/);
+  });
+
+  it("labels outcome tokens with the market title, never a raw +id", () => {
+    expect(balanceAssetLabel("USDC", [])).toBe("USDC");
+    expect(
+      balanceAssetLabel("+14090", [
+        { kind: "outcome", coin: "#14090", balanceCoin: "+14090", noBalanceCoin: "+14091", pair: "PONS above 1 on Sep 7?" },
+      ])
+    ).toBe("PONS above 1 on Sep 7? · Yes");
+    expect(balanceAssetLabel("+14091", [{ kind: "outcome", coin: "#14090", noCoin: "#14091", pair: "PONS above 1 on Sep 7?" }])).toBe(
+      "PONS above 1 on Sep 7? · No"
+    );
+    expect(balanceAssetLabel("+14090", [])).toBe("Yes");
+    expect(spotUsdcParts([{ coin: "USDC", total: "10", hold: "2" }]).available).toBe(8);
   });
 });

@@ -37,18 +37,7 @@ import {
   upnlSum,
 } from "./port-summary.js";
 
-export function spotUsdcParts(balances) {
-  let total = 0;
-  let hold = 0;
-  (balances || []).forEach((b) => {
-    if (!b || String(b.coin).toUpperCase() !== "USDC") return;
-    const t = num(b.total);
-    const ho = num(b.hold);
-    if (Number.isFinite(t)) total += t;
-    if (Number.isFinite(ho)) hold += ho;
-  });
-  return { total, available: Math.max(0, total - hold) };
-}
+export { spotUsdcParts } from "./balances.js";
 
 export function positionRows(assetPositions) {
   const rows = [];
@@ -365,6 +354,7 @@ function renderPortHist(state) {
         mids: data.mids || {},
         markets: state.markets || [],
         hideSmall: portHideSmall,
+        abstraction: data.abstraction,
       });
       if (!rows.length) emptyHist(balRoot, "No balances.");
       else {
@@ -375,7 +365,7 @@ function renderPortHist(state) {
               h(
                 "tr",
                 null,
-                h("td", null, r.coin),
+                h("td", null, r.label || r.coin),
                 h("td", null, fmtQty(r.total)),
                 h("td", null, fmtQty(r.available)),
                 h("td", null, Number.isFinite(r.value) ? fmtUsd(r.value) : "--"),

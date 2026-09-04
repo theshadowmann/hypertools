@@ -14,7 +14,7 @@ import {
   num,
   pnlClass,
 } from "./format.js";
-import { buildPositionsTable, positionRows, spotUsdcParts } from "./dashboard.js";
+import { buildPositionsTable, positionRows } from "./dashboard.js";
 import {
   cancelOrders,
   cancelTwap,
@@ -64,7 +64,7 @@ import {
   toggleFav,
 } from "./markets.js";
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
-import { buildBalanceRows, formatPnlPct } from "./balances.js";
+import { buildBalanceRows, formatPnlPct, perpsAvailableCollateral, spotUsdcParts } from "./balances.js";
 import {
   formatChancePct,
   formatOutcomeCountdown,
@@ -264,7 +264,11 @@ export function createTradeView(app) {
       return spotUsdcParts(spot).available;
     }
     const perps = app.state.data && app.state.data.perps;
-    return perps ? num(perps.withdrawable) : NaN;
+    return perpsAvailableCollateral({
+      abstraction: app.state.data && app.state.data.abstraction,
+      perps,
+      spotBalances: (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [],
+    });
   }
 
   function currentPos() {
@@ -628,9 +632,7 @@ export function createTradeView(app) {
     const px = sizePx();
     const ntl = Number.isFinite(sz) && Number.isFinite(px) ? orderValue(sz, px) : NaN;
     const w = withdrawable();
-    const lev = isCash() ? 1 : leverage;
-    const power = buyingPower(w, lev);
-    setText("ticket-avail", Number.isFinite(w) ? fmtUsd(power) + " USDC" : "— USDC");
+    setText("ticket-avail", Number.isFinite(w) ? fmtUsd(w) + " USDC" : "— USDC");
     const pos = currentPos();
     const posSz = pos ? num(pos.szi) : 0;
     const unitName = (currentMarket() && currentMarket().base) || coin;
@@ -1356,6 +1358,7 @@ export function createTradeView(app) {
       mids,
       markets,
       hideSmall: hideSmallBalances,
+      abstraction: app.state.data && app.state.data.abstraction,
     });
     if (!rows.length) {
       root.appendChild(emptyNote("No balances."));
@@ -1393,7 +1396,7 @@ export function createTradeView(app) {
                 src: url,
               })
             : null,
-          h("span", null, r.coin)
+          h("span", null, r.label || r.coin)
         ),
         h("td", null, fmtQty(r.total)),
         h("td", null, fmtQty(r.available)),

@@ -48,13 +48,19 @@ describe("TradingView Hyperliquid symbols", () => {
 });
 
 describe("available-to-trade sizing", () => {
-  it("sizes from buying power (withdrawable × leverage)", () => {
+  it("sizes from buying power (collateral × leverage), not the Available label", () => {
     expect(buyingPower(100, 20)).toBe(2000);
     expect(sizeFromAvailablePct(buyingPower(1000, 1), 100000, 50, 5)).toBe(0.005);
     expect(sizeFromAvailablePct(buyingPower(100, 20), 100000, 100, 5)).toBe(0.02);
     expect(sizeFromAvailablePct(buyingPower(100, 20), 100000, 25, 5)).toBe(0.005);
     expect(sizeFromAvailablePct(0, 100000, 50, 5)).toBe(0);
     expect(sizeFromAvailablePct(NaN, 100000, 50, 5)).toBe(0);
+    const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(js).toContain('setText("ticket-avail", Number.isFinite(w) ? fmtUsd(w) + " USDC"');
+    expect(js).not.toContain("fmtUsd(power) + \" USDC\"");
+    expect(js).toContain("perpsAvailableCollateral");
+    const api = readFileSync(join(root, "src/api.js"), "utf8");
+    expect(api).toContain('type: "userAbstraction"');
   });
 
   it("clamps percent to 0–100", () => {
