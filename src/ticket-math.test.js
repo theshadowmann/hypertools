@@ -183,10 +183,15 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="trade-outcomes"');
     expect(html).toContain(">Outcomes<");
     const tradeJs = readFileSync(join(root, "src/trade.js"), "utf8");
+    const closeJs = readFileSync(join(root, "src/outcome-close.js"), "utf8");
     expect(tradeJs).toContain('"No outcomes yet"');
-    expect(tradeJs).toContain('"Available Size"');
-    expect(tradeJs).toContain('"PNL (ROE %)"');
+    expect(closeJs).toContain('"Available Size"');
+    expect(closeJs).toContain('"PNL (ROE %)"');
     expect(tradeJs).toContain("jumpToOutcome");
+    expect(tradeJs).toContain("startOutcomeClose");
+    expect(closeJs).toContain("Close at a limit price");
+    expect(closeJs).toContain("Don't show this again");
+    expect(closeJs).not.toContain("jumpToOutcome");
   });
 
   it("puts Order Book and Trades as word tabs in the book column", () => {

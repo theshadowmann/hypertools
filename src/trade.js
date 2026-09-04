@@ -75,10 +75,15 @@ import {
   outcomeLegBalance,
   outcomeLegCoin,
   outcomePayout,
-  outcomePositionMetrics,
   outcomePositionsFromSpot,
   outcomeVenueBadge,
 } from "./outcomes.js";
+import {
+  buildOutcomePositionsTable,
+  isOutcomeCloseBusy,
+  outcomeCloseBusyCoin,
+  startOutcomeClose,
+} from "./outcome-close.js";
 import {
   aggregateLevels,
   bookPrecisions,
@@ -1474,22 +1479,17 @@ export function createTradeView(app) {
     });
   }
 
-  function outcomesHead() {
-    return h(
-      "thead",
-      null,
-      h(
-        "tr",
-        null,
-        h("th", null, "Market"),
-        h("th", null, "Size"),
-        h("th", null, "Available Size"),
-        h("th", null, "Position Value"),
-        h("th", null, "Entry Price"),
-        h("th", null, "Mark Price"),
-        h("th", null, "PNL (ROE %)")
-      )
-    );
+  function closeOutcomeOpts(p) {
+    return {
+      row: p,
+      markets,
+      onSuccess: async () => {
+        await refreshUserTables();
+      },
+      onSettled: () => {
+        renderOutcomes();
+      },
+    };
   }
 
   function renderOutcomes() {
@@ -1500,13 +1500,11 @@ export function createTradeView(app) {
     document.querySelectorAll("[data-out-side]").forEach((btn) => {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-out-side") === outcomeSideFilter ? "true" : "false");
     });
-    const emptyBody = h(
-      "tr",
-      null,
-      h("td", { colSpan: "7", class: "out-empty" }, "No outcomes yet")
-    );
+    const showClose = !!app.state.address;
     if (!app.state.address) {
-      root.appendChild(h("table", { class: "bal-table out-table" }, outcomesHead(), h("tbody", null, emptyBody)));
+      root.appendChild(
+        buildOutcomePositionsTable([], { showClose: false, emptyMessage: "No outcomes yet" })
+      );
       return;
     }
     const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
@@ -1514,48 +1512,16 @@ export function createTradeView(app) {
     if (outcomeSideFilter === "Yes" || outcomeSideFilter === "No") {
       rows = rows.filter((r) => r.side === outcomeSideFilter);
     }
-    if (!rows.length) {
-      root.appendChild(h("table", { class: "bal-table out-table" }, outcomesHead(), h("tbody", null, emptyBody)));
-      return;
-    }
-    const body = rows.map((p) => {
-      const m = outcomePositionMetrics(p);
-      const pnlTxt =
-        m.pnlPct == null && !Number.isFinite(m.pnlUsd)
-          ? "—"
-          : (Number.isFinite(m.pnlUsd) ? fmtUsd(m.pnlUsd, { signed: true }) : "—") +
-            " (" +
-            formatPnlPct(m.pnlPct) +
-            ")";
-      const pnlCls =
-        m.pnlPct == null || !Number.isFinite(m.pnlPct) || m.pnlPct === 0 ? "" : m.pnlPct > 0 ? " up" : " down";
-      return h(
-        "tr",
-        null,
-        h(
-          "td",
-          null,
-          h(
-            "button",
-            {
-              type: "button",
-              class: "out-mkt-btn",
-              onClick: () => jumpToOutcome(p),
-            },
-            p.title,
-            h("span", { class: "out-mkt-side" }, " " + p.side)
-          )
-        ),
-        h("td", null, fmtQty(p.total)),
-        h("td", null, fmtQty(p.available)),
-        h("td", null, Number.isFinite(m.value) ? fmtUsd(m.value) : "—"),
-        h("td", null, Number.isFinite(m.entryPx) ? fmtPx(m.entryPx) : "—"),
-        h("td", null, p.markPx == null ? "—" : fmtPx(p.markPx)),
-        h("td", { class: "bal-pnl" + pnlCls }, pnlTxt)
-      );
-    });
     root.appendChild(
-      h("table", { class: "bal-table out-table" }, outcomesHead(), h("tbody", null, ...body))
+      buildOutcomePositionsTable(rows, {
+        showClose,
+        closeBusy: isOutcomeCloseBusy(),
+        closeBusyCoin: outcomeCloseBusyCoin(),
+        emptyMessage: "No outcomes yet",
+        onTitleClick: (p) => jumpToOutcome(p),
+        onLimit: (p) => startOutcomeClose({ kind: "limit", ...closeOutcomeOpts(p) }).then(() => renderOutcomes()),
+        onMarket: (p) => startOutcomeClose({ kind: "market", ...closeOutcomeOpts(p) }).then(() => renderOutcomes()),
+      })
     );
   }
 

@@ -11,7 +11,13 @@ import {
 import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import { setOpenOrdersTabLabel } from "./open-orders.js";
-import { outcomePositionMetrics, outcomePositionsFromSpot } from "./outcomes.js";
+import { outcomePositionsFromSpot } from "./outcomes.js";
+import {
+  buildOutcomePositionsTable,
+  isOutcomeCloseBusy,
+  outcomeCloseBusyCoin,
+  startOutcomeClose,
+} from "./outcome-close.js";
 import {
   axisTicks,
   chartSeries,
@@ -398,36 +404,35 @@ function renderPortHist(state) {
     if (!connected) empty("port-outcomes", "outcomes");
     else {
       const rows = outcomePositionsFromSpot((data.spot && data.spot.balances) || [], state.markets || []);
-      if (!rows || !rows.length) emptyHist(outRoot, "No outcomes yet");
-      else {
-        clear(outRoot);
-        outRoot.appendChild(
-          histTable(
-            ["Market", "Size", "Available Size", "Position Value", "Entry Price", "Mark Price", "PNL (ROE %)"],
-            rows.map((r) => {
-              const m = outcomePositionMetrics(r);
-              const pnlTxt =
-                m.pnlPct == null && !Number.isFinite(m.pnlUsd)
-                  ? "--"
-                  : (Number.isFinite(m.pnlUsd) ? fmtUsd(m.pnlUsd, { signed: true }) : "--") +
-                    " (" +
-                    formatPnlPct(m.pnlPct) +
-                    ")";
-              return h(
-                "tr",
-                null,
-                h("td", null, r.title || r.coin || "--"),
-                h("td", null, fmtQty(r.total)),
-                h("td", null, fmtQty(r.available)),
-                h("td", null, Number.isFinite(m.value) ? fmtUsd(m.value) : "--"),
-                h("td", null, Number.isFinite(m.entryPx) ? fmtPx(m.entryPx) : "--"),
-                h("td", null, r.markPx != null && Number.isFinite(Number(r.markPx)) ? fmtPx(r.markPx) : "--"),
-                h("td", { class: Number.isFinite(m.pnlUsd) ? pnlClass(m.pnlUsd) : "" }, pnlTxt)
-              );
-            })
-          )
-        );
-      }
+      clear(outRoot);
+      outRoot.appendChild(
+        buildOutcomePositionsTable(rows, {
+          showClose: !!state.address,
+          closeBusy: isOutcomeCloseBusy(),
+          closeBusyCoin: outcomeCloseBusyCoin(),
+          emptyMessage: "No outcomes yet",
+          onLimit: (p) =>
+            startOutcomeClose({
+              kind: "limit",
+              row: p,
+              markets: state.markets || [],
+              onSettled: () => {
+                const dash = document.getElementById("dashboard");
+                if (dash && dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+              },
+            }),
+          onMarket: (p) =>
+            startOutcomeClose({
+              kind: "market",
+              row: p,
+              markets: state.markets || [],
+              onSettled: () => {
+                const dash = document.getElementById("dashboard");
+                if (dash && dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+              },
+            }),
+        })
+      );
     }
   }
 

@@ -22,6 +22,7 @@ import {
   runConnectFromNav,
   showConnectStatus,
 } from "./nav-connect.js";
+import { bindOutcomeCloseApp } from "./outcome-close.js";
 
 const state = {
   address: null,
@@ -77,6 +78,8 @@ const app = {
   },
   connectFromNav: () => connectFromNav(),
 };
+
+bindOutcomeCloseApp(() => app);
 
 async function getTrade() {
   if (!tradeView) {
