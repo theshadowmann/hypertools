@@ -80,6 +80,7 @@ import {
 } from "./outcomes.js";
 import {
   buildOutcomePositionsTable,
+  canCloseOutcomes,
   isOutcomeCloseBusy,
   outcomeCloseBusyCoin,
   startOutcomeClose,
@@ -1500,7 +1501,7 @@ export function createTradeView(app) {
     document.querySelectorAll("[data-out-side]").forEach((btn) => {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-out-side") === outcomeSideFilter ? "true" : "false");
     });
-    const showClose = !!app.state.address;
+    const showClose = canCloseOutcomes(app.state);
     if (!app.state.address) {
       root.appendChild(
         buildOutcomePositionsTable([], { showClose: false, emptyMessage: "No outcomes yet" })

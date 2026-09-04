@@ -14,6 +14,7 @@ import { setOpenOrdersTabLabel } from "./open-orders.js";
 import { outcomePositionsFromSpot } from "./outcomes.js";
 import {
   buildOutcomePositionsTable,
+  canCloseOutcomes,
   isOutcomeCloseBusy,
   outcomeCloseBusyCoin,
   startOutcomeClose,
@@ -407,7 +408,7 @@ function renderPortHist(state) {
       clear(outRoot);
       outRoot.appendChild(
         buildOutcomePositionsTable(rows, {
-          showClose: !!state.address,
+          showClose: canCloseOutcomes(state),
           closeBusy: isOutcomeCloseBusy(),
           closeBusyCoin: outcomeCloseBusyCoin(),
           emptyMessage: "No outcomes yet",
