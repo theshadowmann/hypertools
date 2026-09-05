@@ -20,6 +20,7 @@ import {
   twapMinutesFromParts,
   tvInterval,
   tvSymbol,
+  displaySpotBase,
 } from "./ticket-math.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -33,6 +34,9 @@ describe("TradingView Hyperliquid symbols", () => {
     expect(tvSymbol("")).toBe("HYPERLIQUID:BTCUSDC.P");
     expect(tvSymbol("PURR/USDC", "spot", "PURR", "USDC")).toBe("HYPERLIQUID:PURRUSDC");
     expect(tvSymbol("@1", "spot", "HFUN", "USDC")).toBe("HYPERLIQUID:HFUNUSDC");
+    expect(tvSymbol("UBTC/USDC", "spot", "UBTC", "USDC")).toBe("HYPERLIQUID:BTCUSDC");
+    expect(tvSymbol("USOL/USDC", "spot", "USOL", "USDC")).toBe("HYPERLIQUID:SOLUSDC");
+    expect(tvSymbol("UETH/USDC", "spot", "UETH", "USDC")).toBe("HYPERLIQUID:ETHUSDC");
     expect(tvSymbol("#12100", "outcome")).toBeNull();
     expect(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-yes", "outcome")).toBeNull();
     expect(tvSymbol("out:pons-touches-1-by-sep-7-at-600-am-utc-no", "outcome")).toBeNull();
@@ -44,6 +48,25 @@ describe("TradingView Hyperliquid symbols", () => {
     expect(tvInterval("15m")).toBe("15");
     expect(tvInterval("1h")).toBe("60");
     expect(tvInterval("1d")).toBe("D");
+  });
+});
+
+describe("unit-spot display names", () => {
+  it("strips Hyperliquid U prefix except stables and short U tickers", () => {
+    expect(displaySpotBase("UBTC")).toBe("BTC");
+    expect(displaySpotBase("USOL")).toBe("SOL");
+    expect(displaySpotBase("UETH")).toBe("ETH");
+    expect(displaySpotBase("UZEC")).toBe("ZEC");
+    expect(displaySpotBase("UPUMP")).toBe("PUMP");
+    expect(displaySpotBase("UBTC/USDC")).toBe("BTC");
+    expect(displaySpotBase("PURR")).toBe("PURR");
+    expect(displaySpotBase("HFUN")).toBe("HFUN");
+    expect(displaySpotBase("USDC")).toBe("USDC");
+    expect(displaySpotBase("USDT")).toBe("USDT");
+    expect(displaySpotBase("USDT0")).toBe("USDT0");
+    expect(displaySpotBase("USDH")).toBe("USDH");
+    expect(displaySpotBase("UNI")).toBe("UNI");
+    expect(displaySpotBase("UMA")).toBe("UMA");
   });
 });
 

@@ -33,6 +33,7 @@ import {
   change24h,
   coinsFromUsdc,
   DEFAULT_MAX_SLIPPAGE,
+  displaySpotBase,
   estimateLiqPx,
   estimateSlippage,
   formatFeePct,
@@ -325,7 +326,7 @@ export function createTradeView(app) {
       hlCoin: chartCoin,
       interval,
       kind: m ? m.kind : pageKind === "outcome" ? "outcome" : "perp",
-      base: m && m.base,
+      base: m && (m.displayBase || displaySpotBase(m.base) || m.base),
       quote: m && m.quote,
       onFallback: () => renderHlIntervalRow(true),
     });
@@ -373,7 +374,7 @@ export function createTradeView(app) {
   function coinLabel() {
     const m = currentMarket();
     if (m && m.kind === "outcome") return outcomeLeg === 1 ? "No" : "Yes";
-    if (m && m.kind === "spot" && m.base) return m.base;
+    if (m && m.kind === "spot" && m.base) return m.displayBase || displaySpotBase(m.base);
     if (m && m.coin) return m.coin;
     return coin || "Coin";
   }
@@ -646,7 +647,9 @@ export function createTradeView(app) {
     setText("ticket-avail", Number.isFinite(w) ? fmtUsd(w) + " USDC" : "— USDC");
     const pos = currentPos();
     const posSz = pos ? num(pos.szi) : 0;
-    const unitName = (currentMarket() && currentMarket().base) || coin;
+    const unitName = isSpot()
+      ? (mkt && (mkt.displayBase || displaySpotBase(mkt.base))) || coin
+      : (mkt && mkt.base) || coin;
     setText("ticket-pos", pos && posSz ? fmtQty(Math.abs(posSz)) + " " + unitName : "0.00000 " + unitName);
     const liq = isCash() ? NaN : estimateLiqPx(mark(), leverage, side === "buy");
     setText("sum-liq", Number.isFinite(liq) ? fmtPx(liq) : "—");
@@ -664,7 +667,16 @@ export function createTradeView(app) {
     if (minNote) minNote.classList.toggle("hidden", isOutcome() || !Number.isFinite(ntl) || ntl >= 10 || !(sz > 0));
     if (mkt) {
       const unitCoin = byId("unit-coin");
-      if (unitCoin) unitCoin.textContent = mkt.kind === "outcome" ? (outcomeLeg === 1 ? "No" : "Yes") : mkt.base || mkt.coin;
+      if (unitCoin) {
+        unitCoin.textContent =
+          mkt.kind === "outcome"
+            ? outcomeLeg === 1
+              ? "No"
+              : "Yes"
+            : mkt.kind === "spot"
+              ? mkt.displayBase || displaySpotBase(mkt.base) || mkt.base || mkt.coin
+              : mkt.base || mkt.coin;
+      }
     }
     if (isOutcome() && mkt) {
       const yesPx = num(mkt.markPx) || num((app.state.data && app.state.data.mids || {})[mkt.coin]);

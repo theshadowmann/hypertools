@@ -61,6 +61,27 @@ describe("parse markets", () => {
     expect(spot[0].asset).toBe(SPOT_ASSET_OFFSET);
     expect(spot[0].funding).toBeNull();
   });
+
+  it("strips unit-spot U prefix for pair/display but keeps wire base", () => {
+    const unit = parseSpotMarkets([
+      {
+        universe: [{ tokens: [2, 0], name: "UBTC/USDC", index: 1, isCanonical: true }],
+        tokens: [
+          { name: "USDC", index: 0, szDecimals: 8 },
+          { name: "UBTC", index: 2, szDecimals: 8 },
+        ],
+      },
+      [{ coin: "UBTC/USDC", markPx: "79000", prevDayPx: "78000", dayNtlVlm: "10" }],
+    ]);
+    expect(unit[0].coin).toBe("UBTC/USDC");
+    expect(unit[0].base).toBe("UBTC");
+    expect(unit[0].displayBase).toBe("BTC");
+    expect(unit[0].pair).toBe("BTC/USDC");
+    expect(iconSymbol(unit[0])).toBe("BTC");
+    expect(coinIconUrl("UBTC")).toBe("https://app.hyperliquid.xyz/coins/BTC.svg");
+    expect(coinIconUrl("USDC")).toBe("https://app.hyperliquid.xyz/coins/USDC.svg");
+    expect(coinIconUrl("UNI")).toBe("https://app.hyperliquid.xyz/coins/UNI.svg");
+  });
 });
 
 describe("picker filter", () => {
@@ -210,6 +231,7 @@ describe("funding and display", () => {
     expect(compactUsd(undefined)).toBe("—");
     expect(compactUsd("")).toBe("—");
     expect(displayPair("PURR", "USDC")).toBe("PURR/USDC");
+    expect(displayPair("UBTC", "USDC")).toBe("BTC/USDC");
   });
 
   it("shows outcome OI as complete-set USD and leaves missing volume as a dash", () => {
@@ -237,6 +259,7 @@ describe("funding and display", () => {
     expect(coinIconUrl("../HYPE")).toBeNull();
     expect(coinIconUrl("javascript:alert(1)")).toBeNull();
     expect(iconSymbol({ kind: "spot", base: "HYPE", coin: "HYPE/USDC" })).toBe("HYPE");
+    expect(iconSymbol({ kind: "spot", base: "UBTC", displayBase: "BTC", coin: "UBTC/USDC" })).toBe("BTC");
     expect(iconSymbol({ kind: "perp", coin: "BTC" })).toBe("BTC");
     expect(iconSymbol({ kind: "outcome", underlying: "BTC", coin: "#12100" })).toBe("BTC");
   });

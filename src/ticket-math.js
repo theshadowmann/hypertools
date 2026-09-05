@@ -8,11 +8,36 @@ function sanitizeTicker(s) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
+const UNIT_SPOT_STABLES = new Set(["USDC", "USDT", "USDT0"]);
+
+/**
+ * Hyperliquid unit-spot tokens are `U` + underlying (UBTC, USOL, UETH).
+ * Display and TradingView use the stripped ticker; wire names stay `UBTC`.
+ * Stables and short U-tickers (UNI, UMA) are left alone.
+ */
+export function displaySpotBase(name) {
+  const raw = String(name || "").trim();
+  if (!raw) return raw;
+  const slash = raw.indexOf("/");
+  const s = slash > 0 ? raw.slice(0, slash) : raw;
+  const upper = s.toUpperCase();
+  if (UNIT_SPOT_STABLES.has(upper) || upper.startsWith("USD")) return s;
+  if (upper.charAt(0) !== "U") return s;
+  const rest = s.slice(1);
+  if (rest.length < 3 || !/^[A-Za-z0-9]+$/.test(rest)) return s;
+  return rest;
+}
+
+function spotTvBase(base, coin) {
+  if (base) return displaySpotBase(base);
+  return displaySpotBase(coin);
+}
+
 /** Official TradingView Hyperliquid symbols. Perps: HYPERLIQUID:{COIN}USDC.P. Spot: HYPERLIQUID:PURRUSDC. HIP-4 outcomes have no public TV listing — never map them to a TV symbol (including HYPERLIQUID:out:… or BTC). */
 export function tvSymbol(coin, kind = "perp", base, quote) {
   if (kind === "outcome") return null;
   if (kind === "spot") {
-    const b = sanitizeTicker(base || coin);
+    const b = sanitizeTicker(spotTvBase(base, coin));
     const q = sanitizeTicker(quote || "USDC");
     if (!b) return "HYPERLIQUID:PURRUSDC";
     return "HYPERLIQUID:" + b + q;

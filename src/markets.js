@@ -1,6 +1,6 @@
 import { fmtPx } from "./format.js";
 import { HL_COIN_ICON_BASE } from "./hosts.js";
-import { change24h } from "./ticket-math.js";
+import { change24h, displaySpotBase } from "./ticket-math.js";
 
 export const FAV_KEY = "ht.fav.markets";
 export const SPOT_ASSET_OFFSET = 10_000;
@@ -22,7 +22,7 @@ function ctxByCoin(ctxs, coin) {
 }
 
 export function displayPair(base, quote) {
-  const b = String(base || "").trim();
+  const b = displaySpotBase(base);
   const q = String(quote || "USDC").trim();
   if (!b) return q;
   return b + "/" + q;
@@ -35,13 +35,14 @@ export function coinIconUrl(symbol) {
   let name = String(symbol || "").trim();
   if (!COIN_ICON_RE.test(name)) return null;
   if (/^k[A-Z]/.test(name)) name = name.slice(1);
+  name = displaySpotBase(name);
   if (!COIN_ICON_RE.test(name)) return null;
   return HL_COIN_ICON_BASE + name + ".svg";
 }
 
 export function iconSymbol(market) {
   if (!market) return "";
-  if (market.kind === "spot" && market.base) return market.base;
+  if (market.kind === "spot" && market.base) return market.displayBase || displaySpotBase(market.base);
   if (market.kind === "outcome") return market.underlying || "";
   return market.coin || market.base || "";
 }
@@ -115,14 +116,16 @@ export function parseSpotMarkets(payload) {
     const quoteTok = tokenByIndex(tokens, ids[1]);
     const base = (baseTok && baseTok.name) || coin;
     const quote = (quoteTok && quoteTok.name) || "USDC";
+    const displayBase = displaySpotBase(base);
     const index = Number(u.index);
     out.push({
       id: "spot:" + coin,
       kind: "spot",
       coin,
       base,
+      displayBase,
       quote,
-      pair: displayPair(base, quote),
+      pair: displayPair(displayBase, quote),
       asset: SPOT_ASSET_OFFSET + (Number.isInteger(index) ? index : 0),
       szDecimals: baseTok ? baseTok.szDecimals : 8,
       maxLeverage: null,
@@ -147,7 +150,7 @@ export function mergeMarkets(perps, spot, outcomes) {
 
 export function marketSearchText(m) {
   if (!m) return "";
-  return [m.coin, m.base, m.quote, m.pair, m.id, m.kind, m.description, m.underlying, m.venue].join(" ").toLowerCase();
+  return [m.coin, m.base, m.displayBase, m.quote, m.pair, m.id, m.kind, m.description, m.underlying, m.venue].join(" ").toLowerCase();
 }
 
 export function changeAbs(mark, prevDay) {
