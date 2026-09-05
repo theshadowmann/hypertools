@@ -54,6 +54,7 @@ export function funding8h(hourly) {
 }
 
 export function compactUsd(raw) {
+  if (raw == null || raw === "") return "—";
   const n = Number(raw);
   if (!Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
@@ -183,6 +184,28 @@ export function signedChangeClass(ch) {
   return "mp-muted";
 }
 
+function finiteField(raw) {
+  if (raw == null || raw === "") return NaN;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Perp OI is contracts × mark. Outcome OI is complete-set count ($1 each). */
+export function openInterestUsd(m) {
+  const oi = finiteField(m && m.openInterest);
+  if (!Number.isFinite(oi)) return NaN;
+  if (m.kind === "outcome") return oi;
+  const mark = Number(m.markPx);
+  return oi * (Number.isFinite(mark) ? mark : 1);
+}
+
+export function pickerOpenInterestUsd(m) {
+  if (!m) return "—";
+  if (m.kind === "spot") return "—";
+  const ntl = openInterestUsd(m);
+  return Number.isFinite(ntl) ? compactUsd(ntl) : "—";
+}
+
 export function sortMarkets(rows, sortKey, sortDir) {
   const dir = sortDir === "asc" ? 1 : -1;
   const list = (rows || []).slice();
@@ -196,16 +219,14 @@ export function sortMarkets(rows, sortKey, sortDir) {
       av = funding8h(a.funding);
       bv = funding8h(b.funding);
     } else if (sortKey === "oi") {
-      const am = Number(a.markPx);
-      const bm = Number(b.markPx);
-      av = Number(a.openInterest) * (Number.isFinite(am) ? am : 1);
-      bv = Number(b.openInterest) * (Number.isFinite(bm) ? bm : 1);
+      av = openInterestUsd(a);
+      bv = openInterestUsd(b);
     } else if (sortKey === "price" || sortKey === "chance") {
       av = Number(a.markPx || a.midPx);
       bv = Number(b.markPx || b.midPx);
     } else {
-      av = Number(a.dayNtlVlm);
-      bv = Number(b.dayNtlVlm);
+      av = finiteField(a.dayNtlVlm);
+      bv = finiteField(b.dayNtlVlm);
     }
     const aOk = Number.isFinite(av);
     const bOk = Number.isFinite(bv);

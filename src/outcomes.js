@@ -8,6 +8,8 @@
  *   POST /info  { "type": "l2Book", coin }    → levels for "#12100"
  *   POST /info  { "type": "recentTrades", coin }
  *   POST /info  { "type": "spotClearinghouseState" }  balances[].coin like "+12100"
+ *   WS `sac` snapshot  → dayNtlVlm + circulatingSupply on `#` coins
+ *                       (same source app.hyperliquid.xyz uses for Volume / OI)
  *
  * Exchange: same `order` action as perps. Asset `a` = 100_000_000 + 10*id + side.
  * Size is integer shares. Price is probability [0.001, 0.999] tick 0.0001.

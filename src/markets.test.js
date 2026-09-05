@@ -13,7 +13,9 @@ import {
   loadFavs,
   parsePerpMarkets,
   parseSpotMarkets,
+  pickerOpenInterestUsd,
   signedChangeClass,
+  sortMarkets,
   SPOT_ASSET_OFFSET,
   toggleFav,
 } from "./markets.js";
@@ -200,7 +202,30 @@ describe("funding and display", () => {
 
   it("formats compact USD from live-scale notionals", () => {
     expect(compactUsd(2.21e9)).toBe("$2.21B");
+    expect(compactUsd(0)).toBe("$0");
+    expect(compactUsd("0")).toBe("$0");
+    expect(compactUsd(null)).toBe("—");
+    expect(compactUsd(undefined)).toBe("—");
+    expect(compactUsd("")).toBe("—");
     expect(displayPair("PURR", "USDC")).toBe("PURR/USDC");
+  });
+
+  it("shows outcome OI as complete-set USD and leaves missing volume as a dash", () => {
+    expect(pickerOpenInterestUsd({ kind: "outcome", openInterest: 300, markPx: "0.05" })).toBe("$300");
+    expect(pickerOpenInterestUsd({ kind: "outcome", openInterest: null, markPx: "0.05" })).toBe("—");
+    expect(pickerOpenInterestUsd({ kind: "perp", openInterest: "10", markPx: "100" })).toBe("$1.0K");
+    expect(pickerOpenInterestUsd({ kind: "spot", openInterest: null, dayNtlVlm: "5" })).toBe("—");
+    const sorted = sortMarkets(
+      [
+        { pair: "A?", kind: "outcome", dayNtlVlm: 50, openInterest: 10, markPx: "0.2" },
+        { pair: "B?", kind: "outcome", dayNtlVlm: null, openInterest: null, markPx: "0.8" },
+        { pair: "C?", kind: "outcome", dayNtlVlm: 9, openInterest: 40, markPx: "0.1" },
+      ],
+      "volume",
+      "desc"
+    );
+    expect(sorted.map((m) => m.pair)).toEqual(["A?", "C?", "B?"]);
+    expect(sortMarkets(sorted, "oi", "desc").map((m) => m.pair)).toEqual(["C?", "A?", "B?"]);
   });
 
   it("builds official Hyperliquid coin icon URLs only", () => {

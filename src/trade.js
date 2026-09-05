@@ -60,6 +60,7 @@ import {
   funding8h,
   iconSymbol,
   loadFavs,
+  pickerOpenInterestUsd,
   signedChangeClass,
   toggleFav,
 } from "./markets.js";
@@ -1132,7 +1133,6 @@ export function createTradeView(app) {
         m.kind === "perp" && Number.isFinite(fund)
           ? (fund * 100).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + "%"
           : "—";
-      const oiNtl = Number(m.openInterest) * Number(m.markPx);
       const starred = favs.indexOf(m.id) !== -1;
       const venue = m.kind === "outcome" ? outcomeVenueBadge(m.venue) : "";
       const tr = h("tr", {
@@ -1199,15 +1199,7 @@ export function createTradeView(app) {
         tr.appendChild(h("td", { class: "mp-outcome-hide" }, ""));
         tr.appendChild(h("td", { class: "mp-outcome-hide" }, ""));
         tr.appendChild(h("td", null, compactUsd(m.dayNtlVlm)));
-        tr.appendChild(
-          h(
-            "td",
-            null,
-            Number.isFinite(Number(m.openInterest)) && Number(m.openInterest) > 0
-              ? compactUsd(Number(m.openInterest) * (num(m.markPx) || 1))
-              : "—"
-          )
-        );
+        tr.appendChild(h("td", null, pickerOpenInterestUsd(m)));
       } else {
         tr.appendChild(h("td", null, Number.isFinite(num(m.markPx)) ? fmtPx(m.markPx) : "—"));
         tr.appendChild(h("td", { class: chCell.cls }, chCell.text));
@@ -1219,7 +1211,7 @@ export function createTradeView(app) {
           )
         );
         tr.appendChild(h("td", null, compactUsd(m.dayNtlVlm)));
-        tr.appendChild(h("td", null, m.kind === "perp" && Number.isFinite(oiNtl) ? compactUsd(oiNtl) : "—"));
+        tr.appendChild(h("td", null, pickerOpenInterestUsd(m)));
       }
       body.appendChild(tr);
     });

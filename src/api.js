@@ -1,5 +1,6 @@
 import { HL_INFO, HL_EXCHANGE, HL_WS } from "./hosts.js";
 import { mergeMarkets, parsePerpMarkets, parseSpotMarkets } from "./markets.js";
+import { enrichOutcomeMarkets, fetchSpotAssetCtxs } from "./outcome-ctxs.js";
 import { parseOutcomeMarkets } from "./outcomes.js";
 export { HL_INFO, HL_EXCHANGE, HL_WS };
 export const DUST = 1e-8;
@@ -102,6 +103,7 @@ function marksFromMetaCtxs(payload) {
 }
 
 export async function loadMarkets() {
+  const spotCtxsP = fetchSpotAssetCtxs().catch(() => ({}));
   const results = await Promise.allSettled([
     hlInfo({ type: "metaAndAssetCtxs" }),
     hlInfo({ type: "spotMetaAndAssetCtxs" }),
@@ -116,7 +118,9 @@ export async function loadMarkets() {
   const mids = results[3].status === "fulfilled" ? results[3].value : {};
   const hip3Marks = marksFromMetaCtxs(results[4].status === "fulfilled" ? results[4].value : null);
   const templates = results[5].status === "fulfilled" ? results[5].value : null;
-  const outcomes = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids, hip3Marks, templates) : [];
+  const parsed = outcomeMeta ? parseOutcomeMarkets(outcomeMeta, mids, hip3Marks, templates) : [];
+  const spotCtxs = await spotCtxsP;
+  const outcomes = enrichOutcomeMarkets(parsed, spotCtxs);
   const markets = mergeMarkets(perps, spot, outcomes);
   if (!markets.length) throw new Error("Hyperliquid returned no markets");
   return markets;
