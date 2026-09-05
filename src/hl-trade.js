@@ -17,6 +17,7 @@ import {
   orderSucceeded,
   sealOrderPayload,
   slippagePrice,
+  userMessage,
 } from "./order-build.js";
 
 const transport = new HttpTransport({ isTestnet: false, apiUrl: HL_API });
@@ -27,16 +28,6 @@ function walletClient(provider, address) {
     account: address,
     transport: custom(provider),
   });
-}
-
-function userMessage(err) {
-  if (!err) return "Request failed.";
-  if (err.code === 4001 || err.code === "ACTION_REJECTED") return "Wallet rejected the signature.";
-  const fromApi = explainExchangeError(err.response);
-  if (fromApi) return fromApi;
-  const msg = err.message || String(err);
-  if (/user rejected|denied|rejected the request/i.test(msg)) return "Wallet rejected the signature.";
-  return msg;
 }
 
 async function agentStillValid(user, agent) {
@@ -185,6 +176,7 @@ export async function placePerpOrder({
   );
   const exch = agentExchange(agent);
   const result = await exch.order(payload);
+  if (result == null) throw new Error("No response from Hyperliquid.");
   const err = explainExchangeError(result);
   if (err) throw new Error(err);
   if (!orderSucceeded(result) && result.status !== "ok") {
@@ -254,6 +246,7 @@ export async function placeScaleOrders({ source, address, orders, onStatus }) {
   onStatus && onStatus("Signing scale orders…");
   const payload = sealOrderPayload(buildOrderPayload(orders, "na"));
   const result = await agentExchange(agent).order(payload);
+  if (result == null) throw new Error("No response from Hyperliquid.");
   const err = explainExchangeError(result);
   if (err) throw new Error(err);
   if (!orderSucceeded(result) && result.status !== "ok") {

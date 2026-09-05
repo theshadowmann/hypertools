@@ -357,7 +357,7 @@ export function createTradeView(app) {
   function useBookPrice(px) {
     const input = byId("ticket-price");
     const n = num(px);
-    if (input && Number.isFinite(n)) {
+    if (input && Number.isFinite(n) && n > 0) {
       const step = Number(bookPrec);
       const decimals =
         Number.isFinite(step) && step > 0
@@ -988,6 +988,26 @@ export function createTradeView(app) {
       return;
     }
     const sz = coinSize();
+    if (!Number.isFinite(sz) || sz <= 0) {
+      ticketMessage("Enter a size greater than zero", "err");
+      return;
+    }
+    const submitType =
+      orderType === "stop-market" || orderType === "stop-limit" ? "stop" : orderType === "market" ? "market" : "limit";
+    if (submitType === "limit") {
+      const px = num(fieldValue("ticket-price"));
+      if (!Number.isFinite(px) || px <= 0) {
+        ticketMessage("Enter a limit price", "err");
+        return;
+      }
+    }
+    if (orderType === "stop-limit") {
+      const px = num(fieldValue("ticket-stop-limit"));
+      if (!Number.isFinite(px) || px <= 0) {
+        ticketMessage("Enter a limit price", "err");
+        return;
+      }
+    }
     ticketBusy = true;
     renderTicketButton();
     const args = {
@@ -1023,8 +1043,7 @@ export function createTradeView(app) {
         ticketMessage("Scale orders accepted.", "ok");
       } else {
         const tpsl = extraTpslWires(mkt, side === "buy", sz);
-        const type =
-          orderType === "stop-market" || orderType === "stop-limit" ? "stop" : orderType === "market" ? "market" : "limit";
+        const type = submitType;
         await placePerpOrder({
           ...args,
           price: orderType === "stop-limit" ? fieldValue("ticket-stop-limit") : fieldValue("ticket-price"),
@@ -2201,7 +2220,9 @@ export function createTradeView(app) {
     });
     byId("ticket-mid-btn")?.addEventListener("click", () => {
       const input = byId("ticket-price");
-      if (input && Number.isFinite(mid())) input.value = String(mid());
+      const px = mid();
+      if (input && Number.isFinite(px) && px > 0) input.value = String(px);
+      else ticketMessage("Mid price unavailable", "err");
       updateEstimate();
     });
     byId("ticket-max")?.addEventListener("click", () => applyPct(100));

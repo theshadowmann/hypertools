@@ -124,6 +124,8 @@ export function buildOrderWire({
     if (!Number.isFinite(pxNum) || pxNum <= 0) throw new Error("No price for market order");
     t = { limit: { tif: "Ioc" } };
   } else {
+    const rawPx = Number(price);
+    if (!Number.isFinite(rawPx) || rawPx <= 0) throw new Error("Enter a limit price");
     pxNum = pxFor(price);
     if (!Number.isFinite(pxNum) || pxNum <= 0) throw new Error("Enter a limit price");
     const allowed = { Gtc: "Gtc", Ioc: "Ioc", Alo: "Alo" };
@@ -185,6 +187,23 @@ export function explainExchangeError(result) {
   if (twapStatus && twapStatus.error) return twapStatus.error;
   if (result.message) return result.message;
   return null;
+}
+
+/**
+ * Ticket / wallet / SDK errors. Do not treat a missing `err.response` as an
+ * exchange null — that used to replace every thrown Error with
+ * "No response from Hyperliquid."
+ */
+export function userMessage(err) {
+  if (!err) return "Request failed.";
+  if (err.code === 4001 || err.code === "ACTION_REJECTED") return "Wallet rejected the signature.";
+  if (err.response != null) {
+    const fromApi = explainExchangeError(err.response);
+    if (fromApi) return fromApi;
+  }
+  const msg = err.message || String(err);
+  if (/user rejected|denied|rejected the request/i.test(msg)) return "Wallet rejected the signature.";
+  return msg;
 }
 
 export function orderSucceeded(result) {

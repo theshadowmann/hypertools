@@ -181,6 +181,15 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="trade-balances"');
   });
 
+  it("blocks empty limit prices and does not write a zero Mid into the ticket", () => {
+    const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(js).toContain('ticketMessage("Enter a limit price", "err")');
+    expect(js).toContain("if (input && Number.isFinite(px) && px > 0) input.value = String(px)");
+    expect(js).toContain('ticketMessage("Mid price unavailable", "err")');
+    expect(js).toContain("if (input && Number.isFinite(n) && n > 0)");
+    expect(js).not.toContain("if (input && Number.isFinite(mid())) input.value = String(mid())");
+  });
+
   it("uses Place order for the enabled ticket CTA and keeps USDC on /outcome Balances", () => {
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
     expect(js).toContain('submit.textContent = "Place order"');

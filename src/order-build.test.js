@@ -6,11 +6,13 @@ import {
   builderParam,
   buildOrderPayload,
   buildOrderWire,
+  explainExchangeError,
   roundPx,
   roundSz,
   sealOrderPayload,
   sizeFromMarginPct,
   toWire,
+  userMessage,
 } from "./order-build.js";
 
 describe("builder attachment", () => {
@@ -114,6 +116,42 @@ describe("builder attachment", () => {
     expect(wire.t.trigger.tpsl).toBe("sl");
     expect(wire.t.trigger.isMarket).toBe(true);
     expect(wire.t.trigger.triggerPx).toBe("80000");
+  });
+});
+
+describe("limit price and exchange errors", () => {
+  it("rejects limit prices of 0, 0.0, blank, and NaN before rounding", () => {
+    const base = { asset: 0, isBuy: true, size: 0.01, type: "limit", tif: "Gtc", szDecimals: 5 };
+    expect(() => buildOrderWire({ ...base, price: 0 })).toThrow(/Enter a limit price/);
+    expect(() => buildOrderWire({ ...base, price: "0.0" })).toThrow(/Enter a limit price/);
+    expect(() => buildOrderWire({ ...base, price: "" })).toThrow(/Enter a limit price/);
+    expect(() => buildOrderWire({ ...base, price: " " })).toThrow(/Enter a limit price/);
+    expect(() => buildOrderWire({ ...base, price: undefined })).toThrow(/Enter a limit price/);
+    expect(() =>
+      buildOrderWire({ asset: 100_012_100, isBuy: true, size: 10, price: 0, type: "limit" })
+    ).toThrow(/Enter a limit price/);
+  });
+
+  it("surfaces SDK messages instead of a false no-response when .response is missing", () => {
+    expect(userMessage(new Error("Enter a limit price"))).toBe("Enter a limit price");
+    expect(userMessage(new Error("Failed to fetch"))).toBe("Failed to fetch");
+    expect(userMessage({ message: "network timeout" })).toBe("network timeout");
+    expect(userMessage({ code: 4001, message: "User rejected" })).toBe("Wallet rejected the signature.");
+    expect(userMessage(null)).toBe("Request failed.");
+  });
+
+  it("keeps no-response only for a true null exchange result", () => {
+    expect(explainExchangeError(null)).toBe("No response from Hyperliquid.");
+    expect(explainExchangeError(undefined)).toBe("No response from Hyperliquid.");
+    expect(explainExchangeError({ status: "err", response: "Insufficient margin" })).toBe("Insufficient margin");
+    expect(
+      explainExchangeError({
+        status: "ok",
+        response: { data: { statuses: [{ error: "Order must have minimum value of $10." }] } },
+      })
+    ).toBe("Order must have minimum value of $10.");
+    expect(userMessage({ response: { status: "err", response: "bad px" } })).toBe("bad px");
+    expect(userMessage({ response: null, message: "agent signing failed" })).toBe("agent signing failed");
   });
 });
 
