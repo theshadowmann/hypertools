@@ -4,7 +4,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { setLwcChartFactory } from "./hl-lwc-chart.js";
 import {
   mountChart,
   mountTvChart,
@@ -25,6 +26,16 @@ import { drawCandles } from "./hl-chart.js";
 import { candleSnapshotBody, candlesToBars, hlCandleInterval, prevDayFromDailyBars } from "./api.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+beforeAll(() => {
+  setLwcChartFactory(() => ({
+    addSeries: () => ({ setData: () => {} }),
+    applyOptions: () => {},
+    timeScale: () => ({ fitContent: () => {} }),
+    remove: () => {},
+  }));
+});
+afterAll(() => setLwcChartFactory(null));
 
 describe("TradingView embed", () => {
   it("loads the official Advanced Chart iframe, not a same-origin snapshot", () => {
@@ -114,7 +125,8 @@ describe("TradingView embed", () => {
     expect(host.querySelector("script")).toBeNull();
     expect(host.innerHTML).not.toContain("BTCUSDC");
     expect(host.innerHTML).not.toContain("tradingview-widget.com");
-    expect(host.querySelector("canvas.hl-chart") || host.querySelector(".hl-chart-host") || host.querySelector(".tv-skip")).toBeTruthy();
+    expect(host.querySelector(".hl-lwc-host") || host.querySelector(".hl-chart-host") || host.querySelector(".tv-skip")).toBeTruthy();
+    host.querySelector(".hl-lwc-host")?._chartTeardown?.();
   });
 
   it("never mounts the official widget for HIP-4 outcome markets", () => {
@@ -130,22 +142,25 @@ describe("TradingView embed", () => {
     expect(host.innerHTML).not.toContain("HYPERLIQUID:out:");
     expect(host.innerHTML).not.toContain("BTCUSDC");
     expect(host.innerHTML).not.toContain("HYPERLIQUID:BTC");
+    host.querySelector(".hl-lwc-host")?._chartTeardown?.();
   });
 
-  it("falls back to a Hyperliquid candle canvas for outcome coins", () => {
+  it("mounts Lightweight Charts for outcome coins, never a TV iframe", () => {
     const host = document.createElement("div");
     host.style.height = "200px";
     const kind = mountChart(host, { coin: "#12100", interval: "15m", kind: "outcome" });
-    expect(kind).toBe("hl");
+    expect(kind).toBe("lwc");
     expect(host.querySelector("iframe")).toBeNull();
     expect(host.querySelector("script")).toBeNull();
     expect(host.innerHTML).not.toContain("BTCUSDC");
     expect(host.innerHTML).not.toContain("HYPERLIQUID:BTC");
     expect(host.innerHTML).not.toContain("tradingview-widget.com");
-    expect(host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
+    expect(host.querySelector(".hl-lwc-host") || host.querySelector(".tv-skip")).toBeTruthy();
+    const wrap = host.querySelector(".hl-lwc-host");
+    if (wrap && wrap._chartTeardown) wrap._chartTeardown();
   });
 
-  it("charts the outcome hash coin on HL, never a TV iframe or BTC", () => {
+  it("charts the outcome hash coin on Lightweight Charts, never a TV iframe or BTC", () => {
     const host = document.createElement("div");
     const kind = mountChart(host, {
       coin: "#12880",
@@ -154,12 +169,13 @@ describe("TradingView embed", () => {
       interval: "5m",
       kind: "outcome",
     });
-    expect(kind).toBe("hl");
+    expect(kind).toBe("lwc");
     expect(host.querySelector("iframe")).toBeNull();
     expect(host.innerHTML).not.toContain("tradingview-widget.com");
     expect(host.innerHTML).not.toContain("HYPERLIQUID:out:");
     expect(host.innerHTML).not.toContain("BTCUSDC");
-    expect(host.querySelector(".hl-chart-host") || host.querySelector("canvas.hl-chart") || host.querySelector(".tv-skip")).toBeTruthy();
+    expect(host.querySelector(".hl-lwc-host") || host.querySelector(".hl-chart-host") || host.querySelector(".tv-skip")).toBeTruthy();
+    host.querySelector(".hl-lwc-host")?._chartTeardown?.();
   });
 
   it("strips HyperTools pane/scale/toolbar paints so stock TV dark colors apply", () => {
@@ -524,7 +540,7 @@ describe("HL interval row", () => {
     expect(html).toContain('data-hl-iv="1d"');
     expect(html).not.toContain('class="trade-iv"');
     expect(html).not.toContain("data-interval");
-    expect(trade).toContain('renderHlIntervalRow(kind === "hl" || !!(m && m.kind === "outcome") || pageKind === "outcome")');
+    expect(trade).toContain('renderHlIntervalRow(kind === "hl" || kind === "lwc" || !!(m && m.kind === "outcome") || pageKind === "outcome")');
     expect(trade).toContain("onFallback: () => renderHlIntervalRow(true)");
     expect(trade).toContain("outcomeLegCoin");
     expect(trade).not.toContain("outcomeLegTvCoin");

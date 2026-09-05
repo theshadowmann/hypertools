@@ -1,6 +1,7 @@
 import { clear } from "./dom.js";
 import { tvInterval, tvSymbol } from "./ticket-math.js";
 import { mountHlChart } from "./hl-chart.js";
+import { mountHlLightweightChart } from "./hl-lwc-chart.js";
 
 /**
  * Official TradingView Advanced Chart iframe widget. Not user-configurable.
@@ -259,7 +260,7 @@ export const TV_PAINT_MS = 8000;
 
 function teardownChartHost(container) {
   if (!container || !container.querySelector) return;
-  const host = container.querySelector(".tradingview-widget-container, .hl-chart-host");
+  const host = container.querySelector(".tradingview-widget-container, .hl-lwc-host, .hl-chart-host");
   if (host && typeof host._chartTeardown === "function") host._chartTeardown();
 }
 
@@ -327,7 +328,7 @@ export function scheduleTvFallback(iframe, onFail, ms = TV_PAINT_MS, opts) {
 export function mountTvChart(container, { coin, interval, kind, base, quote, hlCoin, onFallback } = {}) {
   if (!container) return;
   if (kind === "outcome") {
-    mountHlChart(container, { coin: hlCoin || coin, interval });
+    mountHlLightweightChart(container, { coin: hlCoin || coin, interval });
     return;
   }
   teardownChartHost(container);
@@ -373,14 +374,14 @@ export function mountTvChart(container, { coin, interval, kind, base, quote, hlC
   wrap._chartTeardown = cancel;
 }
 
-/** Perps/spot: official TV when a Hyperliquid symbol exists. Outcomes: HL candles only, never a TV iframe. */
+/** Perps/spot: official TV when a Hyperliquid symbol exists. Outcomes: Lightweight Charts, never a TV iframe. */
 export function mountChart(container, opts) {
   if (!container) return "skip";
   const o = opts || {};
   const hlCoin = o.hlCoin || o.coin;
   if (o.kind === "outcome") {
-    mountHlChart(container, { coin: hlCoin, interval: o.interval });
-    return "hl";
+    mountHlLightweightChart(container, { coin: hlCoin, interval: o.interval });
+    return "lwc";
   }
   const tvCoin = o.tvCoin || o.coin;
   const symbol = tvSymbol(tvCoin, o.kind, o.base, o.quote);

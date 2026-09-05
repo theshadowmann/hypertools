@@ -327,7 +327,7 @@ export function createTradeView(app) {
       quote: m && m.quote,
       onFallback: () => renderHlIntervalRow(true),
     });
-    renderHlIntervalRow(kind === "hl" || !!(m && m.kind === "outcome") || pageKind === "outcome");
+    renderHlIntervalRow(kind === "hl" || kind === "lwc" || !!(m && m.kind === "outcome") || pageKind === "outcome");
   }
 
   function renderHlIntervalRow(show) {
