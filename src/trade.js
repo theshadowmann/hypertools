@@ -611,6 +611,7 @@ export function createTradeView(app) {
         outCh.textContent = formatStatChangePct(ch);
         paintStatSigned(outCh, ch);
       }
+      setText("stat-yes-k", "Price (" + (outcomeLeg === 1 ? "No" : "Yes") + ")");
       setText("stat-yes", Number.isFinite(k) ? fmtPx(k) : "—");
       return;
     }

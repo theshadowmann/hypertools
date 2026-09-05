@@ -92,11 +92,13 @@ describe("picker filter", () => {
     expect(html).toMatch(/mp-head-outcome[\s\S]*% Chance[\s\S]*Volume[\s\S]*Open Interest/);
     expect(html).toContain('id="stats-outcome"');
     expect(html).toContain('id="stat-out-change"');
-    expect(html).toMatch(/id="stats-outcome"[\s\S]*24h Change[\s\S]*Price \(Yes\)/);
+    expect(html).toMatch(/id="stats-outcome"[\s\S]*24h Change[\s\S]*id="stat-yes-k"[\s\S]*Price \(Yes\)/);
     const trade = readFileSync(join(root, "src/trade.js"), "utf8");
     expect(trade).toContain("hydrateOutcomePrevDay");
     expect(trade).toContain("marketChange24h");
     expect(trade).toContain("paintStatSigned");
+    expect(trade).toContain('setText("stat-yes-k", "Price (" + (outcomeLeg === 1 ? "No" : "Yes") + ")")');
+    expect(html).toContain('id="stat-yes-k"');
     expect(html).toContain("Price (Yes)");
     expect(html).not.toMatch(/Crypto|Tradfi|Pre-launch/);
   });
