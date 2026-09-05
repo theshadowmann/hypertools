@@ -1,0 +1,171 @@
+
+html[data-theme="dark"], [data-theme="dark"], html.theme-dark, html, body,
+.theme-dark:root, :root {
+  --color-header-bg: #0F172A !important;
+  --color-body-bg: #0F172A !important;
+  --color-pane-bg: #0F172A !important;
+  --color-chart-page-bg: #0F172A !important;
+  --tv-color-platform-background: #0F172A !important;
+  --tv-color-pane-background: #0F172A !important;
+  --tv-color-pane-background-secondary: #0F172A !important;
+  --tv-color-toolbar-button-background-hover: transparent !important;
+  --tv-color-toolbar-button-background-secondary-hover: transparent !important;
+  --tv-color-toolbar-button-background-expanded: transparent !important;
+  --tv-color-toolbar-button-background-active: transparent !important;
+  --tv-color-toolbar-button-background-active-hover: transparent !important;
+  --tv-color-toolbar-toggle-button-background-active: transparent !important;
+  --tv-color-toolbar-toggle-button-background-active-hover: transparent !important;
+  --tv-color-toolbar-button-text: #F8FAFC !important;
+  --tv-color-toolbar-button-text-hover: #F8FAFC !important;
+  --tv-color-toolbar-button-text-active: #06B6D4 !important;
+  --tv-color-toolbar-button-text-active-hover: #06B6D4 !important;
+  --tv-color-item-active-text: #06B6D4 !important;
+  --tv-color-toolbar-divider-background: rgba(51, 65, 85, 0.55) !important;
+  background: #0F172A !important;
+  background-color: #0F172A !important;
+}
+.chart-page,
+.chart-container,
+.layout__area--center,
+.layout__area--top,
+.layout__area--left,
+[class^="toolbar-"],
+[class*=" toolbar-"] {
+  background: #0F172A !important;
+  background-color: #0F172A !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+.layout__area--top button,
+.layout__area--left button,
+.layout__area--top [class*="button"],
+.layout__area--left [class*="button"],
+.layout__area--top [class*="apply-common-tooltip"],
+.layout__area--left [class*="apply-common-tooltip"],
+.layout__area--top [class*="isInteractive"],
+.layout__area--left [class*="isInteractive"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  outline-width: 0 !important;
+  color: #F8FAFC !important;
+  fill: #F8FAFC !important;
+}
+.layout__area--top button::before,
+.layout__area--top button::after,
+.layout__area--left button::before,
+.layout__area--left button::after,
+.layout__area--top [class*="button"]::before,
+.layout__area--top [class*="button"]::after,
+.layout__area--left [class*="button"]::before,
+.layout__area--left [class*="button"]::after,
+.layout__area--top [class*="apply-common-tooltip"]::before,
+.layout__area--top [class*="apply-common-tooltip"]::after,
+.layout__area--left [class*="apply-common-tooltip"]::before,
+.layout__area--left [class*="apply-common-tooltip"]::after {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.layout__area--top [class*="isActive"],
+.layout__area--left [class*="isActive"],
+.layout__area--top [class*="isOpened"],
+.layout__area--left [class*="isOpened"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  outline-width: 0 !important;
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+}
+.layout__area--top [class*="isActive"] svg,
+.layout__area--left [class*="isActive"] svg,
+.layout__area--top [class*="isActive"] svg path,
+.layout__area--left [class*="isActive"] svg path {
+  fill: #06B6D4 !important;
+  color: #06B6D4 !important;
+  stroke: #06B6D4 !important;
+}
+.layout__area--top [class*="isSelected"],
+.layout__area--left [class*="isSelected"],
+.layout__area--top [class*="isChecked"],
+.layout__area--left [class*="isChecked"],
+.layout__area--top [aria-checked="true"],
+.layout__area--left [aria-checked="true"],
+.layout__area--top [aria-pressed="true"],
+.layout__area--left [aria-pressed="true"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+}
+.layout__area--top [class*="isSelected"] svg,
+.layout__area--left [class*="isSelected"] svg,
+.layout__area--top [class*="isChecked"] svg,
+.layout__area--left [class*="isChecked"] svg,
+.layout__area--top [class*="isSelected"] svg path,
+.layout__area--left [class*="isSelected"] svg path {
+  fill: #06B6D4 !important;
+  color: #06B6D4 !important;
+  stroke: #06B6D4 !important;
+}
+[class*="isActive-"],
+[class*="isSelected-"],
+[class*="isChecked-"],
+[class*="button-"][class*="isActive"],
+[class*="button-"][class*="isSelected"],
+[class*="isActive-"] *,
+[class*="isSelected-"] *,
+[class*="button-"][class*="isActive"] * {
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  outline: none !important;
+}
+[aria-checked="true"],
+[aria-pressed="true"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  color: #06B6D4 !important;
+  fill: #06B6D4 !important;
+}
+[class*="isActive-"]::before,
+[class*="isActive-"]::after,
+[class*="isSelected-"]::before,
+[class*="isSelected-"]::after,
+[class*="isChecked-"]::before,
+[class*="isChecked-"]::after,
+[class*="button-"][class*="isActive"]::before,
+[class*="button-"][class*="isActive"]::after,
+[class*="button-"][class*="isSelected"]::before,
+[class*="button-"][class*="isSelected"]::after,
+[class*="isActive-"] > *,
+[class*="isSelected-"] > *,
+[class*="button-"][class*="isActive"] > * {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+}

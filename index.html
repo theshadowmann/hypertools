@@ -3,129 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="HyperTools — a read-only Hyperliquid dashboard. Connect MetaMask or Rabby, or paste an address, to view perps, spot, and staking from the public Info API. No trading. No keys." />
-  <meta name="theme-color" content="#05070a" />
-  <title>HyperTools — Hyperliquid Account Dashboard</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: {
-              950: "#05070a",
-              900: "#0b1018",
-              850: "#10161f",
-              800: "#161d28",
-              700: "#1e2734",
-              600: "#2a3444",
-            },
-            mist: {
-              400: "#94a3b8",
-              300: "#cbd5e1",
-              200: "#e2e8f0",
-              100: "#f1f5f9",
-            },
-            accent: {
-              DEFAULT: "#2dd4bf",
-              dim: "#14b8a6",
-              muted: "rgba(45, 212, 191, 0.12)",
-              line: "rgba(45, 212, 191, 0.28)",
-            },
-            danger: {
-              DEFAULT: "#fb7185",
-              muted: "rgba(251, 113, 133, 0.12)",
-            },
-            warn: {
-              DEFAULT: "#fbbf24",
-              muted: "rgba(251, 191, 36, 0.12)",
-            },
-          },
-          fontFamily: {
-            sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-            mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
-          },
-          boxShadow: {
-            glow: "0 0 80px rgba(45, 212, 191, 0.08)",
-            card: "0 1px 0 rgba(255,255,255,0.04), 0 18px 40px rgba(0,0,0,0.35)",
-          },
-        },
-      },
-    };
-  </script>
-
-  <style>
-    html { scroll-behavior: smooth; }
-    body { background: #05070a; color: #e2e8f0; }
-    .hero-grid {
-      background-image:
-        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 75%);
-    }
-    .tabular { font-variant-numeric: tabular-nums; }
-  </style>
+  <meta name="description" content="HyperTools — Hyperliquid trading terminal. Live perp chart and order book. Connect MetaMask or Rabby to place market and limit orders from your wallet. Portfolio overview for perps, spot, and staking." />
+  <meta name="theme-color" content="#080D1A" />
+  <title>HyperTools — Hyperliquid Trading Terminal</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </head>
 <body class="font-sans antialiased bg-ink-950 text-mist-200 min-h-screen">
 
-  <!-- =====================================================================
-       1. STICKY NAV
-       ===================================================================== -->
-  <header class="sticky top-0 z-50 border-b border-white/5 bg-ink-950/80 backdrop-blur-md">
-    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-      <a href="#" id="wordmark" class="flex shrink-0 items-center gap-2.5" aria-label="HyperTools home">
-        <span class="flex h-7 w-7 items-end justify-center gap-0.5 rounded-md bg-accent-muted ring-1 ring-accent-line" aria-hidden="true">
-          <span class="mb-1.5 h-2.5 w-1 rounded-sm bg-accent"></span>
-          <span class="mb-1.5 h-4 w-1 rounded-sm bg-accent/70"></span>
-        </span>
-        <span class="text-[15px] font-semibold tracking-tight text-white">HyperTools</span>
-      </a>
+  <header class="sticky top-0 border-b border-chrome/50 bg-ink-950">
+    <div class="mx-auto flex h-12 max-w-[1600px] items-center justify-between gap-3 px-3 sm:px-4">
+      <div class="flex min-w-0 items-center gap-5">
+        <a href="/trade" id="wordmark" class="flex shrink-0 items-center gap-2" aria-label="HyperTools trading terminal">
+          <span class="flex h-6 w-6 items-end justify-center gap-0.5" aria-hidden="true">
+            <span class="mb-0.5 h-2 w-1 rounded-sm bg-buy"></span>
+            <span class="mb-0.5 h-3.5 w-1 rounded-sm bg-buy/70"></span>
+          </span>
+          <span class="text-[14px] font-semibold tracking-tight text-white">HyperTools</span>
+        </a>
+        <nav class="flex items-center gap-5" aria-label="Primary">
+          <a href="/trade" id="nav-trade" class="nav-word" aria-current="page">Trade</a>
+          <a href="/portfolio" id="nav-portfolio" class="nav-word">Portfolio</a>
+          <a href="/outcome" id="nav-outcome" class="nav-word">Outcome</a>
+        </nav>
+      </div>
 
       <div class="flex min-w-0 items-center gap-2 sm:gap-3">
-        <span class="hidden xs:inline-flex items-center rounded-full border border-warn/30 bg-warn/muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-warn sm:inline-flex">
-          Estimates only
-        </span>
-        <span id="live-chip" class="hidden items-center rounded-full border border-accent/30 bg-accent-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent">
-          Live data
-        </span>
-
-        <!-- Disconnected: open MetaMask / Rabby (or scroll to install if none) -->
-        <div id="nav-disconnected" class="relative flex items-center">
+        <div id="nav-disconnected" class="relative flex items-center gap-2">
+          <span id="nav-connect-status" class="nav-connect-status" role="status"></span>
           <button
             id="btn-nav-connect"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg bg-accent px-3.5 text-sm font-semibold text-ink-950 transition hover:bg-accent-dim"
+            class="btn-connect"
           >
-            Connect
+            Connect to trade
           </button>
           <div
             id="nav-wallet-menu"
-            class="absolute right-0 top-full z-50 mt-2 hidden min-w-[13rem] overflow-hidden rounded-lg border border-white/10 bg-ink-850 py-1 shadow-card"
+            class="nav-wallet-menu hidden"
             role="menu"
             hidden
           ></div>
         </div>
 
-        <!-- Connected: truncated address + refresh + disconnect -->
         <div id="nav-connected" class="hidden items-center gap-2">
-          <span id="nav-address" class="max-w-[9.5rem] truncate font-mono text-xs text-mist-300 sm:max-w-none sm:text-sm"></span>
+          <span id="nav-address" class="addr-chip"></span>
           <button
             id="btn-refresh"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-xs font-medium text-mist-300 transition hover:border-white/20 hover:text-white sm:text-sm"
+            class="btn-ghost"
           >
             Refresh
           </button>
           <button
             id="btn-disconnect"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-xs font-medium text-mist-300 transition hover:border-danger/40 hover:text-danger sm:text-sm"
+            class="btn-ghost"
           >
             Disconnect
           </button>
@@ -135,73 +67,46 @@
   </header>
 
   <main>
-    <!-- =====================================================================
-         2. LANDING — only while no address is set
-         ===================================================================== -->
     <section id="landing" class="relative overflow-hidden">
       <div class="hero-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
-      <div class="pointer-events-none absolute -top-24 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" aria-hidden="true"></div>
 
       <div class="relative mx-auto max-w-6xl px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
         <p class="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
-          Perps · Spot · Staking
+          Hyperliquid trading terminal
         </p>
-        <h1 class="max-w-3xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
-          Your Hyperliquid account, one screen.
+        <h1 class="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
+          Chart, order book, and perps orders from your wallet.
         </h1>
         <p class="mt-5 max-w-xl text-base leading-relaxed text-mist-400 sm:text-lg">
-          Connect a wallet or paste an address to load live perps, spot balances, and HYPE staking
-          from Hyperliquid’s public Info API. Read-only. No trading. Nothing leaves this browser
-          except a public address lookup.
+          Live candlesticks and L2 book. Place market and limit orders with MetaMask or Rabby.
+          Paste an address to load balances, positions, and staking.
         </p>
 
         <div id="connect" class="scroll-mt-20 mt-10 max-w-xl space-y-5">
           <div id="wallet-buttons" class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"></div>
 
-          <div id="no-wallet" class="hidden rounded-xl border border-white/10 bg-ink-850/80 p-5">
-            <p class="text-sm font-semibold text-white">Install MetaMask or Rabby</p>
+          <div id="no-wallet" class="hidden rounded-xl border border-chrome/60 bg-ink-850/80 p-5">
+            <p class="text-sm font-medium text-mist-200">Install MetaMask or Rabby to trade</p>
             <p class="mt-1.5 text-sm leading-relaxed text-mist-400">
-              No injected wallet detected. Install one to connect, or paste any Hyperliquid address below to view an account.
+              No wallet in this browser. Install one to place orders, or paste an address to load balances and positions.
             </p>
             <div class="mt-4 flex flex-wrap gap-3">
               <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" class="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-ink-950 transition hover:bg-accent-dim">MetaMask</a>
-              <a href="https://rabby.io" target="_blank" rel="noopener noreferrer" class="inline-flex h-10 items-center rounded-lg border border-white/15 px-4 text-sm font-medium text-mist-200 transition hover:border-white/30 hover:text-white">Rabby</a>
+              <a href="https://rabby.io" target="_blank" rel="noopener noreferrer" class="inline-flex h-10 items-center rounded-lg border border-chrome/60 px-4 text-sm font-medium text-mist-200 transition hover:border-chrome hover:text-white">Rabby</a>
             </div>
           </div>
 
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-wider text-mist-400">or paste an address</p>
-            <form id="paste-form" class="flex flex-col gap-2 sm:flex-row" autocomplete="off" novalidate>
-              <label for="paste-address" class="sr-only">Hyperliquid address</label>
-              <input
-                id="paste-address"
-                name="address"
-                type="text"
-                spellcheck="false"
-                placeholder="0x…"
-                maxlength="42"
-                class="h-11 w-full rounded-lg border border-white/10 bg-ink-950 px-3 font-mono text-sm text-white placeholder:text-mist-400/40 focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/20"
-              />
-              <button
-                type="submit"
-                class="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-white/10 px-4 text-sm font-semibold text-white transition hover:border-accent/40 hover:bg-accent-muted"
-              >
-                View account
-              </button>
-            </form>
-            <p id="paste-error" class="mt-2 hidden text-sm text-danger" role="alert"></p>
-            <p class="mt-2 text-xs text-mist-400">Any 0x Hyperliquid account works. Connecting a wallet only shares the address — HyperTools never asks you to sign.</p>
-          </div>
+          <p class="text-sm text-mist-400">Paste an address on Portfolio to load balances without connecting a wallet.</p>
         </div>
 
-        <ul class="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/5 pt-6 text-xs font-medium uppercase tracking-wider text-mist-400">
+        <ul class="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-chrome/50 pt-6 text-xs font-medium uppercase tracking-wider text-mist-400">
           <li class="flex items-center gap-2">
             <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true"></span>
-            Read-only
+            Live chart &amp; book
           </li>
           <li class="flex items-center gap-2">
             <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true"></span>
-            No trading
+            Wallet-signed orders
           </li>
           <li class="flex items-center gap-2">
             <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true"></span>
@@ -209,7 +114,7 @@
           </li>
           <li class="flex items-center gap-2">
             <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true"></span>
-            No keys
+            No keys on a server
           </li>
           <li class="flex items-center gap-2">
             <span class="h-1.5 w-1.5 rounded-full bg-warn" aria-hidden="true"></span>
@@ -219,94 +124,550 @@
       </div>
     </section>
 
-    <!-- =====================================================================
-         3. DASHBOARD — only when an address is set
-         ===================================================================== -->
-    <section id="dashboard" class="hidden border-t border-white/5 bg-ink-900">
-      <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-
-        <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section id="dashboard" class="hidden port-page">
+      <div class="port-inner">
+        <div class="port-head">
           <div>
-            <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Account</h2>
-            <p id="dash-subtitle" class="mt-1 font-mono text-sm text-mist-400"></p>
+            <h1 class="port-title">Portfolio</h1>
+            <p id="dash-subtitle" class="port-sub"></p>
           </div>
-          <p id="dash-updated" class="text-xs text-mist-400"></p>
+          <p id="dash-updated" class="port-updated"></p>
         </div>
 
-        <div id="error-banner" class="mb-6 hidden rounded-lg border border-danger/30 bg-danger/muted px-4 py-3 text-sm text-rose-100" role="alert"></div>
-
-        <!-- Loading skeleton -->
-        <div id="loading" class="hidden space-y-6" aria-busy="true" aria-live="polite">
-          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-            <div class="h-28 animate-pulse rounded-xl bg-ink-800"></div>
-          </div>
-          <div class="h-64 animate-pulse rounded-xl bg-ink-800"></div>
-          <p class="text-center text-sm text-mist-400">Loading Hyperliquid account…</p>
+        <div id="port-paste-wrap" class="port-paste">
+          <p class="port-paste-k">Paste an address</p>
+          <form id="paste-form" class="port-paste-form" autocomplete="off" novalidate>
+            <label for="paste-address" class="sr-only">Hyperliquid address</label>
+            <input
+              id="paste-address"
+              name="address"
+              type="text"
+              spellcheck="false"
+              placeholder="0x…"
+              maxlength="42"
+              class="port-paste-input"
+            />
+            <button type="submit" class="btn-ghost port-paste-btn">Load portfolio</button>
+          </form>
+          <p id="paste-error" class="mt-2 hidden text-sm text-danger" role="alert"></p>
         </div>
 
-        <div id="dash-content" class="hidden space-y-10">
+        <div id="error-banner" class="mb-4 hidden rounded-lg border border-danger/30 bg-danger/muted px-4 py-3 text-sm text-rose-100" role="alert"></div>
+        <p id="loading" class="hidden port-loading" aria-busy="true" aria-live="polite">Loading Hyperliquid portfolio…</p>
 
-          <div class="flex gap-3 rounded-lg border border-warn/20 bg-warn/muted px-4 py-3 text-sm text-amber-100/90" role="note">
-            <span class="mt-0.5 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider text-warn">Note</span>
-            <p>
-              Not financial advice. Not affiliated with Hyperliquid. Figures come from the public Info API
-              and can lag. Liquidation prices are venue-reported (shown as “—” when the API returns null).
-              Perps can result in total loss. Do your own research.
-            </p>
+        <div id="dash-content" class="port-body">
+          <div class="port-cards">
+            <div class="port-col">
+              <article class="port-card port-vol-card">
+                <h2 class="port-card-title">14 Day Volume</h2>
+                <p id="port-14d-vol" class="port-card-value">--</p>
+                <a class="port-link" href="https://app.hyperliquid.xyz/portfolio" target="_blank" rel="noopener noreferrer">View Volume</a>
+              </article>
+              <article class="port-card port-fee-card">
+                <h2 class="port-card-title">Fees (Taker / Maker)</h2>
+                <div class="port-fee-row">
+                  <span>Perps</span>
+                  <span><span id="port-fee-perp-taker">--</span> / <span id="port-fee-perp-maker">--</span></span>
+                </div>
+                <div id="port-fee-spot-row" class="port-fee-row">
+                  <span>Spot</span>
+                  <span><span id="port-fee-spot-taker">--</span> / <span id="port-fee-spot-maker">--</span></span>
+                </div>
+                <a class="port-link" href="https://hyperliquid.gitbook.io/hyperliquid-docs/trading/fees" target="_blank" rel="noopener noreferrer">View Fee Schedule</a>
+              </article>
+            </div>
+
+            <article class="port-card">
+              <div class="port-acct-head">
+                <div class="port-dd port-menu-wrap">
+                  <span class="port-dd-k">Accounts</span>
+                  <button type="button" id="port-acct-btn" class="port-menu-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="port-acct-label">All</span>
+                    <svg class="port-menu-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                      <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <div id="port-acct-menu" class="port-menu hidden" role="listbox" hidden>
+                    <button type="button" data-port-acct="perps">
+                      <span>Only Perps</span>
+                      <span class="port-check" hidden>✓</span>
+                    </button>
+                    <button type="button" data-port-acct="all" class="is-on">
+                      <span>All</span>
+                      <span class="port-check">✓</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="port-acct-row">
+                <span class="port-acct-k">PNL</span>
+                <span id="port-pnl" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row">
+                <span class="port-acct-k">Volume</span>
+                <span id="port-vol" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row">
+                <span class="port-acct-k">Total Equity</span>
+                <span id="port-total-eq" class="port-acct-v">--</span>
+              </div>
+              <div id="port-spot-eq-row" class="port-acct-row indent">
+                <span class="port-acct-k">Spot Equity</span>
+                <span id="port-spot-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Perps Equity</span>
+                <span id="port-perp-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">uPNL</span>
+                <span id="port-upnl" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Vault Equity</span>
+                <span id="port-vault-eq" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Earn Balance</span>
+                <span id="port-earn" class="port-acct-v">--</span>
+              </div>
+              <div class="port-acct-row indent">
+                <span class="port-acct-k">Staking Account</span>
+                <span id="port-stake" class="port-acct-v">--</span>
+              </div>
+            </article>
+
+            <article class="port-card port-chart-card">
+              <div class="port-chart-head">
+                <div class="port-chart-tabs" role="tablist">
+                  <button type="button" class="port-chart-tab" data-port-chart="account" aria-selected="false">Account Value</button>
+                  <button type="button" class="port-chart-tab" data-port-chart="pnl" aria-selected="true">PNL</button>
+                  <button type="button" class="port-chart-tab" data-port-chart="perpPnl" aria-selected="false">Perps PNL</button>
+                </div>
+                <div class="port-menu-wrap">
+                  <button type="button" id="port-tf-btn" class="port-menu-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="port-tf-label">7D</span>
+                    <svg class="port-menu-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                      <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <div id="port-tf-menu" class="port-menu hidden" role="listbox" hidden>
+                    <button type="button" data-port-period="day">24h</button>
+                    <button type="button" data-port-period="week" class="is-on">7D</button>
+                    <button type="button" data-port-period="month">30D</button>
+                    <button type="button" data-port-period="allTime">All-time</button>
+                  </div>
+                </div>
+              </div>
+              <canvas id="port-pnl-chart" class="port-chart" width="640" height="220" aria-label="Portfolio chart"></canvas>
+            </article>
           </div>
 
-          <!-- Overview -->
-          <div id="overview-cards" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
+          <div class="port-card port-hist">
+            <div class="hist-tabs" role="tablist">
+              <button type="button" data-port-tab="balances" class="hist-tab" aria-selected="true">Balances</button>
+              <button type="button" data-port-tab="positions" class="hist-tab" aria-selected="false">Positions</button>
+              <button type="button" data-port-tab="outcomes" class="hist-tab" aria-selected="false">Outcomes</button>
+              <button type="button" data-port-tab="orders" class="hist-tab" aria-selected="false">Open Orders (0)</button>
+              <button type="button" data-port-tab="twap" class="hist-tab" aria-selected="false">TWAP</button>
+              <button type="button" data-port-tab="funding" class="hist-tab" aria-selected="false">Funding History</button>
+              <button type="button" data-port-tab="history" class="hist-tab" aria-selected="false">Order History</button>
+              <label id="port-bal-hide-wrap" class="chk hist-extra">
+                <input id="port-bal-hide-small" type="checkbox" checked />
+                <span class="chk-box" aria-hidden="true"></span>
+                Hide Small Balances
+              </label>
+            </div>
+            <div id="port-balances" class="hist-body"></div>
+            <div id="port-positions" class="hist-body hidden"></div>
+            <div id="port-outcomes" class="hist-body hidden"></div>
+            <div id="port-orders" class="hist-body hidden"></div>
+            <div id="port-twap" class="hist-body hidden"></div>
+            <div id="port-funding" class="hist-body hidden"></div>
+            <div id="port-history" class="hist-body hidden"></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-          <!-- Perps -->
-          <section>
-            <div class="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-semibold tracking-tight text-white">Perp positions</h3>
-                <p class="mt-1 text-xs text-mist-400">Signed size from <span class="font-mono">szi</span> · marks from <span class="font-mono">allMids</span></p>
+    <section id="trade" class="hidden bg-ink-950">
+      <div class="trade-shell">
+
+        <div class="trade-stats">
+          <div class="stats-left">
+            <button type="button" id="market-chip" class="market-chip" aria-haspopup="dialog" aria-expanded="false" aria-controls="market-picker">
+              <img id="market-chip-icon" class="coin-icon" alt="" width="22" height="22" hidden />
+              <span id="market-chip-pair">BTC/USDC</span>
+              <svg class="chip-chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                <path class="chip-chevron-down" d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path class="chip-chevron-up" d="M2.5 7.5 L6 4 L9.5 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span id="market-chip-lev" class="lev-badge">20x</span>
+            </button>
+          </div>
+          <div class="stats-metrics" id="stats-perp">
+            <div class="stat"><span class="stat-k">Mark</span><span id="stat-mark" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Oracle</span><span id="stat-oracle" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">24h Change</span><span id="stat-change" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">24h Volume</span><span id="stat-volume" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Open Interest</span><span id="stat-oi" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Funding</span><span id="stat-funding" class="stat-v">—</span></div>
+          </div>
+          <div class="stats-metrics hidden" id="stats-outcome">
+            <div class="stat"><span class="stat-k">Underlying</span><span id="stat-und" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">Countdown</span><span id="stat-ends" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">% Chance</span><span id="stat-chance" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k">24h Change</span><span id="stat-out-change" class="stat-v">—</span></div>
+            <div class="stat"><span class="stat-k" id="stat-yes-k">Price (Yes)</span><span id="stat-yes" class="stat-v">—</span></div>
+          </div>
+        </div>
+
+        <div id="market-picker" class="market-picker hidden" role="dialog" aria-label="Markets" hidden>
+          <div class="mp-search">
+            <svg class="mp-mag" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M10.5 10.5 L14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            <input id="mp-search" type="text" placeholder="Search" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="mp-tabs" role="tablist" aria-label="Market category">
+            <button type="button" data-mp-tab="favorites" class="mp-tab" role="tab" aria-selected="false">Favorites</button>
+            <button type="button" data-mp-tab="all" class="mp-tab" role="tab" aria-selected="true">All</button>
+            <button type="button" data-mp-tab="perps" class="mp-tab" role="tab" aria-selected="false">Perps</button>
+            <button type="button" data-mp-tab="spot" class="mp-tab" role="tab" aria-selected="false">Spot</button>
+            <button type="button" data-mp-tab="outcome" class="mp-tab" role="tab" aria-selected="false">Outcome</button>
+            <button type="button" data-mp-tab="trending" class="mp-tab" role="tab" aria-selected="false">Trending</button>
+          </div>
+          <div class="mp-table-wrap">
+            <table class="mp-table" id="mp-table">
+              <colgroup>
+                <col class="mp-col-mkt" />
+                <col class="mp-col-px" />
+                <col class="mp-col-chg" />
+                <col class="mp-col-fund" />
+                <col class="mp-col-vol" />
+                <col class="mp-col-oi" />
+              </colgroup>
+              <thead>
+                <tr class="mp-head-perp">
+                  <th>Market</th>
+                  <th><button type="button" data-mp-sort="price">Last Price</button></th>
+                  <th>
+                    <button type="button" data-mp-sort="change" aria-sort="desc">
+                      24h Change
+                      <svg class="mp-sort-chevron" viewBox="0 0 10 10" width="8" height="8" aria-hidden="true">
+                        <path d="M2 3.2 L5 6.8 L8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </th>
+                  <th><button type="button" data-mp-sort="funding">8h Funding</button></th>
+                  <th><button type="button" data-mp-sort="volume">Volume</button></th>
+                  <th><button type="button" data-mp-sort="oi">Open Interest</button></th>
+                </tr>
+                <tr class="mp-head-outcome hidden">
+                  <th>Market</th>
+                  <th>
+                    <button type="button" data-mp-sort="chance">
+                      % Chance
+                      <svg class="mp-sort-chevron" viewBox="0 0 10 10" width="8" height="8" aria-hidden="true">
+                        <path d="M2 3.2 L5 6.8 L8 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="mp-outcome-hide"></th>
+                  <th class="mp-outcome-hide"></th>
+                  <th><button type="button" data-mp-sort="volume">Volume</button></th>
+                  <th><button type="button" data-mp-sort="oi">Open Interest</button></th>
+                </tr>
+              </thead>
+              <tbody id="mp-body"></tbody>
+            </table>
+          </div>
+          <p class="mp-foot">Esc to close · ↑↓ to move · Enter to select</p>
+        </div>
+
+        <div class="trade-chart">
+          <div id="hl-iv" class="hl-iv hidden" role="toolbar" aria-label="Candle interval">
+            <button type="button" class="hl-iv-btn" data-hl-iv="1m" aria-pressed="false">1m</button>
+            <button type="button" class="hl-iv-btn" data-hl-iv="5m" aria-pressed="false">5m</button>
+            <button type="button" class="hl-iv-btn" data-hl-iv="15m" aria-pressed="true">15m</button>
+            <button type="button" class="hl-iv-btn" data-hl-iv="1h" aria-pressed="false">1h</button>
+            <button type="button" class="hl-iv-btn" data-hl-iv="4h" aria-pressed="false">4h</button>
+            <button type="button" class="hl-iv-btn" data-hl-iv="1d" aria-pressed="false">1d</button>
+          </div>
+          <div id="chart" class="tv-host"></div>
+        </div>
+
+        <div class="trade-book">
+          <div class="book-head">
+            <div class="book-tabs" role="tablist" aria-label="Book">
+              <button type="button" data-book-tab="book" class="book-tab" aria-selected="true">Order Book</button>
+              <button type="button" data-book-tab="trades" class="book-tab" aria-selected="false">Trades</button>
+            </div>
+          </div>
+          <div id="book-pane" class="book-pane">
+            <div id="book-tools" class="book-tools">
+              <label class="sr-only" for="book-prec">Price precision</label>
+              <select id="book-prec" class="book-dd" title="Price precision"></select>
+              <label class="sr-only" for="book-unit">Size unit</label>
+              <select id="book-unit" class="book-dd" title="Size unit">
+                <option value="usdc" selected>USDC</option>
+                <option value="coin">Coin</option>
+              </select>
+            </div>
+            <div class="book-cols">
+              <span>Price</span>
+              <span id="book-sz-h">Size (USDC)</span>
+              <span id="book-tot-h">Total (USDC)</span>
+            </div>
+            <div id="book-asks" class="book-asks"></div>
+            <div id="book-spread" class="book-spread">
+              <span>—</span>
+            </div>
+            <div id="book-bids" class="book-bids"></div>
+          </div>
+          <div id="trades-pane" class="trades-pane hidden">
+            <div class="book-cols trades-cols">
+              <span>Price</span>
+              <span>Size</span>
+              <span>Time</span>
+            </div>
+            <div id="trades-body" class="trades-body"></div>
+          </div>
+        </div>
+
+        <div class="trade-ticket">
+          <form id="ticket-form" class="ticket">
+            <div class="ls-tabs" role="tablist" aria-label="Side">
+              <button type="button" id="side-buy" class="ls-tab" aria-pressed="true">Buy / Long</button>
+              <button type="button" id="side-sell" class="ls-tab" aria-pressed="false">Sell / Short</button>
+              <select id="outcome-otype" class="otype-dd hidden" aria-label="Order type">
+                <option value="limit" selected>Limit</option>
+                <option value="market">Market</option>
+              </select>
+            </div>
+
+            <div class="type-row">
+              <button type="button" data-otype="market" class="type-btn" aria-pressed="false">Market</button>
+              <button type="button" data-otype="limit" class="type-btn" aria-pressed="true">Limit</button>
+              <div class="pro-wrap">
+                <button type="button" id="pro-toggle" class="type-btn pro-btn" aria-pressed="false">Pro</button>
+                <div id="pro-menu" class="pro-menu hidden" role="menu">
+                  <button type="button" data-otype="scale" role="menuitem">Scale order</button>
+                  <button type="button" data-otype="twap" role="menuitem">TWAP</button>
+                  <button type="button" data-otype="stop-limit" role="menuitem">Stop Limit</button>
+                  <button type="button" data-otype="stop-market" role="menuitem">Stop Market</button>
+                </div>
               </div>
-              <p id="perps-count" class="text-xs font-medium uppercase tracking-wider text-mist-400"></p>
             </div>
-            <div id="perps-root"></div>
-          </section>
 
-          <!-- Spot -->
-          <section>
-            <div class="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-semibold tracking-tight text-white">Spot balances</h3>
-                <p class="mt-1 text-xs text-mist-400">Dust (total ≈ 0) is hidden. Available = total − hold.</p>
+            <div id="outcome-legs" class="outcome-legs hidden" role="group" aria-label="Outcome side">
+              <button type="button" id="leg-yes" class="outcome-leg" aria-pressed="true">
+                <span class="outcome-leg-name">Yes</span>
+                <span id="leg-yes-odds" class="outcome-leg-odds">—</span>
+              </button>
+              <button type="button" id="leg-no" class="outcome-leg" aria-pressed="false">
+                <span class="outcome-leg-name">No</span>
+                <span id="leg-no-odds" class="outcome-leg-odds">—</span>
+              </button>
+            </div>
+
+            <div id="lev-row" class="lev-row">
+              <button type="button" id="lev-toggle" class="lev-btn"><span id="lev-label">20x</span></button>
+              <div class="margin-mode">
+                <button type="button" id="mode-isolated" class="mode-btn" aria-pressed="false">Isolated</button>
+                <button type="button" id="mode-cross" class="mode-btn" aria-pressed="true">Cross</button>
               </div>
-              <p id="spot-count" class="text-xs font-medium uppercase tracking-wider text-mist-400"></p>
+              <div id="lev-pop" class="lev-pop hidden">
+                <label class="ticket-label" for="lev-range">Leverage</label>
+                <div class="lev-pop-row">
+                  <input id="lev-range" class="pct-slider" type="range" min="1" max="50" value="20" />
+                  <input id="lev-input" class="pct-box" type="text" inputmode="numeric" value="20" />
+                </div>
+                <button type="button" id="lev-apply" class="lev-apply">Update leverage</button>
+              </div>
             </div>
-            <div id="spot-root"></div>
-          </section>
 
-          <!-- Staking -->
-          <section>
-            <div class="mb-4">
-              <h3 class="text-lg font-semibold tracking-tight text-white">Staking</h3>
-              <p class="mt-1 text-xs text-mist-400">HYPE delegated to validators. Lock times are venue-reported.</p>
+            <div class="ticket-core">
+            <div class="avail-row">
+              <div>
+                <span class="ticket-label">Available to Trade</span>
+                <p id="ticket-avail" class="avail-v">— USDC</p>
+              </div>
+              <div id="ticket-pos-wrap" class="avail-right">
+                <span class="ticket-label">Current Position</span>
+                <p id="ticket-pos" class="avail-v">—</p>
+              </div>
             </div>
-            <div id="staking-root"></div>
-          </section>
+
+            <div id="ticket-price-wrap" class="ticket-field">
+              <div class="field-head">
+                <label for="ticket-price" id="ticket-price-k" class="ticket-label">Price</label>
+                <button type="button" id="ticket-mid-btn" class="mid-btn">Mid</button>
+              </div>
+              <input id="ticket-price" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
+            </div>
+
+            <div id="ticket-amount-wrap" class="ticket-field">
+              <div class="field-head">
+                <label for="ticket-size" id="ticket-size-k" class="ticket-label">Size</label>
+                <span class="unit-toggle">
+                  <button type="button" id="unit-coin" class="unit-btn" aria-pressed="true">BTC</button>
+                  <button type="button" id="unit-usdc" class="unit-btn" aria-pressed="false">USDC</button>
+                  <button type="button" id="ticket-max" class="max-btn">MAX</button>
+                </span>
+              </div>
+              <input id="ticket-size" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0" class="ticket-input" />
+            </div>
+            </div>
+
+            <div class="ticket-core ticket-core-tail">
+            <div class="slider-row">
+              <input id="ticket-pct" type="range" min="0" max="100" step="1" value="0" class="pct-slider" />
+              <div class="pct-ticks" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <input id="ticket-pct-box" class="pct-box" type="text" inputmode="numeric" value="0" aria-label="Percent of available" />
+              <span class="pct-suffix">%</span>
+            </div>
+
+            <div class="ticket-scroll">
+            <div id="ticket-scale-wrap" class="hidden scale-fields">
+              <input id="ticket-start" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="Start (USDC)" aria-label="Start (USDC)" />
+              <input id="ticket-end" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="End (USDC)" aria-label="End (USDC)" />
+              <div class="scale-pair">
+                <label class="scale-skew">
+                  <span class="scale-skew-k">Total Orders</span>
+                  <input id="ticket-count" type="text" inputmode="numeric" autocomplete="off" class="scale-skew-in" value="5" placeholder="Total Orders" aria-label="Total Orders" />
+                </label>
+                <label class="scale-skew">
+                  <span class="scale-skew-k">Size Skew</span>
+                  <input id="ticket-skew" type="text" inputmode="decimal" autocomplete="off" class="scale-skew-in" value="1.00" aria-label="Size Skew" />
+                </label>
+              </div>
+            </div>
+
+            <div id="ticket-twap-wrap" class="hidden twap-fields">
+              <span class="ticket-label">Running Time (5m - 7d)</span>
+              <div class="twap-time-row">
+                <input id="ticket-twap-days" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Day(s)" aria-label="Day(s)" />
+                <input id="ticket-twap-hours" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Hour(s)" aria-label="Hour(s)" />
+                <input id="ticket-twap-mins" type="text" inputmode="numeric" autocomplete="off" class="ticket-input" placeholder="Min(s)" value="30" aria-label="Min(s)" />
+              </div>
+              <input id="ticket-minutes" type="hidden" value="30" />
+            </div>
+
+            <div id="ticket-stop-wrap" class="hidden pro-fields">
+              <div class="ticket-field">
+                <label for="ticket-trigger" class="ticket-label">Trigger</label>
+                <input id="ticket-trigger" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+              </div>
+              <div id="ticket-stop-limit-price" class="ticket-field hidden">
+                <label for="ticket-stop-limit" class="ticket-label">Limit price</label>
+                <input id="ticket-stop-limit" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" />
+              </div>
+            </div>
+            </div>
+
+            <div id="ticket-chk-row" class="chk-row">
+              <label id="ticket-random-lbl" class="chk hidden"><input id="ticket-random" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Randomize</label>
+              <label class="chk"><input id="ticket-reduce" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Reduce Only</label>
+              <label id="ticket-tpsl-lbl" class="chk"><input id="ticket-tpsl" type="checkbox" /><span class="chk-box" aria-hidden="true"></span> Take Profit / Stop Loss</label>
+            </div>
+            <div id="ticket-tpsl-pad" class="tpsl-pad">
+            <div id="ticket-tpsl-wrap" class="tpsl-grid is-idle" aria-hidden="true">
+              <input id="ticket-tp" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="TP Price" aria-label="Take profit price" />
+              <label class="tpsl-combo">
+                <span class="tpsl-combo-k">Gain</span>
+                <input id="ticket-tp-gain" type="text" inputmode="decimal" autocomplete="off" class="tpsl-combo-in" aria-label="Take profit gain" />
+                <select id="ticket-tp-unit" class="tpsl-combo-unit" aria-label="Take profit gain unit">
+                  <option value="pct" selected>%</option>
+                  <option value="usd">$</option>
+                </select>
+              </label>
+              <input id="ticket-sl" type="text" inputmode="decimal" autocomplete="off" class="ticket-input" placeholder="SL Price" aria-label="Stop loss price" />
+              <label class="tpsl-combo">
+                <span class="tpsl-combo-k">Loss</span>
+                <input id="ticket-sl-loss" type="text" inputmode="decimal" autocomplete="off" class="tpsl-combo-in" aria-label="Stop loss" />
+                <select id="ticket-sl-unit" class="tpsl-combo-unit" aria-label="Stop loss unit">
+                  <option value="pct" selected>%</option>
+                  <option value="usd">$</option>
+                </select>
+              </label>
+            </div>
+            </div>
+            </div>
+            <div class="ticket-foot">
+            <div id="outcome-tif-wrap" class="tif-ctl hidden">
+              <span>TIF</span>
+              <select id="ticket-tif" aria-label="Time in force">
+                <option value="Gtc" selected>GTC</option>
+                <option value="Ioc">IOC</option>
+              </select>
+            </div>
+            <p id="ticket-status" class="ticket-status" role="status"></p>
+            <button type="button" id="ticket-submit" class="ticket-submit buy connect">Connect wallet</button>
+            <p id="ticket-min" class="hidden ticket-warn">Hyperliquid rejects orders under $10 notional.</p>
+
+            <div class="summary">
+              <div id="sum-liq-row" class="sum-row"><span>Liquidation Price</span><span id="sum-liq">—</span></div>
+              <div class="sum-row"><span>Order Value</span><span id="sum-value">—</span></div>
+              <div id="sum-payout-row" class="sum-row hidden"><span id="sum-payout-k">Payout if Yes</span><span id="sum-payout">—</span></div>
+              <div id="sum-margin-row" class="sum-row"><span>Margin Required</span><span id="sum-margin">—</span></div>
+              <div id="sum-slip-row" class="sum-row">
+                <span>Slippage</span>
+                <span class="sum-slip">
+                  <span id="sum-slip-est">Est. 0.00%</span>
+                  <span class="sum-slash">/</span>
+                  <span>Max</span>
+                  <input id="ticket-slip" type="text" inputmode="decimal" value="8" aria-label="Max slippage percent" />
+                  <span>%</span>
+                </span>
+              </div>
+              <div class="sum-row"><span>Fees</span><span id="sum-fees">—</span></div>
+            </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="trade-bottom">
+          <div class="hist-tabs" role="tablist">
+            <button type="button" data-bottom-tab="balances" class="hist-tab" aria-selected="true">Balances</button>
+            <button type="button" data-bottom-tab="positions" class="hist-tab" aria-selected="false">Positions</button>
+            <button type="button" data-bottom-tab="outcomes" class="hist-tab" aria-selected="false">Outcomes</button>
+            <button type="button" data-bottom-tab="orders" class="hist-tab" aria-selected="false">Open Orders (0)</button>
+            <button type="button" data-bottom-tab="twap" class="hist-tab" aria-selected="false">TWAP</button>
+            <button type="button" data-bottom-tab="funding" class="hist-tab" aria-selected="false">Funding History</button>
+            <button type="button" data-bottom-tab="history" class="hist-tab" aria-selected="false">Order History</button>
+            <label id="bal-hide-wrap" class="chk hist-extra">
+              <input id="bal-hide-small" type="checkbox" checked />
+              <span class="chk-box" aria-hidden="true"></span>
+              Hide Small Balances
+            </label>
+            <div id="out-filter-wrap" class="hist-extra hidden" role="group" aria-label="Outcome filters">
+              <button type="button" data-out-side="all" class="out-filter" aria-pressed="true">All</button>
+              <button type="button" data-out-side="Yes" class="out-filter" aria-pressed="false">Yes</button>
+              <button type="button" data-out-side="No" class="out-filter" aria-pressed="false">No</button>
+            </div>
+          </div>
+          <div id="trade-balances" class="hist-body"></div>
+          <div id="trade-positions" class="hist-body hidden"></div>
+          <div id="trade-outcomes" class="hist-body hidden"></div>
+          <div id="trade-orders" class="hist-body hidden"></div>
+          <div id="trade-twap" class="hist-body hidden"></div>
+          <div id="trade-funding" class="hist-body hidden"></div>
+          <div id="trade-history" class="hist-body hidden"></div>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- =====================================================================
-       4. FOOTER
-       ===================================================================== -->
-  <footer class="border-t border-white/5 bg-ink-900">
+  <footer class="border-t border-chrome/50 bg-ink-900">
     <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <div class="grid gap-10 md:grid-cols-12">
         <div class="md:col-span-7">
-          <p class="text-sm font-semibold text-white">HyperTools</p>
-          <p class="mt-2 text-sm text-mist-400">A read-only dashboard for Hyperliquid perps, spot, and staking.</p>
+          <p class="text-sm font-medium text-mist-100">HyperTools</p>
+          <p class="mt-2 text-sm text-mist-400">Hyperliquid trading terminal: live chart, order book, and market/limit orders from a connected wallet. Portfolio overview for balances, positions, and staking.</p>
 
           <div class="mt-6 space-y-3 text-xs leading-relaxed text-mist-400">
             <p>
@@ -316,41 +677,39 @@
             </p>
             <p>
               <strong class="text-mist-300">Not affiliated with Hyperliquid.</strong>
-              This is an independent prototype. It is not built, endorsed, or operated by Hyperliquid
+              This is an independent site. It is not built, endorsed, or operated by Hyperliquid
               or its affiliates.
             </p>
             <p>
               <strong class="text-mist-300">Live data, still estimates.</strong>
-              Account figures are fetched from Hyperliquid’s public Info API. They can be stale, incomplete,
+              Portfolio figures are fetched from Hyperliquid’s public Info API. They can be stale, incomplete,
               or disagree with the official UI. Liquidation prices are reported by the venue; a JSON null is
               shown as an em dash, not zero. If a number here disagrees with Hyperliquid, trust Hyperliquid.
             </p>
             <p>
-              <strong class="text-mist-300">Read-only wallet connect.</strong>
-              Connecting a wallet only shares your address via <span class="font-mono">eth_requestAccounts</span>.
-              HyperTools never asks you to sign a trade, never sends a transaction, never requests a private key,
-              and never places an order.
+              <strong class="text-mist-300">Wallet trading.</strong>
+              Connect a wallet to place and cancel Hyperliquid perps orders. Connecting requests
+              <span class="font-mono">eth_requestAccounts</span>. Enable trading signs official
+              Hyperliquid EIP-712 messages (approveBuilderFee, approveAgent). Orders are L1 actions
+              signed by the agent key in this tab’s memory — wiped on Disconnect, never written to
+              localStorage, never sent to a server. Paste an address to load a portfolio.
             </p>
             <p>
               <strong class="text-mist-300">Do your own research.</strong>
               Trading perpetual futures can result in total loss of capital. Only risk what you can afford to lose.
             </p>
-            <p>
-              <strong class="text-mist-300">Prototype software.</strong>
-              This is an early prototype and may contain errors. Use at your own risk.
-            </p>
           </div>
         </div>
 
-        <div class="md:col-span-5 md:border-l md:border-white/5 md:pl-10">
+        <div class="md:col-span-5 md:border-l md:border-chrome/50 md:pl-10">
           <p class="text-xs font-medium uppercase tracking-wider text-mist-400">Feedback</p>
           <p class="mt-2 text-sm text-mist-300">
             Thoughts welcome at
             <a href="mailto:hello@hypertools.dev" class="text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">hello@hypertools.dev</a>.
           </p>
           <p class="mt-6 text-xs text-mist-400">
-            No backend. No WalletConnect project id. Data is requested in your browser from
-            <span class="font-mono">api.hyperliquid.xyz</span>.
+            Static site. Data and orders go from your browser to
+            <span class="font-mono">api.hyperliquid.xyz</span> (info, exchange, websocket).
           </p>
           <p class="mt-8 font-mono text-xs text-mist-400">© 2026 HyperTools. All rights reserved.</p>
         </div>
@@ -358,927 +717,6 @@
     </div>
   </footer>
 
-  <script>
-    (function () {
-      "use strict";
-
-      /* ------------------------------------------------------------------
-         Hyperliquid mainnet Info API
-         POST https://api.hyperliquid.xyz/info   Content-Type: application/json
-
-         After we have an address we fetch in parallel:
-           1) {type:"clearinghouseState", user}     perps + margin
-           2) {type:"spotClearinghouseState", user}  spot balances
-           3) {type:"delegatorSummary", user}        staking totals (HYPE)
-           4) {type:"delegations", user}             per-validator stake
-           5) {type:"allMids"}                       current marks (perp tickers)
-
-         Confirmed live field mapping (curl, 2026-08-29):
-           clearinghouseState
-             marginSummary.{accountValue,totalNtlPos,totalRawUsd,totalMarginUsed}  // decimal strings
-             crossMarginSummary.*  (same keys)
-             crossMaintenanceMarginUsed, withdrawable  // strings
-             assetPositions[]: { type:"oneWay", position: {
-               coin, szi (+ long / − short), entryPx,
-               liquidationPx: string | null,   // null is common — display "—"
-               leverage: { type:"cross"|"isolated", value: NUMBER, rawUsd?: string },
-               marginUsed, positionValue, unrealizedPnl, returnOnEquity,  // strings
-               maxLeverage: NUMBER,
-               cumFunding: { allTime, sinceOpen, sinceChange }
-             }}
-             time  // ms number
-           spotClearinghouseState
-             balances[]: { coin, token, total, hold, entryNtl }  // strings except token (number)
-           delegatorSummary
-             delegated, undelegated, totalPendingWithdrawal  // HYPE strings
-             nPendingWithdrawals  // number
-           delegations
-             [{ validator, amount, lockedUntilTimestamp }]  // amount string, lock ms number
-           allMids
-             { [coin: string]: pxString }  e.g. BTC, ETH; also @N spot and #N HIP-3 keys
-
-         Wallet: EIP-6963 discovery, then window.ethereum fallback.
-         Only eth_requestAccounts. No personal_sign, no L1 actions, no txs.
-         ------------------------------------------------------------------ */
-
-      var HL_INFO = "https://api.hyperliquid.xyz/info";
-      var DUST = 1e-8;
-      var ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
-
-      var state = {
-        address: null,
-        source: null,          // "wallet" | "paste"
-        provider: null,
-        data: null,
-        loading: false,
-        error: null,
-      };
-
-      /* EIP-6963 announced providers, keyed by info.uuid */
-      var discovered = {};
-      var walletUnsub = null;
-
-      var el = {
-        landing: document.getElementById("landing"),
-        dashboard: document.getElementById("dashboard"),
-        liveChip: document.getElementById("live-chip"),
-        navDisc: document.getElementById("nav-disconnected"),
-        navConn: document.getElementById("nav-connected"),
-        navAddress: document.getElementById("nav-address"),
-        navConnect: document.getElementById("btn-nav-connect"),
-        navWalletMenu: document.getElementById("nav-wallet-menu"),
-        walletButtons: document.getElementById("wallet-buttons"),
-        noWallet: document.getElementById("no-wallet"),
-        pasteForm: document.getElementById("paste-form"),
-        pasteInput: document.getElementById("paste-address"),
-        pasteError: document.getElementById("paste-error"),
-        errorBanner: document.getElementById("error-banner"),
-        loading: document.getElementById("loading"),
-        dashContent: document.getElementById("dash-content"),
-        dashSubtitle: document.getElementById("dash-subtitle"),
-        dashUpdated: document.getElementById("dash-updated"),
-        overview: document.getElementById("overview-cards"),
-        perpsRoot: document.getElementById("perps-root"),
-        perpsCount: document.getElementById("perps-count"),
-        spotRoot: document.getElementById("spot-root"),
-        spotCount: document.getElementById("spot-count"),
-        stakingRoot: document.getElementById("staking-root"),
-      };
-
-      /* ---------- formatting (parse API decimal STRINGS with Number for display only) ---------- */
-
-      function num(raw) {
-        if (raw == null || raw === "") return NaN;
-        var n = Number(raw);
-        return Number.isFinite(n) ? n : NaN;
-      }
-
-      function fmtUsd(raw, opts) {
-        opts = opts || {};
-        if (raw == null || raw === "") return "—";
-        var n = num(raw);
-        if (!Number.isFinite(n)) return "—";
-        var abs = Math.abs(n);
-        var digits = abs === 0 ? 2 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
-        var body = n.toLocaleString("en-US", {
-          minimumFractionDigits: digits,
-          maximumFractionDigits: digits,
-        });
-        var sign = opts.signed && n > 0 ? "+" : "";
-        return sign + "$" + body;
-      }
-
-      function fmtQty(raw) {
-        if (raw == null || raw === "") return "—";
-        var n = num(raw);
-        if (!Number.isFinite(n)) return "—";
-        var abs = Math.abs(n);
-        var digits = abs === 0 ? 2 : abs >= 1000 ? 2 : abs >= 1 ? 4 : abs >= 0.0001 ? 6 : 8;
-        return n.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: digits,
-        });
-      }
-
-      function fmtPx(raw) {
-        if (raw == null || raw === "") return "—";
-        var n = num(raw);
-        if (!Number.isFinite(n)) return "—";
-        var abs = Math.abs(n);
-        var digits = abs >= 1000 ? 2 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
-        return "$" + n.toLocaleString("en-US", {
-          minimumFractionDigits: digits,
-          maximumFractionDigits: digits,
-        });
-      }
-
-      /* returnOnEquity is a fraction string (e.g. "0.096") — display as percent. */
-      function fmtRoe(raw) {
-        if (raw == null || raw === "") return "—";
-        var n = num(raw);
-        if (!Number.isFinite(n)) return "—";
-        var pct = n * 100;
-        var sign = pct > 0 ? "+" : "";
-        return sign + pct.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }) + "%";
-      }
-
-      function fmtHype(raw) {
-        if (raw == null || raw === "") return "—";
-        var n = num(raw);
-        if (!Number.isFinite(n)) return "—";
-        return fmtQty(raw) + " HYPE";
-      }
-
-      function truncAddr(addr) {
-        if (!addr || addr.length < 12) return addr || "";
-        return addr.slice(0, 6) + "…" + addr.slice(-4);
-      }
-
-      function pnlClass(raw) {
-        var n = num(raw);
-        if (!Number.isFinite(n) || n === 0) return "text-white";
-        return n > 0 ? "text-accent" : "text-danger";
-      }
-
-      function escapeHtml(s) {
-        return String(s)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-      }
-
-      function formatLocalTime(ms) {
-        var n = num(ms);
-        if (!Number.isFinite(n) || n <= 0) return "—";
-        try {
-          return new Date(n).toLocaleString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          });
-        } catch (e) {
-          return "—";
-        }
-      }
-
-      /* ---------- Hyperliquid fetch ---------- */
-
-      function hlInfo(body) {
-        return fetch(HL_INFO, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }).then(function (res) {
-          if (!res.ok) {
-            throw new Error("HTTP " + res.status + " from Hyperliquid Info API");
-          }
-          return res.json();
-        });
-      }
-
-      function settledValue(result, label, errors) {
-        if (result.status === "fulfilled") return result.value;
-        var msg = (result.reason && result.reason.message) || String(result.reason);
-        errors.push(label + ": " + msg);
-        return null;
-      }
-
-      function loadAccount(address) {
-        state.loading = true;
-        state.error = null;
-        renderChrome();
-        renderLoading();
-
-        /* Five public Info calls — no auth, address is the only input. */
-        return Promise.allSettled([
-          hlInfo({ type: "clearinghouseState", user: address }),
-          hlInfo({ type: "spotClearinghouseState", user: address }),
-          hlInfo({ type: "delegatorSummary", user: address }),
-          hlInfo({ type: "delegations", user: address }),
-          hlInfo({ type: "allMids" }),
-        ]).then(function (results) {
-          var errors = [];
-          var perps = settledValue(results[0], "clearinghouseState", errors);
-          var spot = settledValue(results[1], "spotClearinghouseState", errors);
-          var staking = settledValue(results[2], "delegatorSummary", errors);
-          var dels = settledValue(results[3], "delegations", errors);
-          var mids = settledValue(results[4], "allMids", errors);
-
-          /* Empty positions / zero activity is valid — not an error. */
-          state.data = {
-            perps: perps,
-            spot: spot,
-            staking: staking,
-            delegations: Array.isArray(dels) ? dels : dels == null ? null : [],
-            mids: mids && typeof mids === "object" ? mids : {},
-          };
-
-          if (errors.length) {
-            var corsHint = " If this is a browser CORS block, the request never reached Hyperliquid — we do not invent substitute numbers.";
-            state.error =
-              "Could not load some Hyperliquid data. " +
-              errors.join(" · ") +
-              corsHint;
-          } else {
-            state.error = null;
-          }
-
-          state.loading = false;
-          renderChrome();
-          renderDashboard();
-        }).catch(function (err) {
-          state.loading = false;
-          state.data = null;
-          state.error =
-            "Hyperliquid Info API request failed: " +
-            ((err && err.message) || String(err)) +
-            ". If this is CORS, your browser blocked the public API; we will not fake account data.";
-          renderChrome();
-          renderDashboard();
-        });
-      }
-
-      /* ---------- wallet discovery (EIP-6963, then window.ethereum) ---------- */
-
-      function labelInjected(provider) {
-        if (!provider) return "Injected wallet";
-        /* Rabby often also sets isMetaMask — check Rabby / OKX first. */
-        if (provider.isRabby) return "Rabby";
-        if (provider.isOkxWallet) return "OKX Wallet";
-        if (provider.isCoinbaseWallet) return "Coinbase Wallet";
-        if (provider.isPhantom) return "Phantom";
-        if (provider.isBraveWallet) return "Brave Wallet";
-        if (provider.isMetaMask) return "MetaMask";
-        return "Injected wallet";
-      }
-
-      function providerList() {
-        var list = Object.keys(discovered).map(function (id) { return discovered[id]; });
-        list.sort(function (a, b) {
-          return String(a.info.name).localeCompare(String(b.info.name));
-        });
-        return list;
-      }
-
-      function renderWalletButtons() {
-        var list = providerList();
-        var html = "";
-
-        if (list.length) {
-          list.forEach(function (entry) {
-            var name = escapeHtml(entry.info.name || "Wallet");
-            var uuid = escapeHtml(entry.info.uuid);
-            var icon = entry.info.icon
-              ? '<img src="' + escapeHtml(entry.info.icon) + '" alt="" class="h-5 w-5 rounded-sm" />'
-              : "";
-            html +=
-              '<button type="button" data-uuid="' + uuid + '" class="wallet-connect-btn inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim">' +
-              icon + "Connect " + name +
-              "</button>";
-          });
-          el.noWallet.classList.add("hidden");
-        } else if (window.ethereum) {
-          var label = labelInjected(window.ethereum);
-          html =
-            '<button type="button" data-fallback="1" class="wallet-connect-btn inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-ink-950 shadow-glow transition hover:bg-accent-dim">Connect ' +
-            escapeHtml(label) +
-            "</button>";
-          el.noWallet.classList.add("hidden");
-        } else {
-          el.noWallet.classList.remove("hidden");
-        }
-
-        el.walletButtons.innerHTML = html;
-        el.walletButtons.querySelectorAll(".wallet-connect-btn").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            var uuid = btn.getAttribute("data-uuid");
-            var provider = null;
-            if (uuid && discovered[uuid]) provider = discovered[uuid].provider;
-            else if (btn.getAttribute("data-fallback")) provider = window.ethereum;
-            if (!provider) return;
-            connectWallet(provider);
-          });
-        });
-      }
-
-      function attachWalletListeners(provider) {
-        detachWalletListeners();
-        if (!provider || typeof provider.on !== "function") return;
-
-        var onAccounts = function (accounts) {
-          if (!accounts || !accounts.length) {
-            disconnect();
-            return;
-          }
-          var next = accounts[0];
-          if (next && next.toLowerCase() !== (state.address || "").toLowerCase()) {
-            setAddress(next, "wallet");
-          }
-        };
-        var onDisconnect = function () {
-          disconnect();
-        };
-
-        provider.on("accountsChanged", onAccounts);
-        if (typeof provider.on === "function") {
-          try { provider.on("disconnect", onDisconnect); } catch (e) { /* some wallets omit this */ }
-        }
-
-        walletUnsub = function () {
-          try {
-            if (typeof provider.removeListener === "function") {
-              provider.removeListener("accountsChanged", onAccounts);
-              provider.removeListener("disconnect", onDisconnect);
-            } else if (typeof provider.off === "function") {
-              provider.off("accountsChanged", onAccounts);
-              provider.off("disconnect", onDisconnect);
-            }
-          } catch (e) { /* ignore */ }
-          walletUnsub = null;
-        };
-      }
-
-      function detachWalletListeners() {
-        if (typeof walletUnsub === "function") walletUnsub();
-        walletUnsub = null;
-      }
-
-      function connectWallet(provider) {
-        if (!provider || typeof provider.request !== "function") return;
-        /* READ-ONLY: request accounts only. Do not sign Hyperliquid L1 actions. Do not send txs. */
-        provider
-          .request({ method: "eth_requestAccounts" })
-          .then(function (accounts) {
-            if (!accounts || !accounts.length) {
-              showPasteError("Wallet returned no account.");
-              return;
-            }
-            state.provider = provider;
-            attachWalletListeners(provider);
-            setAddress(accounts[0], "wallet");
-          })
-          .catch(function (err) {
-            var msg = (err && err.message) || "Wallet connection was rejected.";
-            showPasteError(msg);
-          });
-      }
-
-      function showPasteError(msg) {
-        el.pasteError.textContent = msg;
-        el.pasteError.classList.remove("hidden");
-      }
-
-      function clearPasteError() {
-        el.pasteError.textContent = "";
-        el.pasteError.classList.add("hidden");
-      }
-
-      function setAddress(address, source) {
-        var normalized = String(address || "").trim();
-        if (!ADDR_RE.test(normalized)) {
-          showPasteError("Enter a valid 0x address (42 hex characters).");
-          return;
-        }
-        clearPasteError();
-        state.address = normalized;
-        state.source = source;
-        loadAccount(normalized);
-      }
-
-      function disconnect() {
-        detachWalletListeners();
-        state.address = null;
-        state.source = null;
-        state.provider = null;
-        state.data = null;
-        state.error = null;
-        state.loading = false;
-        renderChrome();
-        el.landing.classList.remove("hidden");
-        el.dashboard.classList.add("hidden");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-
-      /* ---------- chrome / landing vs dashboard ---------- */
-
-      function renderChrome() {
-        var connected = !!state.address;
-        el.landing.classList.toggle("hidden", connected);
-        el.dashboard.classList.toggle("hidden", !connected);
-        el.navDisc.classList.toggle("hidden", connected);
-        el.navConn.classList.toggle("hidden", !connected);
-        el.navConn.classList.toggle("flex", connected);
-        el.liveChip.classList.toggle("hidden", !connected);
-        el.liveChip.classList.toggle("inline-flex", connected);
-        if (connected) {
-          el.navAddress.textContent = truncAddr(state.address);
-          el.navAddress.title = state.address;
-          var via = state.source === "wallet" ? "connected wallet" : "pasted address";
-          el.dashSubtitle.textContent = state.address + "  ·  " + via;
-        }
-      }
-
-      function renderLoading() {
-        el.loading.classList.remove("hidden");
-        el.dashContent.classList.add("hidden");
-        el.errorBanner.classList.add("hidden");
-      }
-
-      function renderDashboard() {
-        el.loading.classList.add("hidden");
-
-        if (state.error) {
-          el.errorBanner.textContent = state.error;
-          el.errorBanner.classList.remove("hidden");
-        } else {
-          el.errorBanner.classList.add("hidden");
-        }
-
-        if (!state.data) {
-          el.dashContent.classList.add("hidden");
-          return;
-        }
-
-        el.dashContent.classList.remove("hidden");
-
-        var perps = state.data.perps || {};
-        var ms = perps.marginSummary || {};
-        var time = perps.time;
-        el.dashUpdated.textContent = time ? "Venue snapshot · " + formatLocalTime(time) : "";
-
-        var spotBalances = (state.data.spot && state.data.spot.balances) || [];
-        renderOverview(perps, spotBalances);
-        renderPerps(perps.assetPositions || [], state.data.mids || {});
-        renderSpot(spotBalances);
-        renderStaking(state.data.staking, state.data.delegations);
-      }
-
-      function spotUsdcParts(balances) {
-        var total = 0;
-        var hold = 0;
-        (balances || []).forEach(function (b) {
-          if (!b || String(b.coin).toUpperCase() !== "USDC") return;
-          var t = num(b.total);
-          var h = num(b.hold);
-          if (Number.isFinite(t)) total += t;
-          if (Number.isFinite(h)) hold += h;
-        });
-        return { total: total, available: Math.max(0, total - hold) };
-      }
-
-      function renderOverview(perps, spotBalances) {
-        var ms = perps.marginSummary || {};
-        var perpEquity = num(ms.accountValue);
-        if (!Number.isFinite(perpEquity)) perpEquity = 0;
-        var perpWithdrawable = num(perps.withdrawable);
-        if (!Number.isFinite(perpWithdrawable)) perpWithdrawable = 0;
-        var marginUsed = ms.totalMarginUsed;
-        var spot = spotUsdcParts(spotBalances);
-
-        /* Perps equity and spot USDC live in different HL buckets. Sum them so
-           a cash-only (spot) account is not shown as $0.00. */
-        var accountValue = perpEquity + spot.total;
-        var withdrawable = perpWithdrawable + spot.available;
-
-        var positions = perps.assetPositions || [];
-        var upnlSum = 0;
-        var hasUpnl = false;
-        positions.forEach(function (ap) {
-          var p = ap && ap.position;
-          if (!p) return;
-          var n = num(p.unrealizedPnl);
-          if (Number.isFinite(n)) {
-            upnlSum += n;
-            hasUpnl = true;
-          }
-        });
-
-        var usage = "";
-        var av = accountValue;
-        var mu = num(marginUsed);
-        if (Number.isFinite(av) && av > 0 && Number.isFinite(mu) && mu > 0) {
-          usage = ((mu / av) * 100).toLocaleString("en-US", {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
-          }) + "% of account value";
-        }
-
-        var cards = [
-          {
-            label: "Account value",
-            value: fmtUsd(accountValue),
-            hint: "Perps equity + spot USDC",
-            extra: "",
-          },
-          {
-            label: "Withdrawable",
-            value: fmtUsd(withdrawable),
-            hint: "Perps withdrawable + free spot USDC",
-            extra: "",
-          },
-          {
-            label: "Margin used",
-            value: fmtUsd(marginUsed),
-            hint: "Open perp margin",
-            extra: usage,
-          },
-          {
-            label: "Unrealized PnL",
-            value: hasUpnl ? fmtUsd(upnlSum, { signed: true }) : "—",
-            hint: "Open perps",
-            extra: "",
-            pnl: hasUpnl ? upnlSum : null,
-          },
-        ];
-
-        el.overview.innerHTML = cards.map(function (c) {
-          var color = c.pnl == null ? "text-white" : pnlClass(c.pnl);
-          return (
-            '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card">' +
-              '<p class="text-xs font-medium uppercase tracking-wider text-mist-400">' + escapeHtml(c.label) + "</p>" +
-              '<p class="mt-2 font-mono text-2xl font-medium tracking-tight tabular ' + color + '">' + escapeHtml(c.value) + "</p>" +
-              (c.extra ? '<p class="mt-1 text-xs text-mist-400">' + escapeHtml(c.extra) + "</p>" : "") +
-              '<p class="mt-1 text-[10px] uppercase tracking-wider text-mist-400/70">' + escapeHtml(c.hint) + "</p>" +
-            "</article>"
-          );
-        }).join("");
-      }
-
-      function positionRows(assetPositions, mids) {
-        var rows = [];
-        (assetPositions || []).forEach(function (ap) {
-          var p = ap && ap.position;
-          if (!p || p.szi == null) return;
-          var szi = num(p.szi);
-          if (!Number.isFinite(szi) || szi === 0) return;
-          rows.push(p);
-        });
-        rows.sort(function (a, b) {
-          return Math.abs(num(b.positionValue)) - Math.abs(num(a.positionValue));
-        });
-        return rows;
-      }
-
-      function levLabel(lev) {
-        if (!lev) return "—";
-        var v = lev.value;
-        var t = lev.type || "";
-        if (v == null || v === "") return t || "—";
-        return String(v) + "× " + t;
-      }
-
-      function renderPerps(assetPositions, mids) {
-        var rows = positionRows(assetPositions, mids);
-        el.perpsCount.textContent = rows.length ? rows.length + " open" : "";
-
-        if (!rows.length) {
-          el.perpsRoot.innerHTML =
-            '<div class="rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-10 text-center text-sm text-mist-400">No open perps.</div>';
-          return;
-        }
-
-        var head =
-          '<thead class="text-xs font-medium uppercase tracking-wider text-mist-400">' +
-          "<tr>" +
-          ["Market", "Side", "Size", "Entry", "Mark", "Liq. price", "Leverage", "uPnL", "ROE"].map(function (h) {
-            return '<th class="px-3 py-2 text-left font-medium">' + h + "</th>";
-          }).join("") +
-          "</tr></thead>";
-
-        var body = rows.map(function (p) {
-          var szi = num(p.szi);
-          var side = szi >= 0 ? "Long" : "Short";
-          var sideCls = szi >= 0
-            ? "text-accent bg-accent-muted ring-accent/30"
-            : "text-danger bg-danger/muted ring-danger/30";
-          var mark = mids && p.coin != null ? mids[p.coin] : null;
-          /* liquidationPx is frequently JSON null on live accounts — never coerce to 0. */
-          var liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
-          return (
-            "<tr class='border-t border-white/5'>" +
-              '<td class="px-3 py-2.5 font-medium text-white">' + escapeHtml(p.coin || "—") + "</td>" +
-              '<td class="px-3 py-2.5"><span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ' + sideCls + '">' + side + "</span></td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(fmtQty(Math.abs(szi))) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(fmtPx(p.entryPx)) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(mark == null ? "—" : fmtPx(mark)) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(liq) + "</td>" +
-              '<td class="px-3 py-2.5 text-sm text-mist-300">' + escapeHtml(levLabel(p.leverage)) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular ' + pnlClass(p.unrealizedPnl) + '">' + escapeHtml(fmtUsd(p.unrealizedPnl, { signed: true })) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular ' + pnlClass(p.returnOnEquity) + '">' + escapeHtml(fmtRoe(p.returnOnEquity)) + "</td>" +
-            "</tr>"
-          );
-        }).join("");
-
-        var table =
-          '<div class="hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card md:block">' +
-          '<table class="min-w-full text-sm">' + head + "<tbody>" + body + "</tbody></table></div>";
-
-        var cards = rows.map(function (p) {
-          var szi = num(p.szi);
-          var side = szi >= 0 ? "Long" : "Short";
-          var sideCls = szi >= 0 ? "text-accent" : "text-danger";
-          var mark = mids && p.coin != null ? mids[p.coin] : null;
-          var liq = p.liquidationPx == null || p.liquidationPx === "" ? "—" : fmtPx(p.liquidationPx);
-          function row(k, v, cls) {
-            return '<div class="flex items-baseline justify-between gap-3 py-1"><span class="text-xs uppercase tracking-wider text-mist-400">' + k + '</span><span class="font-mono text-sm tabular ' + (cls || "text-white") + '">' + v + "</span></div>";
-          }
-          return (
-            '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card">' +
-              '<div class="mb-3 flex items-center justify-between">' +
-                '<p class="text-base font-semibold text-white">' + escapeHtml(p.coin || "—") + "</p>" +
-                '<span class="text-xs font-semibold uppercase tracking-wider ' + sideCls + '">' + side + " · " + escapeHtml(levLabel(p.leverage)) + "</span>" +
-              "</div>" +
-              row("Size", escapeHtml(fmtQty(Math.abs(szi)))) +
-              row("Entry", escapeHtml(fmtPx(p.entryPx))) +
-              row("Mark", escapeHtml(mark == null ? "—" : fmtPx(mark))) +
-              row("Liq. price", escapeHtml(liq)) +
-              row("uPnL", escapeHtml(fmtUsd(p.unrealizedPnl, { signed: true })), pnlClass(p.unrealizedPnl)) +
-              row("ROE", escapeHtml(fmtRoe(p.returnOnEquity)), pnlClass(p.returnOnEquity)) +
-            "</article>"
-          );
-        }).join("");
-
-        el.perpsRoot.innerHTML =
-          table +
-          '<div class="grid gap-3 md:hidden">' + cards + "</div>";
-      }
-
-      function renderSpot(balances) {
-        var rows = (balances || []).filter(function (b) {
-          var t = num(b && b.total);
-          return Number.isFinite(t) && Math.abs(t) >= DUST;
-        });
-        rows.sort(function (a, b) {
-          return Math.abs(num(b.total)) - Math.abs(num(a.total));
-        });
-        el.spotCount.textContent = rows.length ? rows.length + " tokens" : "";
-
-        if (!rows.length) {
-          el.spotRoot.innerHTML =
-            '<div class="rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-10 text-center text-sm text-mist-400">No spot balances.</div>';
-          return;
-        }
-
-        var head =
-          "<thead class='text-xs font-medium uppercase tracking-wider text-mist-400'><tr>" +
-          ["Token", "Total", "In orders", "Available"].map(function (h) {
-            return '<th class="px-3 py-2 text-left font-medium">' + h + "</th>";
-          }).join("") +
-          "</tr></thead>";
-
-        var body = rows.map(function (b) {
-          var total = num(b.total);
-          var hold = num(b.hold);
-          var avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
-          return (
-            "<tr class='border-t border-white/5'>" +
-              '<td class="px-3 py-2.5 font-medium text-white">' + escapeHtml(b.coin || "—") + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(fmtQty(b.total)) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular text-mist-300">' + escapeHtml(fmtQty(b.hold)) + "</td>" +
-              '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(Number.isFinite(avail) ? fmtQty(avail) : "—") + "</td>" +
-            "</tr>"
-          );
-        }).join("");
-
-        var table =
-          '<div class="hidden overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card sm:block">' +
-          '<table class="min-w-full text-sm">' + head + "<tbody>" + body + "</tbody></table></div>";
-
-        var cards = rows.map(function (b) {
-          var total = num(b.total);
-          var hold = num(b.hold);
-          var avail = Number.isFinite(total) && Number.isFinite(hold) ? total - hold : NaN;
-          return (
-            '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card sm:hidden">' +
-              '<p class="font-semibold text-white">' + escapeHtml(b.coin || "—") + "</p>" +
-              '<div class="mt-2 grid grid-cols-3 gap-2 text-xs">' +
-                '<div><p class="uppercase tracking-wider text-mist-400">Total</p><p class="mt-0.5 font-mono tabular">' + escapeHtml(fmtQty(b.total)) + "</p></div>" +
-                '<div><p class="uppercase tracking-wider text-mist-400">In orders</p><p class="mt-0.5 font-mono tabular">' + escapeHtml(fmtQty(b.hold)) + "</p></div>" +
-                '<div><p class="uppercase tracking-wider text-mist-400">Available</p><p class="mt-0.5 font-mono tabular">' + escapeHtml(Number.isFinite(avail) ? fmtQty(avail) : "—") + "</p></div>" +
-              "</div>" +
-            "</article>"
-          );
-        }).join("");
-
-        el.spotRoot.innerHTML = table + '<div class="grid gap-3 sm:hidden">' + cards + "</div>";
-      }
-
-      function renderStaking(summary, delegations) {
-        var s = summary || {};
-        var dels = Array.isArray(delegations) ? delegations : [];
-
-        var totals =
-          '<div class="grid gap-3 sm:grid-cols-3">' +
-            cardMini("Delegated", fmtHype(s.delegated), "HYPE staked with validators") +
-            cardMini("Undelegated", fmtHype(s.undelegated), "HYPE not currently staked") +
-            cardMini(
-              "Pending withdrawal",
-              fmtHype(s.totalPendingWithdrawal),
-              (s.nPendingWithdrawals != null ? s.nPendingWithdrawals + " pending" : "Waiting to unstake")
-            ) +
-          "</div>";
-
-        var list;
-        if (!dels.length) {
-          list =
-            '<div class="mt-4 rounded-xl border border-dashed border-white/10 bg-ink-850/50 px-5 py-8 text-center text-sm text-mist-400">No active delegations.</div>';
-        } else {
-          var rows = dels.map(function (d) {
-            var lock = d.lockedUntilTimestamp != null ? formatLocalTime(d.lockedUntilTimestamp) : "—";
-            return (
-              "<tr class='border-t border-white/5'>" +
-                '<td class="px-3 py-2.5 font-mono text-xs text-mist-300">' + escapeHtml(d.validator || "—") + "</td>" +
-                '<td class="px-3 py-2.5 font-mono text-sm tabular">' + escapeHtml(fmtHype(d.amount)) + "</td>" +
-                '<td class="px-3 py-2.5 text-sm text-mist-300">' + escapeHtml(lock) + "</td>" +
-              "</tr>"
-            );
-          }).join("");
-          list =
-            '<div class="mt-4 overflow-x-auto rounded-xl border border-white/8 bg-ink-850 shadow-card">' +
-            '<table class="min-w-full text-sm">' +
-            '<thead class="text-xs font-medium uppercase tracking-wider text-mist-400"><tr>' +
-            '<th class="px-3 py-2 text-left font-medium">Validator</th>' +
-            '<th class="px-3 py-2 text-left font-medium">Amount</th>' +
-            '<th class="px-3 py-2 text-left font-medium">Locked until</th>' +
-            "</tr></thead><tbody>" + rows + "</tbody></table></div>";
-        }
-
-        el.stakingRoot.innerHTML = totals + list;
-      }
-
-      function cardMini(label, value, hint) {
-        return (
-          '<article class="rounded-xl border border-white/8 bg-ink-850 p-4 shadow-card">' +
-            '<p class="text-xs font-medium uppercase tracking-wider text-mist-400">' + escapeHtml(label) + "</p>" +
-            '<p class="mt-2 font-mono text-xl font-medium tracking-tight text-white tabular">' + escapeHtml(value) + "</p>" +
-            (hint ? '<p class="mt-1 text-[10px] tracking-wide text-mist-400/70">' + escapeHtml(hint) + "</p>" : "") +
-          "</article>"
-        );
-      }
-
-      /* ---------- events ---------- */
-
-      el.pasteForm.addEventListener("submit", function (ev) {
-        ev.preventDefault();
-        setAddress(el.pasteInput.value, "paste");
-      });
-
-      document.getElementById("btn-refresh").addEventListener("click", function () {
-        if (state.address) loadAccount(state.address);
-      });
-
-      document.getElementById("btn-disconnect").addEventListener("click", disconnect);
-
-      document.getElementById("wordmark").addEventListener("click", function (ev) {
-        ev.preventDefault();
-        if (!state.address) window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-
-      /* EIP-6963: wallets announce { info, provider }. Request them explicitly. */
-      window.addEventListener("eip6963:announceProvider", function (event) {
-        var detail = event.detail || {};
-        var info = detail.info || {};
-        if (!info.uuid || !detail.provider) return;
-        discovered[info.uuid] = { info: info, provider: detail.provider };
-        renderWalletButtons();
-      });
-      window.dispatchEvent(new Event("eip6963:requestProvider"));
-
-      function walletKind(entry) {
-        var info = (entry && entry.info) || {};
-        var provider = (entry && entry.provider) || {};
-        var name = String(info.name || "").toLowerCase();
-        var rdns = String(info.rdns || "").toLowerCase();
-        if (provider.isRabby || name.indexOf("rabby") !== -1 || rdns.indexOf("rabby") !== -1) return "rabby";
-        if (provider.isMetaMask || name.indexOf("metamask") !== -1 || rdns.indexOf("metamask") !== -1) return "metamask";
-        return null;
-      }
-
-      function walletTargets() {
-        var seen = { metamask: false, rabby: false };
-        var picked = [];
-        providerList().forEach(function (entry) {
-          var kind = walletKind(entry);
-          if (!kind || seen[kind]) return;
-          seen[kind] = true;
-          picked.push({
-            kind: kind,
-            name: kind === "rabby" ? "Rabby" : "MetaMask",
-            provider: entry.provider,
-          });
-        });
-        if (!picked.length && window.ethereum) {
-          var provider = window.ethereum;
-          if (provider.providers && provider.providers.length) {
-            var mm = null;
-            var rabby = null;
-            provider.providers.forEach(function (p) {
-              if (p && p.isRabby) rabby = p;
-              else if (p && p.isMetaMask && !p.isRabby) mm = p;
-            });
-            if (mm) picked.push({ kind: "metamask", name: "MetaMask", provider: mm });
-            if (rabby) picked.push({ kind: "rabby", name: "Rabby", provider: rabby });
-          }
-          if (!picked.length) {
-            var label = labelInjected(provider);
-            if (provider.isRabby) picked.push({ kind: "rabby", name: "Rabby", provider: provider });
-            else if (provider.isMetaMask) picked.push({ kind: "metamask", name: "MetaMask", provider: provider });
-            else picked.push({ kind: "injected", name: label, provider: provider });
-          }
-        }
-        return picked;
-      }
-
-      function hideNavWalletMenu() {
-        if (!el.navWalletMenu) return;
-        el.navWalletMenu.classList.add("hidden");
-        el.navWalletMenu.setAttribute("hidden", "");
-        el.navWalletMenu.innerHTML = "";
-      }
-
-      function showNavWalletMenu(targets) {
-        if (!el.navWalletMenu) return;
-        el.navWalletMenu.innerHTML = targets.map(function (t, i) {
-          return (
-            '<button type="button" data-i="' + i + '" class="block w-full px-3 py-2 text-left text-sm text-mist-200 transition hover:bg-white/5 hover:text-white" role="menuitem">' +
-            "Connect " + escapeHtml(t.name) +
-            "</button>"
-          );
-        }).join("");
-        el.navWalletMenu.classList.remove("hidden");
-        el.navWalletMenu.removeAttribute("hidden");
-        el.navWalletMenu.querySelectorAll("button").forEach(function (btn) {
-          btn.addEventListener("click", function (ev) {
-            ev.stopPropagation();
-            var i = Number(btn.getAttribute("data-i"));
-            hideNavWalletMenu();
-            if (targets[i]) connectWallet(targets[i].provider);
-          });
-        });
-      }
-
-      function connectFromNav() {
-        var targets = walletTargets();
-        if (!targets.length) {
-          var section = document.getElementById("connect");
-          if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
-          return;
-        }
-        if (targets.length === 1) {
-          hideNavWalletMenu();
-          connectWallet(targets[0].provider);
-          return;
-        }
-        if (el.navWalletMenu && !el.navWalletMenu.classList.contains("hidden")) {
-          hideNavWalletMenu();
-          return;
-        }
-        showNavWalletMenu(targets);
-      }
-
-      if (el.navConnect) {
-        el.navConnect.addEventListener("click", function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          connectFromNav();
-        });
-      }
-
-      document.addEventListener("click", function () {
-        hideNavWalletMenu();
-      });
-
-      /* Give wallets a tick to announce, then render fallback / empty state. */
-      renderWalletButtons();
-      setTimeout(renderWalletButtons, 250);
-    })();
-  </script>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
