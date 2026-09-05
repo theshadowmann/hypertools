@@ -897,6 +897,8 @@ export function createTradeView(app) {
     }
     submit.type = "submit";
     submit.classList.remove("connect");
+    submit.classList.toggle("buy", side === "buy");
+    submit.classList.toggle("sell", side === "sell");
     submit.disabled = ticketBusy;
     submit.textContent = "Place order";
   }

@@ -184,6 +184,8 @@ describe("ticket DOM", () => {
   it("uses Place order for the enabled ticket CTA and keeps USDC on /outcome Balances", () => {
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
     expect(js).toContain('submit.textContent = "Place order"');
+    expect(js).toContain('submit.classList.toggle("buy", side === "buy")');
+    expect(js).toContain('submit.classList.toggle("sell", side === "sell")');
     expect(js).toContain("isOutcomePageBalance");
     expect(js).not.toContain('submit.textContent = verb + " " + coin');
     expect(js).toContain('submit.textContent = modalOpen ? "Opening wallet…" : "Connect wallet"');
