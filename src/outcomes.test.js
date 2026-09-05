@@ -9,6 +9,7 @@ import {
   formatOutcomeTitle,
   formatOutcomeUtcLabel,
   isOutcomeCoin,
+  isOutcomePageBalance,
   lookupUnderlyingPx,
   outcomeCategories,
   outcomeLegAsset,
@@ -197,6 +198,10 @@ describe("outcome coins and rounding", () => {
     expect(isOutcomeCoin("+12101")).toBe(true);
     expect(isOutcomeCoin("BTC")).toBe(false);
     expect(isOutcomeCoin("PURR/USDC")).toBe(false);
+    expect(isOutcomePageBalance("USDC")).toBe(true);
+    expect(isOutcomePageBalance("usdc")).toBe(true);
+    expect(isOutcomePageBalance("+12100")).toBe(true);
+    expect(isOutcomePageBalance("PURR")).toBe(false);
   });
 
   it("clamps probability to a 0.0001 tick in [0.001, 0.999]", () => {

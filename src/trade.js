@@ -72,6 +72,7 @@ import {
   formatOutcomeCountdown,
   formatOutcomeOdds,
   isOutcomeCoin,
+  isOutcomePageBalance,
   outcomeLegAsset,
   outcomeLegBalance,
   outcomeLegCoin,
@@ -885,9 +886,7 @@ export function createTradeView(app) {
     submit.type = "submit";
     submit.classList.remove("connect");
     submit.disabled = ticketBusy;
-    const verb = side === "buy" ? "Buy" : "Sell";
-    if (isOutcome()) submit.textContent = verb + " " + (outcomeLeg === 1 ? "No" : "Yes");
-    else submit.textContent = verb + " " + coin;
+    submit.textContent = "Place order";
   }
 
   async function refreshEnabled() {
@@ -1363,7 +1362,7 @@ export function createTradeView(app) {
     const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
     const mids = (app.state.data && app.state.data.mids) || {};
     const spotForPage =
-      pageKind === "outcome" ? spot.filter((b) => b && isOutcomeCoin(b.coin)) : spot;
+      pageKind === "outcome" ? spot.filter((b) => b && isOutcomePageBalance(b.coin)) : spot;
     const rows = buildBalanceRows({
       perps,
       spotBalances: spotForPage,

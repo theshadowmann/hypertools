@@ -158,6 +158,15 @@ describe("ticket DOM", () => {
     expect(html).toContain('id="trade-balances"');
   });
 
+  it("uses Place order for the enabled ticket CTA and keeps USDC on /outcome Balances", () => {
+    const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    expect(js).toContain('submit.textContent = "Place order"');
+    expect(js).toContain("isOutcomePageBalance");
+    expect(js).not.toContain('submit.textContent = verb + " " + coin');
+    expect(js).toContain('submit.textContent = modalOpen ? "Opening wallet…" : "Connect wallet"');
+    expect(js).toContain('submit.textContent = "Enable trading"');
+  });
+
   it("uses word nav Trade / Portfolio / Outcome, not a pill slider", () => {
     const html = readFileSync(join(root, "index.html"), "utf8");
     expect(html).toContain('id="nav-trade"');

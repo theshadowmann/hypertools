@@ -204,6 +204,11 @@ export function isOutcomeCoin(coin) {
   return s.charAt(0) === "#" || s.charAt(0) === "+";
 }
 
+/** /outcome Balances: USDC plus Yes/No share tokens — not other spot. */
+export function isOutcomePageBalance(coin) {
+  return String(coin || "").toUpperCase() === "USDC" || isOutcomeCoin(coin);
+}
+
 export function roundOutcomePx(px) {
   const n = Number(px);
   if (!Number.isFinite(n)) return NaN;
