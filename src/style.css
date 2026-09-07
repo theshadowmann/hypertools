@@ -1467,7 +1467,7 @@ html.tv-embed-frame footer {
   width: 100%;
   height: 18px;
   margin: 0;
-  accent-color: var(--accent-primary);
+  accent-color: transparent;
   -webkit-appearance: none;
   appearance: none;
   background-color: transparent;
@@ -2033,6 +2033,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 input[type="number"] { -moz-appearance: textfield; }
 input[type="range"] { accent-color: var(--accent-primary); }
+input[type="range"].pct-slider { accent-color: transparent; }
 
 .port-page {
   background: var(--bg-main);
