@@ -523,9 +523,11 @@
 
             <div class="ticket-core ticket-core-tail">
             <div class="slider-row">
-              <input id="ticket-pct" type="range" min="0" max="100" step="1" value="0" class="pct-slider" />
-              <div class="pct-ticks" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span>
+              <div class="slider-track-wrap">
+                <input id="ticket-pct" type="range" min="0" max="100" step="1" value="0" class="pct-slider" />
+                <div class="pct-ticks" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
               </div>
               <input id="ticket-pct-box" class="pct-box" type="text" inputmode="numeric" value="0" aria-label="Percent of available" />
               <span class="pct-suffix">%</span>

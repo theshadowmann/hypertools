@@ -1453,6 +1453,13 @@ html.tv-embed-frame footer {
   padding-bottom: 0;
   overflow: visible;
 }
+.slider-track-wrap {
+  position: relative;
+  min-width: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+}
 .pct-slider {
   --fill: 0%;
   position: relative;
@@ -1523,10 +1530,7 @@ html.tv-embed-frame footer {
 }
 .pct-ticks {
   position: absolute;
-  left: 0;
-  right: 54px;
-  top: 50%;
-  transform: translateY(calc(-50% + 3px));
+  inset: 0;
   height: 18px;
   display: flex;
   align-items: center;

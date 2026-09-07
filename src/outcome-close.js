@@ -432,8 +432,7 @@ function paintModal(overlay, opts) {
   const slider = h(
     "div",
     { class: "slider-row out-close-slider" },
-    range,
-    ticks,
+    h("div", { class: "slider-track-wrap" }, range, ticks),
     pctBox,
     h("span", { class: "pct-suffix" }, "%")
   );

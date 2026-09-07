@@ -353,8 +353,9 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/::-moz-range-thumb \{[^}]*background: var\(--accent-primary\)/);
     expect(css).not.toMatch(/::-webkit-slider-thumb \{[^}]*background: transparent/);
     expect(css).not.toMatch(/::-moz-range-thumb \{[^}]*background: transparent/);
-    expect(css).toMatch(/\.pct-ticks \{[^}]*top: 50%/);
-    expect(css).toMatch(/\.pct-ticks \{[^}]*transform: translateY\(calc\(-50% \+ 3px\)\)/);
+    expect(css).toMatch(/\.slider-track-wrap \{[^}]*height: 18px/);
+    expect(css).toMatch(/\.pct-ticks \{[^}]*inset: 0/);
+    expect(html).toMatch(/slider-track-wrap[\s\S]*ticket-pct[\s\S]*pct-ticks/);
     expect(css).toMatch(/\.pct-ticks span \{[\s\S]*border-radius: 50%/);
     expect(css).toMatch(/\.pct-ticks span\.on \{[\s\S]*background: var\(--accent-primary\)/);
     expect(js).toContain("paintRangeFill(range, document.querySelector(\".pct-ticks\"))");
