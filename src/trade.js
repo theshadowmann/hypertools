@@ -74,9 +74,9 @@ import {
   formatOutcomeOdds,
   isOutcomeCoin,
   isOutcomePageBalance,
+  outcomeCandleCoin,
   outcomeLegAsset,
   outcomeLegBalance,
-  outcomeLegCoin,
   outcomePayout,
   outcomePositionsFromSpot,
   outcomeVenueBadge,
@@ -317,7 +317,7 @@ export function createTradeView(app) {
 
   function ensureChart() {
     const m = currentMarket();
-    const chartCoin = m && m.kind === "outcome" ? coin || outcomeLegCoin(m, outcomeLeg) : m ? m.coin : coin;
+    const chartCoin = m && m.kind === "outcome" ? outcomeCandleCoin(m, outcomeLeg) : m ? m.coin : coin;
     const key = (m ? m.id : coin) + "|" + chartCoin + "|" + interval;
     if (key === lastTv && byId("chart") && byId("chart").firstChild) return;
     lastTv = key;
@@ -2075,7 +2075,7 @@ export function createTradeView(app) {
       if (orderType !== "market" && orderType !== "limit") setOrderType("limit");
     }
     marketId = m.id;
-    coin = m.kind === "outcome" ? outcomeLegCoin(m, outcomeLeg) || m.coin : m.coin;
+    coin = m.kind === "outcome" ? outcomeCandleCoin(m, outcomeLeg) || m.coin : m.coin;
     renderMarketChip();
     setUnit(unit === "usdc" ? "usdc" : "coin");
     const yesPx = num(m.markPx) || num(m.midPx);
@@ -2108,7 +2108,7 @@ export function createTradeView(app) {
   function setOutcomeLeg(next) {
     const m = currentMarket();
     const leg = next === 1 ? 1 : 0;
-    if (leg === outcomeLeg && coin === outcomeLegCoin(m, leg)) {
+    if (leg === outcomeLeg && coin === outcomeCandleCoin(m, leg)) {
       renderTicketKind();
       updateEstimate();
       return;
@@ -2119,7 +2119,7 @@ export function createTradeView(app) {
       updateEstimate();
       return;
     }
-    coin = outcomeLegCoin(m, outcomeLeg) || m.coin;
+    coin = outcomeCandleCoin(m, outcomeLeg) || m.coin;
     const px = outcomeLeg === 1 ? num(m.noMarkPx) : num(m.markPx) || num(m.midPx);
     ctx = {
       markPx: px,

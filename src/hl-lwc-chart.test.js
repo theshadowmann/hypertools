@@ -7,6 +7,7 @@ import {
   LWC_DOWN,
   LWC_PANE,
   LWC_UP,
+  candleFailureNote,
   candlesToLwcBars,
   lwcCandleColors,
   lwcChartOptions,
@@ -37,6 +38,30 @@ describe("candlesToLwcBars", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].time).toBe(1_700_000_000);
     expect(rows[1].close).toBe(0.45);
+  });
+
+  it("accepts raw Hyperliquid ms candles and does not divide seconds twice", () => {
+    const fromRaw = candlesToLwcBars([
+      { t: 1_788_717_900_000, o: "0.80", h: "0.82", l: "0.79", c: "0.81" },
+    ]);
+    expect(fromRaw).toHaveLength(1);
+    expect(fromRaw[0].time).toBe(1_788_717_900);
+    const fromSec = candlesToLwcBars([
+      { time: 1_788_717_900, open: 0.8, high: 0.82, low: 0.79, close: 0.81 },
+    ]);
+    expect(fromSec[0].time).toBe(1_788_717_900);
+  });
+});
+
+describe("candleFailureNote", () => {
+  it("keeps load, empty, and render failures distinct", () => {
+    expect(candleFailureNote(new Error("HTTP 500 from Hyperliquid Info API"), "load")).toBe(
+      "Could not load Hyperliquid candles (HTTP 500)."
+    );
+    expect(candleFailureNote(new Error("Assertion failed: duplicate time"), "render")).toBe(
+      "Could not render candles."
+    );
+    expect(candleFailureNote(null, "empty")).toBe("No candle history for this market.");
   });
 });
 
@@ -92,6 +117,53 @@ describe("mountHlLightweightChart", () => {
     const host = document.createElement("div");
     mountHlLightweightChart(host, { coin: "", interval: "15m" });
     expect(host.querySelector(".tv-skip").textContent).toMatch(/Select a market/);
+  });
+
+  it("does not label a setData throw as a Hyperliquid load failure", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    mountHlLightweightChart(host, {
+      coin: "#12300",
+      interval: "5m",
+      createChartFn: () => ({
+        addSeries: () => ({
+          setData: () => {
+            throw new Error("Assertion failed: data must be asc ordered");
+          },
+        }),
+        applyOptions: () => {},
+        timeScale: () => ({ fitContent: () => {} }),
+        remove: () => {},
+      }),
+      loadCandlesFn: async () => [{ time: 1_700_000_000, open: 0.4, high: 0.5, low: 0.3, close: 0.45 }],
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(host.textContent).toMatch(/Could not render candles/);
+    expect(host.textContent).not.toMatch(/Could not load Hyperliquid candles/);
+    document.body.removeChild(host);
+  });
+
+  it("surfaces HTTP status on a real candleSnapshot failure", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    mountHlLightweightChart(host, {
+      coin: "#12300",
+      interval: "5m",
+      createChartFn: () => ({
+        addSeries: () => ({ setData: () => {} }),
+        applyOptions: () => {},
+        timeScale: () => ({ fitContent: () => {} }),
+        remove: () => {},
+      }),
+      loadCandlesFn: async () => {
+        throw new Error("HTTP 500 from Hyperliquid Info API");
+      },
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(host.textContent).toMatch(/Could not load Hyperliquid candles \(HTTP 500\)/);
+    document.body.removeChild(host);
   });
 });
 

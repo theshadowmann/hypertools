@@ -23,7 +23,7 @@ import {
   TV_WIDGET_PAGE,
 } from "./tv-chart.js";
 import { drawCandles } from "./hl-chart.js";
-import { candleSnapshotBody, candlesToBars, hlCandleInterval, prevDayFromDailyBars } from "./api.js";
+import { candleSnapshotBody, candlesToBars, hlCandleInterval, normalizeCandleCoin, prevDayFromDailyBars } from "./api.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -343,6 +343,11 @@ describe("Hyperliquid candles", () => {
     const body = candleSnapshotBody("#12100", "15m");
     expect(body.type).toBe("candleSnapshot");
     expect(body.req.coin).toBe("#12100");
+    expect(normalizeCandleCoin("+12300")).toBe("#12300");
+    expect(normalizeCandleCoin("#12300")).toBe("#12300");
+    expect(normalizeCandleCoin("out:cl-above-83")).toBe("");
+    expect(normalizeCandleCoin("HYPERLIQUID:BTCUSDC.P")).toBe("");
+    expect(candleSnapshotBody("+12300", "5m").req.coin).toBe("#12300");
     expect(body.req.interval).toBe("15m");
     expect(hlCandleInterval("1h")).toBe("1h");
     const bars = candlesToBars([
@@ -542,7 +547,8 @@ describe("HL interval row", () => {
     expect(html).not.toContain("data-interval");
     expect(trade).toContain('renderHlIntervalRow(kind === "hl" || kind === "lwc" || !!(m && m.kind === "outcome") || pageKind === "outcome")');
     expect(trade).toContain("onFallback: () => renderHlIntervalRow(true)");
-    expect(trade).toContain("outcomeLegCoin");
+    expect(trade).toContain("outcomeCandleCoin");
+    expect(trade).not.toMatch(/coin \|\| outcomeLegCoin/);
     expect(trade).not.toContain("outcomeLegTvCoin");
     expect(trade).toContain('byId("hl-iv")');
     expect(trade).toContain("setChartInterval");

@@ -259,6 +259,27 @@ export function outcomeLegCoin(m, leg) {
   return Number(leg) === 1 ? m.noCoin || "" : m.coin || "";
 }
 
+/** `+12300` / `#12300` → `#12300`. Rejects TV slugs and bare tickers. */
+export function toOutcomeHashCoin(coin) {
+  const s = String(coin || "").trim();
+  if (s.charAt(0) === "#" && /^\d+$/.test(s.slice(1))) return s;
+  if (s.charAt(0) === "+" && /^\d+$/.test(s.slice(1))) return "#" + s.slice(1);
+  return "";
+}
+
+/**
+ * candleSnapshot / l2Book coin for a Yes/No leg.
+ * Always `#` form from `outcomeId`. Never TV tickers, bare ids, or `+` balances.
+ */
+export function outcomeCandleCoin(m, leg) {
+  const idx = Number(leg) === 1 ? 1 : 0;
+  if (m && m.outcomeId != null) {
+    const encoded = encodeOutcomeCoin(m.outcomeId, idx);
+    if (encoded) return encoded;
+  }
+  return toOutcomeHashCoin(outcomeLegCoin(m, idx));
+}
+
 /** Charting Library / public-TV ticker for the Yes or No leg. Empty when unknown. */
 export function outcomeLegTvCoin(m, leg) {
   if (!m) return "";

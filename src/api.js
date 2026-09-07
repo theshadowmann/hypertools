@@ -140,12 +140,24 @@ export function candleRange(interval) {
   return { startTime, endTime: now };
 }
 
+/**
+ * Info API candle coin. HIP-4 `+` balances become `#` wire coins.
+ * TradingView slugs are refused so we never POST a 500-body to HL.
+ */
+export function normalizeCandleCoin(coin) {
+  const s = String(coin || "").trim();
+  if (!s) return "";
+  if (/^out:/i.test(s) || /^HYPERLIQUID:/i.test(s)) return "";
+  if (s.charAt(0) === "+" && /^\d+$/.test(s.slice(1))) return "#" + s.slice(1);
+  return s;
+}
+
 export function candleSnapshotBody(coin, interval) {
   const range = candleRange(interval);
   return {
     type: "candleSnapshot",
     req: {
-      coin: String(coin || ""),
+      coin: normalizeCandleCoin(coin),
       interval: hlCandleInterval(interval),
       startTime: range.startTime,
       endTime: range.endTime,
@@ -167,8 +179,12 @@ export function hlCandleInterval(interval) {
 }
 
 export async function loadCandles(coin, interval) {
-  const c = String(coin || "");
-  if (!c) return [];
+  const raw = String(coin || "").trim();
+  const c = normalizeCandleCoin(raw);
+  if (!c) {
+    if (raw) throw new Error("Invalid candle coin");
+    return [];
+  }
   const rows = await hlInfo(candleSnapshotBody(c, interval));
   return candlesToBars(rows);
 }

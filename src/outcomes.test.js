@@ -14,6 +14,7 @@ import {
   outcomeCategories,
   outcomeLegAsset,
   outcomeLegBalance,
+  outcomeCandleCoin,
   outcomeLegCoin,
   outcomeLegTvCoin,
   outcomeLegTvTickers,
@@ -276,6 +277,9 @@ describe("Yes/No odds and wire ids", () => {
     const btc = rows.find((m) => m.outcomeId === 1210);
     expect(outcomeLegCoin(btc, 0)).toBe("#12100");
     expect(outcomeLegCoin(btc, 1)).toBe("#12101");
+    expect(outcomeCandleCoin({ outcomeId: 1230, coin: "BTC", noCoin: "out:x" }, 0)).toBe("#12300");
+    expect(outcomeCandleCoin({ outcomeId: 1230 }, 1)).toBe("#12301");
+    expect(outcomeCandleCoin({ coin: "+12300" }, 0)).toBe("#12300");
     expect(outcomeLegAsset(btc, 0)).toBe(100_012_100);
     expect(outcomeLegAsset(btc, 1)).toBe(100_012_101);
     expect(outcomeLegBalance(btc, 1)).toBe("+12101");

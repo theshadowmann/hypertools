@@ -20,25 +20,48 @@ export const LWC_AXIS = "#94A3B8";
 export const LWC_GRID = "rgba(51, 65, 85, 0.45)";
 export const LWC_BORDER = "#334155";
 
+/** HL Info uses ms; `loadCandles` / `candlesToBars` already emit unix seconds. */
+export function candleTimeSec(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return n > 1e12 ? Math.floor(n / 1000) : Math.floor(n);
+}
+
 export function candlesToLwcBars(bars) {
   if (!Array.isArray(bars)) return [];
   const out = [];
   const seen = new Set();
   bars.forEach((b) => {
     if (!b) return;
-    const time = Math.floor(Number(b.time));
-    const open = Number(b.open);
-    const high = Number(b.high);
-    const low = Number(b.low);
-    const close = Number(b.close);
+    const time = candleTimeSec(b.time ?? b.t ?? b.T);
+    const open = Number(b.open ?? b.o);
+    const highRaw = Number(b.high ?? b.h);
+    const lowRaw = Number(b.low ?? b.l);
+    const close = Number(b.close ?? b.c);
     if (!Number.isInteger(time) || time <= 0) return;
-    if (![open, high, low, close].every(Number.isFinite)) return;
+    if (![open, highRaw, lowRaw, close].every(Number.isFinite)) return;
+    const high = Math.max(open, highRaw, lowRaw, close);
+    const low = Math.min(open, highRaw, lowRaw, close);
     if (seen.has(time)) return;
     seen.add(time);
     out.push({ time, open, high, low, close });
   });
   out.sort((a, c) => a.time - c.time);
   return out;
+}
+
+/** Load vs render vs empty — never label a `setData` throw as a fetch failure. */
+export function candleFailureNote(err, kind) {
+  if (kind === "empty") return "No candle history for this market.";
+  if (kind === "render") return "Could not render candles.";
+  const raw = err && err.message ? String(err.message) : "";
+  const http = raw.match(/^HTTP (\d{3})\b/);
+  if (http) return "Could not load Hyperliquid candles (HTTP " + http[1] + ").";
+  if (/invalid candle coin/i.test(raw)) return "Could not load Hyperliquid candles (invalid coin).";
+  if (/failed to fetch|networkerror|load failed/i.test(raw)) {
+    return "Could not load Hyperliquid candles (network).";
+  }
+  return "Could not load Hyperliquid candles.";
 }
 
 export function lwcCandleColors() {
@@ -104,7 +127,7 @@ function skipNote(container, text) {
   container.appendChild(note);
 }
 
-export function mountHlLightweightChart(container, { coin, interval, createChartFn } = {}) {
+export function mountHlLightweightChart(container, { coin, interval, createChartFn, loadCandlesFn } = {}) {
   if (!container) return;
   const prev = container.querySelector(".hl-lwc-host, .hl-chart-host, .tradingview-widget-container");
   if (prev && typeof prev._chartTeardown === "function") prev._chartTeardown();
@@ -172,25 +195,39 @@ export function mountHlLightweightChart(container, { coin, interval, createChart
     series = null;
   };
 
-  loadCandles(c, interval)
+  const load = typeof loadCandlesFn === "function" ? loadCandlesFn : loadCandles;
+  load(c, interval)
     .then((rows) => {
       if (cancelled) return;
-      const bars = candlesToLwcBars(rows);
-      if (!bars.length) {
+      let bars = [];
+      try {
+        bars = candlesToLwcBars(rows);
+      } catch (err) {
         wrap._chartTeardown();
-        skipNote(container, "No candle history for this market.");
+        skipNote(container, candleFailureNote(err, "render"));
         return;
       }
-      if (series && typeof series.setData === "function") {
+      if (!bars.length) {
+        wrap._chartTeardown();
+        skipNote(container, candleFailureNote(null, "empty"));
+        return;
+      }
+      try {
+        if (!series || typeof series.setData !== "function") {
+          throw new Error("chart series missing");
+        }
         series.setData(bars);
         if (chart && chart.timeScale && typeof chart.timeScale().fitContent === "function") {
           chart.timeScale().fitContent();
         }
+      } catch (err) {
+        if (wrap._chartTeardown) wrap._chartTeardown();
+        skipNote(container, candleFailureNote(err, "render"));
       }
     })
-    .catch(() => {
+    .catch((err) => {
       if (cancelled) return;
       if (wrap._chartTeardown) wrap._chartTeardown();
-      skipNote(container, "Could not load Hyperliquid candles.");
+      skipNote(container, candleFailureNote(err, "load"));
     });
 }
