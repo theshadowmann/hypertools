@@ -349,10 +349,14 @@ describe("ticket DOM", () => {
     expect(css).toMatch(/::-webkit-slider-runnable-track \{[\s\S]*background: transparent/);
     expect(css).toMatch(/::-moz-range-track \{[\s\S]*linear-gradient\([\s\S]*var\(--accent-primary\)[\s\S]*var\(--fill\)/);
     expect(css).toMatch(/::-webkit-slider-thumb \{[^}]*border-radius: 50%/);
-    expect(css).toMatch(/::-webkit-slider-thumb \{[^}]*background: var\(--accent-primary\)/);
-    expect(css).toMatch(/::-moz-range-thumb \{[^}]*background: var\(--accent-primary\)/);
-    expect(css).not.toMatch(/::-webkit-slider-thumb \{[^}]*background: transparent/);
-    expect(css).not.toMatch(/::-moz-range-thumb \{[^}]*background: transparent/);
+    expect(css).toMatch(/::-webkit-slider-thumb \{[^}]*background: transparent/);
+    expect(css).toMatch(/::-webkit-slider-thumb \{[^}]*border: 2px solid var\(--accent-primary\)/);
+    expect(css).toMatch(/::-webkit-slider-thumb \{[^}]*box-shadow: 0 0 0 4px rgba\(6, 182, 212/);
+    expect(css).toMatch(/::-moz-range-thumb \{[^}]*background: transparent/);
+    expect(css).toMatch(/::-moz-range-thumb \{[^}]*border: 2px solid var\(--accent-primary\)/);
+    expect(css).toMatch(/::-moz-range-thumb \{[^}]*box-shadow: 0 0 0 4px rgba\(6, 182, 212/);
+    expect(css).not.toMatch(/::-webkit-slider-thumb \{[^}]*background: var\(--accent-primary\)/);
+    expect(css).not.toMatch(/::-moz-range-thumb \{[^}]*background: var\(--accent-primary\)/);
     expect(css).toMatch(/\.slider-track-wrap \{[^}]*height: 18px/);
     expect(css).toMatch(/\.pct-ticks \{[^}]*inset: 0/);
     expect(html).toMatch(/slider-track-wrap[\s\S]*ticket-pct[\s\S]*pct-ticks/);

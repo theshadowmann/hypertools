@@ -1490,13 +1490,13 @@ html.tv-embed-frame footer {
 .pct-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
   border-radius: 50%;
-  background: var(--accent-primary);
-  border: 0;
-  box-shadow: none;
+  background: transparent;
+  border: 2px solid var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.28), 0 0 8px rgba(6, 182, 212, 0.45);
   box-sizing: border-box;
   cursor: pointer;
   position: relative;
@@ -1519,12 +1519,12 @@ html.tv-embed-frame footer {
   background: var(--accent-primary);
 }
 .pct-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--accent-primary);
-  border: 0;
-  box-shadow: none;
+  background: transparent;
+  border: 2px solid var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.28), 0 0 8px rgba(6, 182, 212, 0.45);
   box-sizing: border-box;
   cursor: pointer;
 }
