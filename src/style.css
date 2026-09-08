@@ -1492,13 +1492,16 @@ html.tv-embed-frame footer {
 .pct-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
+  width: 8px;
+  height: 8px;
+  margin-top: -2px;
   border-radius: 50%;
-  background: var(--accent-primary);
   border: 0;
-  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.22);
+  background: var(--accent-primary);
+  box-shadow:
+    0 0 0 3px var(--bg-main),
+    0 0 0 5px var(--accent-primary),
+    0 0 8px rgba(6, 182, 212, 0.45);
   box-sizing: border-box;
   cursor: pointer;
   position: relative;
@@ -1521,19 +1524,25 @@ html.tv-embed-frame footer {
   background: var(--accent-primary);
 }
 .pct-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--accent-primary);
   border: 0;
-  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.22);
+  background: var(--accent-primary);
+  box-shadow:
+    0 0 0 3px var(--bg-main),
+    0 0 0 5px var(--accent-primary),
+    0 0 8px rgba(6, 182, 212, 0.45);
   box-sizing: border-box;
   cursor: pointer;
 }
 .pct-ticks {
   position: absolute;
-  inset: 0;
-  height: 18px;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1541,7 +1550,6 @@ html.tv-embed-frame footer {
   box-sizing: border-box;
   pointer-events: none;
   z-index: 0;
-  transform: translateY(3px);
 }
 .pct-ticks span {
   display: block;
