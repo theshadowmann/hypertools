@@ -8,6 +8,7 @@ import {
   formatOutcomeOdds,
   formatOutcomeTitle,
   formatOutcomeUtcLabel,
+  isJunkOutcomeTitle,
   isOutcomeCoin,
   isOutcomePageBalance,
   lookupUnderlyingPx,
@@ -146,6 +147,118 @@ describe("outcome titles", () => {
       time: "20260929-2100",
     });
   });
+
+  it("never surfaces template fallback, Recurring junk, or pipe dumps", () => {
+    expect(isJunkOutcomeTitle("template fallback")).toBe(true);
+    expect(isJunkOutcomeTitle("Recurring Fallback")).toBe(true);
+    expect(isJunkOutcomeTitle("Recurring Named Outcome")).toBe(true);
+    expect(isJunkOutcomeTitle("other")).toBe(true);
+    expect(isJunkOutcomeTitle("competition:NFL|participantA:X|participantB:Y")).toBe(true);
+
+    const nflQ = {
+      question: 200,
+      name: "template:sportsTournamentWinner",
+      description:
+        "competition:USA National Football League (NFL)|officialSource:USA National Football League (NFL)|resolutionDeadline:20270221-1200|season:2027|sport:football",
+      fallbackOutcome: 1486,
+      namedOutcomes: [1487],
+    };
+    const nflFallback = { outcome: 1486, name: "template fallback", description: "other", venue: "out" };
+    const rams = {
+      outcome: 1487,
+      name: "template:sportsTournamentParticipant",
+      description: "participant:Los Angeles Rams",
+      venue: "out",
+    };
+    expect(formatOutcomeTitle(nflFallback, nflQ)).toBe("2027 NFL winner · Other");
+    expect(formatOutcomeTitle(rams, nflQ)).toBe("Los Angeles Rams to win 2027 NFL");
+    expect(formatOutcomeTitle(nflFallback, nflQ)).not.toMatch(/template fallback/i);
+    expect(formatOutcomeTitle(nflFallback, nflQ)).not.toMatch(/competition:/);
+
+    const usOpenQ = {
+      question: 202,
+      name: "template:sportsTournamentWinner",
+      description: "competition:US Open|officialSource:ESPN|resolutionDeadline:20260914-0030|season:2026|sport:tennis",
+      fallbackOutcome: 1638,
+      namedOutcomes: [1639],
+    };
+    const alcaraz = {
+      outcome: 1639,
+      name: "template:sportsTournamentParticipant",
+      description: "participant:Carlos Alcaraz",
+      venue: "txyz",
+    };
+    const usOpenOther = { outcome: 1638, name: "template fallback", description: "other", venue: "txyz" };
+    expect(formatOutcomeTitle(alcaraz, usOpenQ)).toBe("Carlos Alcaraz to win 2026 US Open");
+    expect(formatOutcomeTitle(usOpenOther, usOpenQ)).toBe("2026 US Open winner · Other");
+
+    const wOpenQ = {
+      question: 203,
+      name: "template:sportsTournamentWinner",
+      description: "competition:Womens US Open|officialSource:ESPN|resolutionDeadline:20260914-0030|season:2026|sport:tennis",
+      fallbackOutcome: 1648,
+      namedOutcomes: [1649],
+    };
+    expect(
+      formatOutcomeTitle(
+        { outcome: 1649, name: "template:sportsTournamentParticipant", description: "participant:Aryna Sabalenka" },
+        wOpenQ
+      )
+    ).toBe("Aryna Sabalenka to win 2026 Women's US Open");
+
+    const nflGame = {
+      outcome: 1846,
+      name: "template:sportsContestWinner",
+      description:
+        "competition:NFL|contestType:game|countedPlay:regulation time and any overtime|officialSource:ESPN|participantA:New England Patriots|participantB:Seattle Seahawks|resolutionDeadline:20260910-0620|scheduledStart:20260910-0020|season:2026|shortNameA:Patriots|shortNameB:Seahawks|sport:football|stage:Regular Season",
+      venue: "txyz",
+    };
+    expect(formatOutcomeTitle(nflGame)).toBe("NFL: New England Patriots vs Seattle Seahawks");
+    expect(formatOutcomeTitle(nflGame)).not.toMatch(/competition:/);
+
+    const ligaQ = {
+      question: 210,
+      name: "template:sportsContestResult",
+      description:
+        "competition:Spanish La Liga|contestType:Match|countedPlay:regulation time|officialSource:LaLiga|participantA:Elche CF|participantB:Real Sociedad|resolutionDeadline:20260908-1930|scheduledStart:20260907-1930|season:2026/27|sport:Football|stage:Matchday 4",
+      fallbackOutcome: 1751,
+      namedOutcomes: [1752, 1753, 1754],
+    };
+    expect(
+      formatOutcomeTitle(
+        { outcome: 1752, name: "template:sportsContestParticipant2", description: "participant:Elche CF" },
+        ligaQ
+      )
+    ).toBe("Spanish La Liga Matchday 4: Elche CF vs Real Sociedad · Elche CF");
+    expect(
+      formatOutcomeTitle({ outcome: 1753, name: "template:sportsContestDraw2", description: "" }, ligaQ)
+    ).toBe("Spanish La Liga Matchday 4: Elche CF vs Real Sociedad · Draw");
+    expect(
+      formatOutcomeTitle({ outcome: 1751, name: "template fallback", description: "other" }, ligaQ)
+    ).toBe("Spanish La Liga Matchday 4: Elche CF vs Real Sociedad · Other");
+
+    const fomc = meta.questions[0];
+    expect(formatOutcomeTitle({ outcome: 1226, name: "template fallback", description: "other" }, fomc)).toBe(
+      "Federal Reserve's Open Market Committee · September 2026 · Other"
+    );
+    expect(formatOutcomeTitle(meta.outcomes[2], fomc)).toContain("Decrease");
+
+    expect(formatOutcomeTitle({ outcome: 1896, name: "Recurring", description: "class:priceBinary|underlying:BTC|expiry:20260908-0600|targetPrice:79722|period:1d" })).toMatch(
+      /BTC above 79722/
+    );
+    expect(
+      formatOutcomeTitle(
+        { outcome: 1900, name: "Recurring Fallback", description: "other" },
+        {
+          name: "Recurring",
+          description: "class:priceBucket|underlying:BTC|expiry:20260908-0600|priceThresholds:78127,81316|period:1d",
+          fallbackOutcome: 1900,
+          namedOutcomes: [1901],
+        }
+      )
+    ).toMatch(/BTC on Sep 8, 2026/);
+    expect(formatOutcomeTitle({ outcome: 77, name: "template fallback", description: "other" })).toBe("Outcome 77");
+  });
 });
 
 describe("parseOutcomeMarkets", () => {
@@ -190,6 +303,41 @@ describe("parseOutcomeMarkets", () => {
   it("returns nothing for empty API payloads", () => {
     expect(parseOutcomeMarkets(null, {})).toEqual([]);
     expect(parseOutcomeMarkets({ outcomes: [] }, {})).toEqual([]);
+  });
+
+  it("uses live mids only — missing stays blank, 0.5 is a real allMids value", () => {
+    const sportsMeta = {
+      outcomes: [
+        { outcome: 1486, name: "template fallback", description: "other", venue: "out" },
+        { outcome: 1487, name: "template:sportsTournamentParticipant", description: "participant:Los Angeles Rams", venue: "out" },
+        { outcome: 1846, name: "template:sportsContestWinner", description: "competition:NFL|participantA:New England Patriots|participantB:Seattle Seahawks|stage:Regular Season", venue: "txyz" },
+      ],
+      questions: [
+        {
+          question: 200,
+          name: "template:sportsTournamentWinner",
+          description: "competition:USA National Football League (NFL)|season:2027|sport:football",
+          fallbackOutcome: 1486,
+          namedOutcomes: [1487],
+        },
+      ],
+    };
+    const rows = parseOutcomeMarkets(sportsMeta, { "#14860": "0.5" });
+    expect(rows.map((r) => r.pair).join("\n")).not.toMatch(/template fallback/i);
+    expect(rows.map((r) => r.pair).join("\n")).not.toMatch(/competition:/);
+    const other = rows.find((m) => m.outcomeId === 1486);
+    expect(other.pair).toBe("2027 NFL winner · Other");
+    expect(other.markPx).toBe("0.5");
+    expect(formatChancePct(other.markPx)).toBe("50.0%");
+    const rams = rows.find((m) => m.outcomeId === 1487);
+    expect(rams.pair).toBe("Los Angeles Rams to win 2027 NFL");
+    expect(rams.markPx).toBeUndefined();
+    expect(formatChancePct(rams.markPx)).toBe("—");
+    expect(formatChancePct(null)).toBe("—");
+    expect(formatChancePct("")).toBe("—");
+    const game = rows.find((m) => m.outcomeId === 1846);
+    expect(game.pair).toBe("NFL: New England Patriots vs Seattle Seahawks");
+    expect(game.markPx).toBeUndefined();
   });
 });
 

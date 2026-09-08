@@ -168,15 +168,110 @@ function underlyingTicker(fields) {
   return raw.replace(/^xyz:/i, "");
 }
 
+function stripTemplatePrefix(name) {
+  return String(name || "").replace(/^template:\s*/i, "").trim();
+}
+
+function isFieldDump(s) {
+  const t = String(s || "");
+  return t.indexOf("|") >= 0 && /[A-Za-z]+:/.test(t);
+}
+
+/** API junk that must never reach the picker or stats chip. */
+export function isJunkOutcomeTitle(s) {
+  const t = String(s || "").trim();
+  if (!t) return true;
+  if (/^template\s*fallback$/i.test(t)) return true;
+  if (/^recurring(\s+fallback)?$/i.test(t)) return true;
+  if (/^recurring named outcome$/i.test(t)) return true;
+  if (/^other$/i.test(t)) return true;
+  if (/^template:/i.test(t)) return true;
+  if (isFieldDump(t)) return true;
+  return false;
+}
+
+function isFallbackOutcome(outcome, question) {
+  const name = String((outcome && outcome.name) || "");
+  if (/fallback/i.test(name)) return true;
+  if (!question || question.fallbackOutcome == null || !outcome) return false;
+  return Number(question.fallbackOutcome) === Number(outcome.outcome);
+}
+
+function displayCompetition(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (/^USA National Football League/i.test(s) || (/National Football League/i.test(s) && /\bNFL\b/.test(s))) return "NFL";
+  if (/womens?\s+us open/i.test(s)) return "Women's US Open";
+  return s;
+}
+
+function displayStage(raw) {
+  const s = String(raw || "").trim();
+  if (!s || /^(match|game|regular season)$/i.test(s)) return "";
+  return s;
+}
+
+function policySideLabel(name, filled) {
+  if (filled && !isJunkOutcomeTitle(filled) && filled.indexOf("{") < 0) return filled;
+  const id = templateIdFromName(name) || stripTemplatePrefix(name);
+  if (/decrease/i.test(id)) return "Decrease";
+  if (/increase/i.test(id)) return "Increase";
+  if (/nochange|no.?change/i.test(id)) return "No change";
+  return "";
+}
+
+function formatMatchTitle(fields, opts) {
+  const vs = fields.participantA + " vs " + fields.participantB;
+  const head = joinTitle([displayCompetition(fields.competition), displayStage(fields.stage)]);
+  const base = head ? head + ": " + vs : vs;
+  if (opts && opts.draw) return base + " · Draw";
+  if (opts && opts.fallback) return base + " · Other";
+  if (opts && opts.participant) return base + " · " + opts.participant;
+  return base;
+}
+
+function formatPriceBucketTitle(und, fields, outcome, when) {
+  const idx = Number(fields.index);
+  const parts = String(fields.priceThresholds || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (Number.isInteger(idx) && idx >= 0 && parts.length >= 1) {
+    if (idx === 0) return und + " below " + parts[0] + " on " + when + "?";
+    if (idx === parts.length) return und + " above " + parts[parts.length - 1] + " on " + when + "?";
+    if (idx > 0 && idx < parts.length) return und + " from " + parts[idx - 1] + " to " + parts[idx] + " on " + when + "?";
+  }
+  return und + " on " + when + "?";
+}
+
+function joinTitle(parts) {
+  return parts.filter((p) => p != null && String(p).trim()).join(" ").replace(/\s+/g, " ").trim();
+}
+
 /**
- * Human title from live outcomeMeta fields only. Never invents an event name.
- * Falls back to the API description or name when the description is unstructured.
+ * Human title from live outcomeMeta + optional outcomeTemplates.
+ * Never returns "template fallback", raw `key:value|` dumps, or invented names.
  */
-export function formatOutcomeTitle(outcome, question) {
+export function formatOutcomeTitle(outcome, question, templates) {
+  const title = buildOutcomeTitle(outcome, question, templates);
+  if (title && !isJunkOutcomeTitle(title) && !/template\s*fallback/i.test(title)) return title;
+  if (outcome && outcome.outcome != null) return "Outcome " + outcome.outcome;
+  return "";
+}
+
+function buildOutcomeTitle(outcome, question, templates) {
   const o = outcome || {};
   const q = question || null;
   const fields = Object.assign({}, parseOutcomeFields(q && q.description), parseOutcomeFields(o.description));
-  const und = underlyingTicker(fields);
+  const byId = templates instanceof Map ? templates : indexOutcomeTemplates(templates);
+  const oTmpl = byId.get(templateIdFromName(o.name));
+  const qTmpl = q ? byId.get(templateIdFromName(q.name)) : null;
+  const filledOutcome = oTmpl ? fillOutcomeTemplate(oTmpl.name, fields, oTmpl.keywords) : "";
+  const filledQuestion = qTmpl ? fillOutcomeTemplate(qTmpl.name, fields, qTmpl.keywords) : "";
+  const fallback = isFallbackOutcome(o, q);
+  const side = stripTemplatePrefix(o.name);
+
+  const und = underlyingTicker(fields) || String(fields.underlying || "").trim();
   const strike = fields.threshold || fields.target || fields.targetPrice;
   const when = padTimeLabel(fields.time || fields.expiry || "");
   const name = String(o.name || "");
@@ -184,13 +279,50 @@ export function formatOutcomeTitle(outcome, question) {
     const touch = /priceTouch/i.test(name) || fields.class === "priceTouch";
     return und + (touch ? " touches " : " above ") + strike + " on " + when + "?";
   }
-  if (q && (fields.institution || fields.decisionLabel || fields.policyMeasure)) {
-    const bits = [fields.institution, fields.decisionLabel, fields.policyMeasure].filter(Boolean);
-    const side = String(o.name || "").replace(/^template:/, "");
-    return (bits.join(" · ") + (side ? " (" + side + ")" : "")).trim();
+  if (und && fields.low && fields.high && when) {
+    return und + " from " + fields.low + " to " + fields.high + " on " + when + "?";
   }
-  if (o.description && o.description !== "other") return String(o.description);
-  if (o.name) return String(o.name).replace(/^template:/, "");
+  if (und && fields.priceThresholds && when) {
+    if (fallback) return und + " on " + when + " · Other";
+    return formatPriceBucketTitle(und, fields, o, when);
+  }
+
+  if (fields.participantA && fields.participantB) {
+    return formatMatchTitle(fields, {
+      draw: /draw/i.test(side) || /draw/i.test(filledOutcome),
+      fallback,
+      participant: fields.participant || "",
+    });
+  }
+
+  if (fields.participant && (fields.competition || fields.season)) {
+    return joinTitle([fields.participant, "to win", fields.season, displayCompetition(fields.competition)]);
+  }
+
+  if (fallback && (fields.competition || fields.season)) {
+    return joinTitle([fields.season, displayCompetition(fields.competition), "winner"]) + " · Other";
+  }
+
+  if (q && (fields.institution || fields.decisionLabel || fields.policyMeasure)) {
+    const bits = [fields.institution, fields.decisionLabel].filter(Boolean);
+    const head = bits.join(" · ");
+    if (fallback) return (head + " · Other").replace(/^\s*·\s*/, "").trim();
+    const label = policySideLabel(name, filledOutcome);
+    return label ? (head + " · " + label).replace(/^\s*·\s*/, "").trim() : head;
+  }
+
+  if (fields.participant && filledQuestion && !isJunkOutcomeTitle(filledQuestion)) {
+    return joinTitle([fields.participant, "to win", filledQuestion.replace(/\s+winner$/i, "")]);
+  }
+  if (fallback && filledQuestion && !isJunkOutcomeTitle(filledQuestion) && filledQuestion.indexOf("{") < 0) {
+    return filledQuestion + " · Other";
+  }
+  if (filledOutcome && !isJunkOutcomeTitle(filledOutcome) && filledOutcome.indexOf("{") < 0) return filledOutcome;
+  if (filledQuestion && !isJunkOutcomeTitle(filledQuestion) && filledQuestion.indexOf("{") < 0) return filledQuestion;
+
+  const desc = String(o.description || "");
+  if (desc && !isJunkOutcomeTitle(desc)) return desc;
+  if (side && !isJunkOutcomeTitle(side) && !/fallback/i.test(side)) return side;
   if (o.outcome != null) return "Outcome " + o.outcome;
   return "";
 }
@@ -413,8 +545,10 @@ export function parseOutcomeMarkets(meta, mids, hip3Marks, templates) {
     const yesCoin = encodeOutcomeCoin(id, 0);
     const noCoin = encodeOutcomeCoin(id, 1);
     if (!yesCoin) return;
-    const title = formatOutcomeTitle(o, qById[id]);
-    if (!title) return;
+    let title = formatOutcomeTitle(o, qById[id], tmplIndex);
+    if (!title || isJunkOutcomeTitle(title) || /template\s*fallback/i.test(title)) {
+      title = "Outcome " + id;
+    }
     const yesPx = px[yesCoin];
     const noPx = px[noCoin];
     const q = qById[id];
