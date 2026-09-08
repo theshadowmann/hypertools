@@ -10,10 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install and build
+        run: |
+          npm ci
+          npm test
+          npm run build
       - name: Deploy
         env:
           SWA_CLI_DEPLOYMENT_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_JOLLY_FIELD_0D484FC10 }}
         run: |
-          mkdir -p site
-          cp index.html staticwebapp.config.json site/
-          npx --yes @azure/static-web-apps-cli@2.0.10 deploy ./site --env production
+          npx --yes @azure/static-web-apps-cli@2.0.10 deploy ./dist --env production

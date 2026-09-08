@@ -1,10 +1,70 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "*.css", "*.js", "*.png", "*.svg", "*.webp"]
+    "exclude": [
+      "/assets/*",
+      "*.css",
+      "*.js",
+      "*.png",
+      "*.svg",
+      "*.webp",
+      "/embed-widget/*",
+      "/embed-widget/advanced-chart",
+      "/embed-widget/advanced-chart/",
+      "/embed-widget/advanced-chart/index.html",
+      "/tv-embed.html",
+      "/tv-chrome.css",
+      "/tv-flatten.js"
+    ]
   },
+  "routes": [
+    {
+      "route": "/tv-chrome.css",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Cache-Control": "public, max-age=300",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "route": "/tv-flatten.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Cache-Control": "public, max-age=300"
+      }
+    },
+    {
+      "route": "/embed-widget/advanced-chart",
+      "rewrite": "/embed-widget/advanced-chart/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self' https: data: blob: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tradingview-widget.com https://static.tradingview.com https://s3.tradingview.com https://s.tradingview.com https://www.tradingview.com; style-src 'self' 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; connect-src 'self' https: wss: blob:; worker-src blob: 'self'; frame-src https: blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+        "X-Frame-Options": "SAMEORIGIN"
+      }
+    },
+    {
+      "route": "/embed-widget/advanced-chart/",
+      "rewrite": "/embed-widget/advanced-chart/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self' https: data: blob: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tradingview-widget.com https://static.tradingview.com https://s3.tradingview.com https://s.tradingview.com https://www.tradingview.com; style-src 'self' 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; connect-src 'self' https: wss: blob:; worker-src blob: 'self'; frame-src https: blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+        "X-Frame-Options": "SAMEORIGIN"
+      }
+    },
+    {
+      "route": "/embed-widget/*",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self' https: data: blob: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tradingview-widget.com https://static.tradingview.com https://s3.tradingview.com https://s.tradingview.com https://www.tradingview.com; style-src 'self' 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; connect-src 'self' https: wss: blob:; worker-src blob: 'self'; frame-src https: blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+        "X-Frame-Options": "SAMEORIGIN"
+      }
+    }
+  ],
   "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' https://s3.tradingview.com https://s.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://app.hyperliquid.xyz; font-src 'self'; connect-src 'self' https://api.hyperliquid.xyz wss://api.hyperliquid.xyz https://s3.tradingview.com https://s.tradingview.com https://www.tradingview.com https://www.tradingview-widget.com; frame-src 'self' https://www.tradingview-widget.com https://s.tradingview.com https://www.tradingview.com https://s3.tradingview.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
     "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin"
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Frame-Options": "DENY"
   }
 }
