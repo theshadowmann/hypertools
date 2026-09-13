@@ -17,8 +17,8 @@ export async function hlInfo(body, attempt = 0) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 429 && attempt < 2) {
-    await sleep(800 * (attempt + 1));
+  if (res.status === 429 && attempt < 3) {
+    await sleep(1500 * (attempt + 1));
     return hlInfo(body, attempt + 1);
   }
   if (!res.ok) {
@@ -34,48 +34,41 @@ function settledValue(result, label, errors) {
   return null;
 }
 
+/**
+ * Trade/portfolio hot path. Keep this small — a 14-way Info burst trips HL 429s
+ * and then balances + Enable trading both fail for the same reason.
+ */
 export async function loadAccount(address) {
-  const results = await Promise.allSettled([
+  const errors = [];
+  const core = await Promise.allSettled([
     hlInfo({ type: "clearinghouseState", user: address }),
     hlInfo({ type: "spotClearinghouseState", user: address }),
-    hlInfo({ type: "delegatorSummary", user: address }),
-    hlInfo({ type: "delegations", user: address }),
-    hlInfo({ type: "allMids" }),
-    hlInfo({ type: "validatorSummaries" }),
+    hlInfo({ type: "userAbstraction", user: address }),
     hlInfo({ type: "frontendOpenOrders", user: address }),
     hlInfo({ type: "userFills", user: address }),
+    hlInfo({ type: "allMids" }),
+  ]);
+  const perps = settledValue(core[0], "clearinghouseState", errors);
+  const spot = settledValue(core[1], "spotClearinghouseState", errors);
+  const abstraction = core[2].status === "fulfilled" ? core[2].value : null;
+  const openOrders = settledValue(core[3], "frontendOpenOrders", errors);
+  const fills = settledValue(core[4], "userFills", errors);
+  const mids = settledValue(core[5], "allMids", errors);
+
+  // Defer portfolio chrome so connect is not rate-limited.
+  await sleep(200);
+  const slow = await Promise.allSettled([
     hlInfo({ type: "portfolio", user: address }),
     hlInfo({ type: "userFees", user: address }),
-    hlInfo({ type: "userVaultEquities", user: address }),
-    hlInfo({ type: "leadingVaults", user: address }),
+    hlInfo({ type: "delegatorSummary", user: address }),
+    hlInfo({ type: "delegations", user: address }),
     hlInfo({ type: "subAccounts", user: address }),
-    hlInfo({ type: "userAbstraction", user: address }),
   ]);
-
-  const errors = [];
-  const perps = settledValue(results[0], "clearinghouseState", errors);
-  const spot = settledValue(results[1], "spotClearinghouseState", errors);
-  const staking = settledValue(results[2], "delegatorSummary", errors);
-  const dels = settledValue(results[3], "delegations", errors);
-  const mids = settledValue(results[4], "allMids", errors);
-  const validators = settledValue(results[5], "validatorSummaries", errors);
-  const openOrders = settledValue(results[6], "frontendOpenOrders", errors);
-  const fills = settledValue(results[7], "userFills", errors);
-  const portfolio = settledValue(results[8], "portfolio", errors);
-  const userFees = settledValue(results[9], "userFees", errors);
-  const userVaultEquities = settledValue(results[10], "userVaultEquities", errors);
-  const leadingVaults = settledValue(results[11], "leadingVaults", errors);
-  const subAccounts = settledValue(results[12], "subAccounts", errors);
-  const abstraction = results[13] && results[13].status === "fulfilled" ? results[13].value : null;
-
-  const validatorNames = {};
-  if (Array.isArray(validators)) {
-    validators.forEach((v) => {
-      if (!v || !v.validator) return;
-      const key = String(v.validator).toLowerCase();
-      validatorNames[key] = v.name || v.validator;
-    });
-  }
+  const portfolio = settledValue(slow[0], "portfolio", errors);
+  const userFees = settledValue(slow[1], "userFees", errors);
+  const staking = settledValue(slow[2], "delegatorSummary", errors);
+  const dels = settledValue(slow[3], "delegations", errors);
+  const subAccounts = settledValue(slow[4], "subAccounts", errors);
 
   return {
     data: {
@@ -84,13 +77,13 @@ export async function loadAccount(address) {
       staking,
       delegations: Array.isArray(dels) ? dels : dels == null ? null : [],
       mids: mids && typeof mids === "object" ? mids : {},
-      validatorNames,
+      validatorNames: {},
       openOrders: Array.isArray(openOrders) ? openOrders : [],
       fills: Array.isArray(fills) ? fills : [],
       portfolio,
       userFees: userFees && typeof userFees === "object" ? userFees : null,
-      userVaultEquities: Array.isArray(userVaultEquities) ? userVaultEquities : [],
-      leadingVaults: Array.isArray(leadingVaults) ? leadingVaults : [],
+      userVaultEquities: [],
+      leadingVaults: [],
       subAccounts: Array.isArray(subAccounts) ? subAccounts : [],
       abstraction,
     },
@@ -250,23 +243,19 @@ export async function loadDailyPrevDay(coin) {
 }
 
 export async function loadTradeExtras(address) {
+  // Sequential + small set — avoid stacking another 5-way burst on connect.
   const startTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const results = await Promise.allSettled([
-    hlInfo({ type: "historicalOrders", user: address }),
-    hlInfo({ type: "userFunding", user: address, startTime }),
-    hlInfo({ type: "twapHistory", user: address }),
-    hlInfo({ type: "userFees", user: address }),
-    hlInfo({ type: "userTwapSliceFills", user: address }),
-  ]);
-  function val(i) {
-    return results[i].status === "fulfilled" ? results[i].value : null;
-  }
+  const historicalOrders = await hlInfo({ type: "historicalOrders", user: address }).catch(() => []);
+  await sleep(150);
+  const fundingHistory = await hlInfo({ type: "userFunding", user: address, startTime }).catch(() => []);
+  await sleep(150);
+  const twapHistory = await hlInfo({ type: "twapHistory", user: address }).catch(() => []);
   return {
-    historicalOrders: Array.isArray(val(0)) ? val(0) : [],
-    fundingHistory: Array.isArray(val(1)) ? val(1) : [],
-    twapHistory: Array.isArray(val(2)) ? val(2) : [],
-    twapFills: Array.isArray(val(4)) ? val(4) : [],
-    userFees: val(3) && typeof val(3) === "object" ? val(3) : null,
+    historicalOrders: Array.isArray(historicalOrders) ? historicalOrders : [],
+    fundingHistory: Array.isArray(fundingHistory) ? fundingHistory : [],
+    twapHistory: Array.isArray(twapHistory) ? twapHistory : [],
+    twapFills: [],
+    userFees: null,
   };
 }
 

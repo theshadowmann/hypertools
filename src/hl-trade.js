@@ -21,6 +21,10 @@ import {
 } from "./order-build.js";
 
 const transport = new HttpTransport({ isTestnet: false, apiUrl: HL_API });
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 const info = new InfoClient({ transport });
 
 function walletClient(provider, address) {
@@ -77,6 +81,8 @@ export async function enableTrading({ provider, address, onStatus }) {
     wallet: walletClient(provider, user),
   });
 
+  onStatus && onStatus("Checking trading approvals…");
+  await sleep(400);
   const status = await tradingStatus(user);
   if (!status.feeOk) {
     onStatus && onStatus("Approve the builder fee in your wallet…");
@@ -87,8 +93,8 @@ export async function enableTrading({ provider, address, onStatus }) {
   }
 
   let agent = status.stored;
-  const valid = agent ? await agentStillValid(user, agent) : false;
-  if (!valid) {
+  // tradingStatus already checked extraAgents — do not call it again (was doubling Info traffic).
+  if (!status.agentOk) {
     const privateKey = generatePrivateKey();
     const acct = privateKeyToAccount(privateKey);
     onStatus && onStatus("Approve the HyperTools trading agent in your wallet…");
