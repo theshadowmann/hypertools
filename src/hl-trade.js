@@ -50,11 +50,26 @@ async function agentStillValid(user, agent) {
   }
 }
 
-export async function tradingStatus(user) {
-  const [maxFee, extras] = await Promise.all([
-    info.maxBuilderFee({ user, builder: BUILDER_ADDRESS }).catch(() => 0),
-    info.extraAgents({ user }).catch(() => []),
-  ]);
+export async function tradingStatus(user, attempt = 0) {
+  let maxFee = 0;
+  let extras = [];
+  try {
+    const pair = await Promise.all([
+      info.maxBuilderFee({ user, builder: BUILDER_ADDRESS }),
+      info.extraAgents({ user }),
+    ]);
+    maxFee = pair[0];
+    extras = pair[1];
+  } catch (err) {
+    const msg = (err && err.message) || String(err);
+    if (/429|too many requests/i.test(msg) && attempt < 2) {
+      await sleep(2000 * (attempt + 1));
+      return tradingStatus(user, attempt + 1);
+    }
+    // Soft-fail: return stored agent so UI can keep trading after refresh.
+    const stored = getAgent(user);
+    throw Object.assign(err instanceof Error ? err : new Error(msg), { stored });
+  }
   const stored = getAgent(user);
   const feeOk = Number(maxFee) >= BUILDER_FEE_TENTHS;
   const agentOk = stored

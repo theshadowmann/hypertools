@@ -26,6 +26,7 @@ import {
   tradingStatus,
   userMessage,
 } from "./hl-trade.js";
+import { getAgent } from "./agent-store.js";
 import { buildOrderWire } from "./order-build.js";
 import {
   buildScaleWires,
@@ -909,11 +910,14 @@ export function createTradeView(app) {
       renderTicketButton();
       return;
     }
+    const stored = getAgent(app.state.address);
     try {
       const st = await tradingStatus(app.state.address);
       enabled = !!(st.feeOk && st.agentOk);
+      if (!enabled && stored && stored.privateKey) enabled = true;
     } catch {
-      enabled = false;
+      // Rate-limit / network: if this tab already enabled trading, keep it.
+      enabled = !!(stored && stored.privateKey);
     }
     renderTicketButton();
   }
