@@ -203,7 +203,10 @@ export function userMessage(err) {
   }
   const msg = err.message || String(err);
   if (/user rejected|denied|rejected the request/i.test(msg)) return "Wallet rejected the signature.";
-  return msg;
+  if (/\b429\b|too many requests/i.test(msg)) {
+    return "Hyperliquid is rate-limiting right now. Wait about a minute, then click Enable trading once.";
+  }
+  return msg.replace(/\s*-\s*null\s*$/i, "").trim() || msg;
 }
 
 export function orderSucceeded(result) {

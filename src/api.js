@@ -6,17 +6,25 @@ export { HL_INFO, HL_EXCHANGE, HL_WS };
 export const DUST = 1e-8;
 export const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 
-export function hlInfo(body) {
-  return fetch(HL_INFO, {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Info POST with one backoff retry on HTTP 429. */
+export async function hlInfo(body, attempt = 0) {
+  const res = await fetch(HL_INFO, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  }).then((res) => {
-    if (!res.ok) {
-      throw new Error("HTTP " + res.status + " from Hyperliquid Info API");
-    }
-    return res.json();
   });
+  if (res.status === 429 && attempt < 2) {
+    await sleep(800 * (attempt + 1));
+    return hlInfo(body, attempt + 1);
+  }
+  if (!res.ok) {
+    throw new Error("HTTP " + res.status + " from Hyperliquid Info API");
+  }
+  return res.json();
 }
 
 function settledValue(result, label, errors) {
