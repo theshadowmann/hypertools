@@ -194,17 +194,37 @@ export function explainExchangeError(result) {
  * exchange null — that used to replace every thrown Error with
  * "No response from Hyperliquid."
  */
+
+/** HL rejects orders signed by a wiped / never-approved API wallet (stale session agent). */
+export function isMissingApiWalletError(err) {
+  const msg =
+    err == null
+      ? ""
+      : typeof err === "string"
+        ? err
+        : err.message || (err.response != null ? explainExchangeError(err.response) : "") || String(err);
+  return /API Wallet|does not exist|User or API Wallet/i.test(String(msg || ""));
+}
+
 export function userMessage(err) {
   if (!err) return "Request failed.";
   if (err.code === 4001 || err.code === "ACTION_REJECTED") return "Wallet rejected the signature.";
   if (err.response != null) {
     const fromApi = explainExchangeError(err.response);
-    if (fromApi) return fromApi;
+    if (fromApi) {
+      if (isMissingApiWalletError(fromApi)) {
+        return "Trading agent expired — approve in your wallet to continue.";
+      }
+      return fromApi;
+    }
   }
   const msg = err.message || String(err);
   if (/user rejected|denied|rejected the request/i.test(msg)) return "Wallet rejected the signature.";
   if (/\b429\b|too many requests/i.test(msg)) {
     return "Hyperliquid is rate-limiting right now. Wait about a minute, then click Enable trading once.";
+  }
+  if (isMissingApiWalletError(msg)) {
+    return "Trading agent expired — approve in your wallet to continue.";
   }
   return msg.replace(/\s*-\s*null\s*$/i, "").trim() || msg;
 }

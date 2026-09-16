@@ -77,6 +77,16 @@ export function getAgent(user) {
   return null;
 }
 
+/** Drop one user's session agent (memory + sessionStorage). */
+export function forgetAgent(user) {
+  if (!user) return;
+  const key = hlAddress(user);
+  const row = agents.get(key);
+  if (row) row.privateKey = "";
+  agents.delete(key);
+  clearSession(user);
+}
+
 export function wipeAgents() {
   const users = Array.from(agents.keys());
   agents.forEach((a) => {

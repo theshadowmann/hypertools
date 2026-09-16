@@ -254,6 +254,7 @@ export async function submitPerpClose({
   await placePerpOrder({
     source: sess.source,
     address: sess.address,
+    provider: sess.provider,
     market: mkt,
     side: closeSideForPosition(row),
     size: sz,

@@ -258,6 +258,7 @@ export async function submitOutcomeClose({
   const args = {
     source: sess.source,
     address: sess.address,
+    provider: sess.provider,
     market: mkt,
     side: "sell",
     size: sz,

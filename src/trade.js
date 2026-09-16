@@ -1065,6 +1065,7 @@ export function createTradeView(app) {
     const args = {
       source: app.state.source,
       address: app.state.address,
+      provider: app.state.provider,
       market: mkt,
       side,
       size: sz,
@@ -1092,7 +1093,7 @@ export function createTradeView(app) {
           szDecimals: mkt.szDecimals,
           reduceOnly: args.reduceOnly,
         });
-        await placeScaleOrders({ source: args.source, address: args.address, orders: wires, onStatus: args.onStatus });
+        await placeScaleOrders({ source: args.source, address: args.address, provider: args.provider, orders: wires, onStatus: args.onStatus });
         ticketMessage("Scale orders accepted.", "ok");
       } else {
         const tpsl = extraTpslWires(mkt, side === "buy", sz);
@@ -1395,6 +1396,7 @@ export function createTradeView(app) {
       await setLeverage({
         source: app.state.source,
         address: app.state.address,
+        provider: app.state.provider,
         asset: mkt.asset,
         isCross,
         leverage: v,
@@ -2061,6 +2063,7 @@ export function createTradeView(app) {
       await cancelOrders({
         source: app.state.source,
         address: app.state.address,
+        provider: app.state.provider,
         cancels: [{ asset, oid }],
         onStatus: (s) => ticketMessage(s),
       });
@@ -2094,6 +2097,7 @@ export function createTradeView(app) {
       await cancelOrders({
         source: app.state.source,
         address: app.state.address,
+        provider: app.state.provider,
         cancels,
         onStatus: (s) => ticketMessage(s),
       });
@@ -2116,6 +2120,7 @@ export function createTradeView(app) {
       await cancelTwap({
         source: app.state.source,
         address: app.state.address,
+        provider: app.state.provider,
         asset: assetForCoin(c),
         twapId,
         onStatus: (s) => ticketMessage(s),

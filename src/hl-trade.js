@@ -1,7 +1,7 @@
 import { createWalletClient, custom } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
-import { getAgent, rememberAgent } from "./agent-store.js";
+import { forgetAgent, getAgent, rememberAgent } from "./agent-store.js";
 import { HL_API } from "./hosts.js";
 import { pauseHlInfo } from "./api.js";
 import { DEFAULT_MAX_SLIPPAGE, TWAP_MAX_MINUTES, TWAP_MIN_MINUTES } from "./ticket-math.js";
@@ -15,6 +15,7 @@ import {
   buildOrderWire,
   explainExchangeError,
   hlAddress,
+  isMissingApiWalletError,
   orderSucceeded,
   sealOrderPayload,
   slippagePrice,
@@ -68,6 +69,7 @@ export async function tradingStatus(user, attempt = 0) {
       return tradingStatus(user, attempt + 1);
     }
     // Soft-fail: session agent is enough when Info is rate-limiting / unavailable.
+    // Do not wipe here — only invalidate on agent-not-found or verified agentOk:false.
     const stored = getAgent(user);
     if (stored && stored.privateKey) {
       return { feeOk: true, agentOk: true, maxFee: 0, stored, soft: true };
@@ -84,6 +86,11 @@ export async function tradingStatus(user, attempt = 0) {
           (a.validUntil == null || Number(a.validUntil) > Date.now() + 60_000)
       )
     : false;
+  // Info confirmed the stored agent is gone / expired — drop the stale session key.
+  if (stored && !agentOk) {
+    forgetAgent(user);
+    return { feeOk, agentOk: false, maxFee: Number(maxFee) || 0, stored: null };
+  }
   return { feeOk, agentOk, maxFee: Number(maxFee) || 0, stored };
 }
 
@@ -91,17 +98,21 @@ export async function tradingStatus(user, attempt = 0) {
  * Explicit user click only. Approves builder fee + agent via official EIP-712
  * (approveBuilderFee / approveAgent). The agent private key is never logged.
  */
-export async function enableTrading({ provider, address, onStatus }) {
+export async function enableTrading({ provider, address, onStatus, force }) {
   assertCanTrade("wallet");
   if (!provider) throw new Error("Connect a wallet to trade.");
   const user = address;
   // Pause bulk Info only (markets/candles/history) — balances stay unblocked.
   pauseHlInfo(6000);
 
-  const existing = getAgent(user);
-  if (existing && existing.privateKey) {
-    onStatus && onStatus("Trading already enabled for this tab.");
-    return existing;
+  if (force) {
+    forgetAgent(user);
+  } else {
+    const existing = getAgent(user);
+    if (existing && existing.privateKey) {
+      onStatus && onStatus("Trading already enabled for this tab.");
+      return existing;
+    }
   }
 
   const master = new ExchangeClient({
@@ -141,7 +152,12 @@ export async function enableTrading({ provider, address, onStatus }) {
   if (!agentOk || !agent) {
     const privateKey = generatePrivateKey();
     const acct = privateKeyToAccount(privateKey);
-    onStatus && onStatus("Approve the HyperTools trading agent in your wallet…");
+    onStatus &&
+      onStatus(
+        force
+          ? "Trading agent expired — approve in your wallet…"
+          : "Approve the HyperTools trading agent in your wallet…"
+      );
     await master.approveAgent({
       agentAddress: acct.address,
       agentName: AGENT_NAME,
@@ -172,9 +188,41 @@ async function requireReadyAgent(address) {
   return stored;
 }
 
+
+/** Wipe a stale session agent when HL reports the API wallet is gone. */
+export function invalidateAgentOnWalletError(user, err) {
+  if (!isMissingApiWalletError(err)) return false;
+  forgetAgent(user);
+  return true;
+}
+
+async function reapproveExpiredAgent({ provider, address, onStatus }) {
+  if (!provider) {
+    throw new Error("Trading agent expired — click Enable trading and approve in your wallet.");
+  }
+  onStatus && onStatus("Trading agent expired — approve in your wallet…");
+  return enableTrading({ provider, address, onStatus, force: true });
+}
+
+/**
+ * Run an exchange action with the session agent. On HL "API Wallet … does not exist",
+ * wipe the stale agent, re-approve via the master wallet, and retry once.
+ */
+async function withAliveAgent({ provider, address, onStatus }, run) {
+  let agent = await requireReadyAgent(address);
+  try {
+    return await run(agent);
+  } catch (err) {
+    if (!invalidateAgentOnWalletError(address, err)) throw err;
+    agent = await reapproveExpiredAgent({ provider, address, onStatus });
+    return await run(agent);
+  }
+}
+
 export async function placePerpOrder({
   source,
   address,
+  provider,
   market,
   side,
   size,
@@ -193,8 +241,6 @@ export async function placePerpOrder({
   onStatus,
 }) {
   assertCanTrade(source);
-  const agent = await requireReadyAgent(address);
-
   const isBuy = side === "buy";
   let px = price;
   if (type === "market") {
@@ -222,20 +268,24 @@ export async function placePerpOrder({
   const payload = sealOrderPayload(
     buildOrderPayload(extraOrders && extraOrders.length ? [wire].concat(extraOrders) : wire, grouping || "na")
   );
-  const exch = agentExchange(agent);
-  const result = await exch.order(payload);
-  if (result == null) throw new Error("No response from Hyperliquid.");
-  const err = explainExchangeError(result);
-  if (err) throw new Error(err);
-  if (!orderSucceeded(result) && result.status !== "ok") {
-    throw new Error("Hyperliquid did not accept the order.");
-  }
-  return result;
+
+  return withAliveAgent({ provider, address, onStatus }, async (agent) => {
+    const exch = agentExchange(agent);
+    const result = await exch.order(payload);
+    if (result == null) throw new Error("No response from Hyperliquid.");
+    const err = explainExchangeError(result);
+    if (err) throw new Error(err);
+    if (!orderSucceeded(result) && result.status !== "ok") {
+      throw new Error("Hyperliquid did not accept the order.");
+    }
+    return result;
+  });
 }
 
 export async function placeTwapOrder({
   source,
   address,
+  provider,
   market,
   side,
   size,
@@ -245,76 +295,81 @@ export async function placeTwapOrder({
   onStatus,
 }) {
   assertCanTrade(source);
-  const agent = await requireReadyAgent(address);
   const m = Math.max(TWAP_MIN_MINUTES, Math.min(TWAP_MAX_MINUTES, Math.round(Number(minutes) || 30)));
   onStatus && onStatus("Signing TWAP order…");
-  const exch = agentExchange(agent);
-  const result = await exch.twapOrder({
-    twap: {
-      a: market.asset,
-      b: side === "buy",
-      s: String(size),
-      r: !!reduceOnly,
-      m,
-      t: !!randomize,
-    },
+  return withAliveAgent({ provider, address, onStatus }, async (agent) => {
+    const exch = agentExchange(agent);
+    const result = await exch.twapOrder({
+      twap: {
+        a: market.asset,
+        b: side === "buy",
+        s: String(size),
+        r: !!reduceOnly,
+        m,
+        t: !!randomize,
+      },
+    });
+    const err = explainExchangeError(result);
+    if (err) throw new Error(err);
+    return result;
   });
-  const err = explainExchangeError(result);
-  if (err) throw new Error(err);
-  return result;
 }
 
-export async function cancelOrders({ source, address, cancels, onStatus }) {
+export async function cancelOrders({ source, address, provider, cancels, onStatus }) {
   assertCanTrade(source);
-  const agent = await requireReadyAgent(address);
   onStatus && onStatus("Signing cancel…");
-  const exch = agentExchange(agent);
-  const result = await exch.cancel({
-    cancels: cancels.map((c) => ({ a: c.asset, o: c.oid })),
+  return withAliveAgent({ provider, address, onStatus }, async (agent) => {
+    const exch = agentExchange(agent);
+    const result = await exch.cancel({
+      cancels: cancels.map((c) => ({ a: c.asset, o: c.oid })),
+    });
+    const err = explainExchangeError(result);
+    if (err) throw new Error(err);
+    return result;
   });
-  const err = explainExchangeError(result);
-  if (err) throw new Error(err);
-  return result;
 }
 
-export async function cancelTwap({ source, address, asset, twapId, onStatus }) {
+export async function cancelTwap({ source, address, provider, asset, twapId, onStatus }) {
   assertCanTrade(source);
-  const agent = await requireReadyAgent(address);
   onStatus && onStatus("Signing TWAP cancel…");
-  const exch = agentExchange(agent);
-  const result = await exch.twapCancel({ a: asset, t: twapId });
-  const err = explainExchangeError(result);
-  if (err) throw new Error(err);
-  return result;
+  return withAliveAgent({ provider, address, onStatus }, async (agent) => {
+    const exch = agentExchange(agent);
+    const result = await exch.twapCancel({ a: asset, t: twapId });
+    const err = explainExchangeError(result);
+    if (err) throw new Error(err);
+    return result;
+  });
 }
 
-export async function placeScaleOrders({ source, address, orders, onStatus }) {
+export async function placeScaleOrders({ source, address, provider, orders, onStatus }) {
   assertCanTrade(source);
-  const agent = await requireReadyAgent(address);
   onStatus && onStatus("Signing scale orders…");
   const payload = sealOrderPayload(buildOrderPayload(orders, "na"));
-  const result = await agentExchange(agent).order(payload);
-  if (result == null) throw new Error("No response from Hyperliquid.");
-  const err = explainExchangeError(result);
-  if (err) throw new Error(err);
-  if (!orderSucceeded(result) && result.status !== "ok") {
-    throw new Error("Hyperliquid did not accept the order.");
-  }
-  return result;
-}
-
-export async function setLeverage({ source, address, asset, isCross, leverage, onStatus }) {
-  assertCanTrade(source);
-  const agent = await requireReadyAgent(address);
-  onStatus && onStatus("Updating leverage…");
-  const result = await agentExchange(agent).updateLeverage({
-    asset,
-    isCross: !!isCross,
-    leverage: Math.max(1, Math.round(Number(leverage) || 1)),
+  return withAliveAgent({ provider, address, onStatus }, async (agent) => {
+    const result = await agentExchange(agent).order(payload);
+    if (result == null) throw new Error("No response from Hyperliquid.");
+    const err = explainExchangeError(result);
+    if (err) throw new Error(err);
+    if (!orderSucceeded(result) && result.status !== "ok") {
+      throw new Error("Hyperliquid did not accept the order.");
+    }
+    return result;
   });
-  const err = explainExchangeError(result);
-  if (err) throw new Error(err);
-  return result;
 }
 
-export { userMessage };
+export async function setLeverage({ source, address, provider, asset, isCross, leverage, onStatus }) {
+  assertCanTrade(source);
+  onStatus && onStatus("Updating leverage…");
+  return withAliveAgent({ provider, address, onStatus }, async (agent) => {
+    const result = await agentExchange(agent).updateLeverage({
+      asset,
+      isCross: !!isCross,
+      leverage: Math.max(1, Math.round(Number(leverage) || 1)),
+    });
+    const err = explainExchangeError(result);
+    if (err) throw new Error(err);
+    return result;
+  });
+}
+
+export { invalidateAgentOnWalletError, isMissingApiWalletError, userMessage };

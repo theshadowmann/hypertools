@@ -7,6 +7,7 @@ import {
   buildOrderPayload,
   buildOrderWire,
   explainExchangeError,
+  isMissingApiWalletError,
   roundPx,
   roundSz,
   sealOrderPayload,
@@ -221,5 +222,28 @@ describe("rounding", () => {
 
   it("converts margin percent to coin size", () => {
     expect(sizeFromMarginPct(1000, 100000, 50, 5)).toBe("0.005");
+  });
+});
+
+
+describe("stale API wallet errors", () => {
+  it("detects User or API Wallet does not exist", () => {
+    const msg =
+      "User or API Wallet 0x6560e4e92692c08b87956bacee78980703bbbcd7 does not exist.";
+    expect(isMissingApiWalletError(msg)).toBe(true);
+    expect(isMissingApiWalletError(new Error(msg))).toBe(true);
+    expect(isMissingApiWalletError("API Wallet 0xabc does not exist")).toBe(true);
+    expect(isMissingApiWalletError("Insufficient margin")).toBe(false);
+    expect(isMissingApiWalletError(new Error("too many requests"))).toBe(false);
+  });
+
+  it("maps missing API wallet to a friendlier userMessage", () => {
+    expect(
+      userMessage(
+        new Error(
+          "User or API Wallet 0x6560e4e92692c08b87956bacee78980703bbbcd7 does not exist."
+        )
+      )
+    ).toMatch(/Trading agent expired/i);
   });
 });

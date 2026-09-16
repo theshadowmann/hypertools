@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { getAgent, rememberAgent, wipeAgents } from "./agent-store.js";
+import { forgetAgent, getAgent, rememberAgent, wipeAgents } from "./agent-store.js";
 import { HL_API, HL_APP, HL_APP_PORTFOLIO, HL_COIN_ICON_BASE, HL_EXCHANGE, HL_FEES_DOCS, HL_INFO, HL_WS } from "./hosts.js";
 import { assertHlTypedData, guardProvider } from "./wallet-guard.js";
 
@@ -63,6 +63,16 @@ describe("agent store", () => {
     expect(getAgent(USER).privateKey).toBe("0xsecret-agent-key");
     wipeAgents();
     expect(getAgent(USER)).toBeNull();
+  });
+
+  it("forgets one user's session agent without wiping others", () => {
+    const other = "0xcccccccccccccccccccccccccccccccccccccccc";
+    rememberAgent(USER, { privateKey: "0xsecret-a", address: AGENT });
+    rememberAgent(other, { privateKey: "0xsecret-b", address: "0xdddddddddddddddddddddddddddddddddddddddd" });
+    forgetAgent(USER);
+    expect(getAgent(USER)).toBeNull();
+    expect(getAgent(other).privateKey).toBe("0xsecret-b");
+    wipeAgents();
   });
 
   it("strips leftover plaintext localStorage keys", () => {
