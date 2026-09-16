@@ -10,21 +10,64 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Info POST with one backoff retry on HTTP 429. */
-export async function hlInfo(body, attempt = 0) {
+/** Max concurrent Info POSTs. HL 429s when the page fans out 10–20 at once. */
+const INFO_MAX_INFLIGHT = 2;
+let infoInflight = 0;
+const infoWaiters = [];
+let infoPaused = false;
+
+export function pauseHlInfo(ms = 8000) {
+  infoPaused = true;
+  setTimeout(() => {
+    infoPaused = false;
+    pumpInfoQueue();
+  }, ms);
+}
+
+function pumpInfoQueue() {
+  while (!infoPaused && infoInflight < INFO_MAX_INFLIGHT && infoWaiters.length) {
+    const next = infoWaiters.shift();
+    infoInflight += 1;
+    next();
+  }
+}
+
+function enqueueInfo(run) {
+  return new Promise((resolve, reject) => {
+    const start = () => {
+      Promise.resolve()
+        .then(run)
+        .then(resolve, reject)
+        .finally(() => {
+          infoInflight -= 1;
+          pumpInfoQueue();
+        });
+    };
+    infoWaiters.push(start);
+    pumpInfoQueue();
+  });
+}
+
+async function hlInfoOnce(body, attempt = 0) {
+  while (infoPaused) await sleep(200);
   const res = await fetch(HL_INFO, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 429 && attempt < 3) {
-    await sleep(1500 * (attempt + 1));
-    return hlInfo(body, attempt + 1);
+  if (res.status === 429 && attempt < 4) {
+    await sleep(2500 * (attempt + 1));
+    return hlInfoOnce(body, attempt + 1);
   }
   if (!res.ok) {
     throw new Error("HTTP " + res.status + " from Hyperliquid Info API");
   }
   return res.json();
+}
+
+/** Queued Info POST with backoff on HTTP 429. */
+export function hlInfo(body) {
+  return enqueueInfo(() => hlInfoOnce(body));
 }
 
 function settledValue(result, label, errors) {
@@ -40,35 +83,52 @@ function settledValue(result, label, errors) {
  */
 export async function loadAccount(address) {
   const errors = [];
-  const core = await Promise.allSettled([
+  // Two at a time (queue also caps). Balances first so Available to Trade fills.
+  const bal = await Promise.allSettled([
     hlInfo({ type: "clearinghouseState", user: address }),
     hlInfo({ type: "spotClearinghouseState", user: address }),
+  ]);
+  const perps = settledValue(bal[0], "clearinghouseState", errors);
+  const spot = settledValue(bal[1], "spotClearinghouseState", errors);
+
+  const midAbs = await Promise.allSettled([
     hlInfo({ type: "userAbstraction", user: address }),
-    hlInfo({ type: "frontendOpenOrders", user: address }),
-    hlInfo({ type: "userFills", user: address }),
     hlInfo({ type: "allMids" }),
   ]);
-  const perps = settledValue(core[0], "clearinghouseState", errors);
-  const spot = settledValue(core[1], "spotClearinghouseState", errors);
-  const abstraction = core[2].status === "fulfilled" ? core[2].value : null;
-  const openOrders = settledValue(core[3], "frontendOpenOrders", errors);
-  const fills = settledValue(core[4], "userFills", errors);
-  const mids = settledValue(core[5], "allMids", errors);
+  const abstraction = midAbs[0].status === "fulfilled" ? midAbs[0].value : null;
+  const mids = settledValue(midAbs[1], "allMids", errors);
 
-  // Defer portfolio chrome so connect is not rate-limited.
-  await sleep(200);
-  const slow = await Promise.allSettled([
-    hlInfo({ type: "portfolio", user: address }),
-    hlInfo({ type: "userFees", user: address }),
-    hlInfo({ type: "delegatorSummary", user: address }),
-    hlInfo({ type: "delegations", user: address }),
-    hlInfo({ type: "subAccounts", user: address }),
+  const book = await Promise.allSettled([
+    hlInfo({ type: "frontendOpenOrders", user: address }),
+    hlInfo({ type: "userFills", user: address }),
   ]);
-  const portfolio = settledValue(slow[0], "portfolio", errors);
-  const userFees = settledValue(slow[1], "userFees", errors);
-  const staking = settledValue(slow[2], "delegatorSummary", errors);
-  const dels = settledValue(slow[3], "delegations", errors);
-  const subAccounts = settledValue(slow[4], "subAccounts", errors);
+  const openOrders = settledValue(book[0], "frontendOpenOrders", errors);
+  const fills = settledValue(book[1], "userFills", errors);
+
+  // Portfolio chrome last — skip if we already tripped rate limits.
+  let portfolio = null;
+  let userFees = null;
+  let staking = null;
+  let dels = null;
+  let subAccounts = [];
+  if (!errors.some((e) => /429|Too Many/i.test(e))) {
+    await sleep(400);
+    const slow = await Promise.allSettled([
+      hlInfo({ type: "portfolio", user: address }),
+      hlInfo({ type: "userFees", user: address }),
+    ]);
+    portfolio = settledValue(slow[0], "portfolio", errors);
+    userFees = settledValue(slow[1], "userFees", errors);
+    await sleep(300);
+    const slow2 = await Promise.allSettled([
+      hlInfo({ type: "delegatorSummary", user: address }),
+      hlInfo({ type: "delegations", user: address }),
+      hlInfo({ type: "subAccounts", user: address }),
+    ]);
+    staking = settledValue(slow2[0], "delegatorSummary", errors);
+    dels = settledValue(slow2[1], "delegations", errors);
+    subAccounts = settledValue(slow2[2], "subAccounts", errors);
+  }
 
   return {
     data: {
@@ -105,14 +165,21 @@ function marksFromMetaCtxs(payload) {
 
 export async function loadMarkets() {
   const spotCtxsP = fetchSpotAssetCtxs().catch(() => ({}));
-  const results = await Promise.allSettled([
+  const batch1 = await Promise.allSettled([
     hlInfo({ type: "metaAndAssetCtxs" }),
     hlInfo({ type: "spotMetaAndAssetCtxs" }),
+  ]);
+  await sleep(250);
+  const batch2 = await Promise.allSettled([
     hlInfo({ type: "outcomeMeta" }),
     hlInfo({ type: "allMids" }),
+  ]);
+  await sleep(250);
+  const batch3 = await Promise.allSettled([
     hlInfo({ type: "metaAndAssetCtxs", dex: "xyz" }),
     hlInfo({ type: "outcomeTemplates" }),
   ]);
+  const results = [...batch1, ...batch2, ...batch3];
   const perps = results[0].status === "fulfilled" ? parsePerpMarkets(results[0].value) : [];
   const spot = results[1].status === "fulfilled" ? parseSpotMarkets(results[1].value) : [];
   const outcomeMeta = results[2].status === "fulfilled" ? results[2].value : null;

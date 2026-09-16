@@ -905,19 +905,25 @@ export function createTradeView(app) {
   }
 
   async function refreshEnabled() {
-    enabled = false;
     if (!canTrade()) {
+      enabled = false;
       renderTicketButton();
       return;
     }
     const stored = getAgent(app.state.address);
+    // Session agent already means Enable trading succeeded in this tab.
+    // Skip Info checks — they were the main 429 source after every refresh.
+    if (stored && stored.privateKey) {
+      enabled = true;
+      renderTicketButton();
+      return;
+    }
+    enabled = false;
     try {
       const st = await tradingStatus(app.state.address);
       enabled = !!(st.feeOk && st.agentOk);
-      if (!enabled && stored && stored.privateKey) enabled = true;
     } catch {
-      // Rate-limit / network: if this tab already enabled trading, keep it.
-      enabled = !!(stored && stored.privateKey);
+      enabled = false;
     }
     renderTicketButton();
   }

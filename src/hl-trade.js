@@ -3,6 +3,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
 import { getAgent, rememberAgent } from "./agent-store.js";
 import { HL_API } from "./hosts.js";
+import { pauseHlInfo } from "./api.js";
 import { DEFAULT_MAX_SLIPPAGE, TWAP_MAX_MINUTES, TWAP_MIN_MINUTES } from "./ticket-math.js";
 import {
   AGENT_NAME,
@@ -91,15 +92,41 @@ export async function enableTrading({ provider, address, onStatus }) {
   assertCanTrade("wallet");
   if (!provider) throw new Error("Connect a wallet to trade.");
   const user = address;
+  // Stop balance/markets Info traffic while we talk to exchange + wallet.
+  pauseHlInfo(10000);
+
+  const existing = getAgent(user);
+  if (existing && existing.privateKey) {
+    onStatus && onStatus("Trading already enabled for this tab.");
+    return existing;
+  }
+
   const master = new ExchangeClient({
     transport,
     wallet: walletClient(provider, user),
   });
 
+  let feeOk = false;
+  let agentOk = false;
+  let stored = null;
   onStatus && onStatus("Checking trading approvals…");
-  await sleep(400);
-  const status = await tradingStatus(user);
-  if (!status.feeOk) {
+  await sleep(800);
+  try {
+    const status = await tradingStatus(user);
+    feeOk = !!status.feeOk;
+    agentOk = !!status.agentOk;
+    stored = status.stored;
+  } catch (err) {
+    const msg = (err && err.message) || String(err);
+    if (/429|too many requests/i.test(msg)) {
+      onStatus && onStatus("Hyperliquid was busy — continuing with wallet approvals…");
+      await sleep(3000);
+    } else {
+      throw err;
+    }
+  }
+
+  if (!feeOk) {
     onStatus && onStatus("Approve the builder fee in your wallet…");
     await master.approveBuilderFee({
       builder: BUILDER_ADDRESS,
@@ -107,9 +134,8 @@ export async function enableTrading({ provider, address, onStatus }) {
     });
   }
 
-  let agent = status.stored;
-  // tradingStatus already checked extraAgents — do not call it again (was doubling Info traffic).
-  if (!status.agentOk) {
+  let agent = stored || getAgent(user);
+  if (!agentOk || !agent) {
     const privateKey = generatePrivateKey();
     const acct = privateKeyToAccount(privateKey);
     onStatus && onStatus("Approve the HyperTools trading agent in your wallet…");
