@@ -49,6 +49,8 @@ import {
   tpslPriceFromUsd,
   tpslRefPx,
   tpslUsdFromPrice,
+  TWAP_MAX_MINUTES,
+  TWAP_MIN_MINUTES,
   twapMinutesFromParts,
 } from "./ticket-math.js";
 import { paintRangeFill } from "./range-fill.js";
@@ -1022,7 +1024,8 @@ export function createTradeView(app) {
     }
     const submitType =
       orderType === "stop-market" || orderType === "stop-limit" ? "stop" : orderType === "market" ? "market" : "limit";
-    if (submitType === "limit") {
+    // Plain limit only - TWAP/scale hide ticket-price and must not require it.
+    if (orderType === "limit") {
       const px = num(fieldValue("ticket-price"));
       if (!Number.isFinite(px) || px <= 0) {
         ticketMessage("Enter a limit price", "err");
@@ -1036,6 +1039,14 @@ export function createTradeView(app) {
         return;
       }
     }
+    let twapMinutes = null;
+    if (orderType === "twap") {
+      twapMinutes = syncTwapMinutes();
+      if (!Number.isFinite(twapMinutes) || twapMinutes < TWAP_MIN_MINUTES || twapMinutes > TWAP_MAX_MINUTES) {
+        ticketMessage("Enter a running time between 5m and 7d", "err");
+        return;
+      }
+    }
     ticketBusy = true;
     renderTicketButton();
     const args = {
@@ -1044,15 +1055,16 @@ export function createTradeView(app) {
       market: mkt,
       side,
       size: sz,
-      reduceOnly: byId("ticket-reduce")?.checked,
+      reduceOnly: !!byId("ticket-reduce")?.checked,
       onStatus: (s) => ticketMessage(s),
     };
     try {
       if (orderType === "twap") {
         await placeTwapOrder({
           ...args,
-          minutes: syncTwapMinutes(),
-          randomize: byId("ticket-random")?.checked,
+          minutes: twapMinutes,
+          randomize: !!byId("ticket-random")?.checked,
+          reduceOnly: args.reduceOnly,
         });
         ticketMessage("TWAP accepted.", "ok");
       } else if (orderType === "scale") {

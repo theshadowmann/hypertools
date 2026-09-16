@@ -184,10 +184,33 @@ describe("ticket DOM", () => {
   it("blocks empty limit prices and does not write a zero Mid into the ticket", () => {
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
     expect(js).toContain('ticketMessage("Enter a limit price", "err")');
+    expect(js).toContain('if (orderType === "limit")');
+    expect(js).not.toContain('if (submitType === "limit")');
     expect(js).toContain("if (input && Number.isFinite(px) && px > 0) input.value = String(px)");
     expect(js).toContain('ticketMessage("Mid price unavailable", "err")');
     expect(js).toContain("if (input && Number.isFinite(n) && n > 0)");
     expect(js).not.toContain("if (input && Number.isFinite(mid())) input.value = String(mid())");
+  });
+
+  it("places TWAP without a limit price and wires randomize + reduceOnly", () => {
+    const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    const hl = readFileSync(join(root, "src/hl-trade.js"), "utf8");
+    expect(js).toContain('if (orderType === "limit")');
+    expect(js).not.toContain('if (submitType === "limit")');
+    expect(js).toContain('if (orderType === "twap")');
+    expect(js).toContain("twapMinutes = syncTwapMinutes()");
+    expect(js).toContain('ticketMessage("Enter a running time between 5m and 7d", "err")');
+    expect(js).toContain("TWAP_MIN_MINUTES");
+    expect(js).toContain("TWAP_MAX_MINUTES");
+    expect(js).toContain('randomize: !!byId("ticket-random")?.checked');
+    expect(js).toContain('reduceOnly: !!byId("ticket-reduce")?.checked');
+    expect(js).toContain("placeTwapOrder({");
+    expect(js).toContain("minutes: twapMinutes");
+    expect(js).toContain("reduceOnly: args.reduceOnly");
+    expect(hl).toContain("r: !!reduceOnly");
+    expect(hl).toContain("t: !!randomize");
+    expect(hl).toContain("TWAP_MIN_MINUTES");
+    expect(hl).toContain("TWAP_MAX_MINUTES");
   });
 
   it("uses Place order for the enabled ticket CTA; Balances stay spot-only", () => {
