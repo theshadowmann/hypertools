@@ -129,6 +129,21 @@ describe("perp positions close UI", () => {
     expect(closeAll).toBe(1);
   });
 
+  it("shows SIZE as USDC notional via positionValue (fmtUsd), not coin qty", () => {
+    const tableWrap = buildPositionsTable([row], { BTC: 65000 }, { showClose: false });
+    const tds = [...tableWrap.querySelectorAll("tbody tr td")];
+    expect(tds[2].textContent).toBe("$30,000.00");
+    expect(tableWrap.textContent).not.toMatch(/\b0\.5\b/);
+  });
+
+  it("falls back to abs(szi)*mark when positionValue missing", () => {
+    const bare = { ...row };
+    delete bare.positionValue;
+    const tableWrap = buildPositionsTable([bare], { BTC: 65000 }, { showClose: false });
+    const tds = [...tableWrap.querySelectorAll("tbody tr td")];
+    expect(tds[2].textContent).toBe("$32,500.00");
+  });
+
   it("omits close actions for pasted / showClose false", () => {
     const tableWrap = buildPositionsTable([row], { BTC: 65000 }, { showClose: false });
     expect([...tableWrap.querySelectorAll("button")].some((b) => b.textContent === "Limit")).toBe(false);

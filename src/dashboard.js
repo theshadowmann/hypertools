@@ -177,12 +177,18 @@ export function buildPositionsTable(rows, mids, opts = {}) {
                 )
               )
             : null;
+          const pv = num(p.positionValue);
+          let sizeUsd = Number.isFinite(pv) ? Math.abs(pv) : NaN;
+          if (!Number.isFinite(sizeUsd)) {
+            const mark = num(marks[p.coin]);
+            if (Number.isFinite(szi) && Number.isFinite(mark)) sizeUsd = Math.abs(szi) * mark;
+          }
           return h(
             "tr",
             Object.keys(trAttrs).length ? trAttrs : null,
             h("td", null, p.coin),
             h("td", { class: long ? "text-accent" : "text-danger" }, long ? "Long" : "Short"),
-            h("td", null, fmtQty(Math.abs(szi))),
+            h("td", null, fmtUsd(sizeUsd)),
             h("td", null, fmtPx(p.entryPx)),
             h("td", null, marks[p.coin] == null ? "—" : fmtPx(marks[p.coin])),
             h("td", null, p.liquidationPx ? fmtPx(p.liquidationPx) : "—"),
