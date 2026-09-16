@@ -20,6 +20,14 @@ import {
   startOutcomeClose,
 } from "./outcome-close.js";
 import {
+  canClosePerps,
+  closeAllPerps,
+  isPerpCloseBusy,
+  LIMIT_CLOSE_TIP,
+  perpCloseBusyCoin,
+  startPerpClose,
+} from "./perp-close.js";
+import {
   axisTicks,
   chartSeries,
   chartTickUsd,
@@ -72,22 +80,101 @@ export const POS_HEADERS = ["MARKET", "SIDE", "SIZE", "ENTRY", "MARK", "LIQ.", "
 
 export function buildPositionsTable(rows, mids, opts = {}) {
   const marks = mids || {};
+  const list = rows || [];
+  const showClose = !!opts.showClose;
+  const busy = !!opts.closeBusy;
+  const busyCoin = opts.closeBusyCoin || "";
+  const showCloseAll = showClose && typeof opts.onCloseAll === "function" && list.length > 0;
+  const colSpan = String(POS_HEADERS.length + (showClose ? 1 : 0));
+  const headCells = POS_HEADERS.map((label) => h("th", null, label));
+  if (showClose) {
+    headCells.push(
+      h(
+        "th",
+        { class: "orders-cancel-h" },
+        showCloseAll
+          ? h(
+              "button",
+              {
+                type: "button",
+                class: "orders-cancel",
+                disabled: busy,
+                onClick: (ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  opts.onCloseAll();
+                },
+              },
+              "Close All"
+            )
+          : ""
+      )
+    );
+  }
+  if (!list.length) {
+    return h(
+      "div",
+      { class: "overflow-x-auto" },
+      h(
+        "table",
+        { class: "bal-table pos-table" },
+        h("thead", null, h("tr", null, ...headCells)),
+        h("tbody", null, h("tr", null, h("td", { colSpan, class: "out-empty" }, opts.emptyMessage || "No open perps.")))
+      )
+    );
+  }
   return h(
     "div",
     { class: "overflow-x-auto" },
     h(
       "table",
       { class: "bal-table pos-table" },
-      h("thead", null, h("tr", null, ...POS_HEADERS.map((label) => h("th", null, label)))),
+      h("thead", null, h("tr", null, ...headCells)),
       h(
         "tbody",
         null,
-        ...rows.map((p) => {
+        ...list.map((p) => {
           const szi = num(p.szi);
           const long = szi >= 0;
+          const rowBusy = busy || (busyCoin && busyCoin === p.coin);
           const trAttrs = {};
           if (opts.rowClass) trAttrs.class = opts.rowClass;
           if (typeof opts.onRowClick === "function") trAttrs.onClick = () => opts.onRowClick(p);
+          const actions = showClose
+            ? h(
+                "td",
+                { class: "orders-cancel-cell out-close-cell" },
+                h(
+                  "button",
+                  {
+                    type: "button",
+                    class: "orders-cancel out-close",
+                    title: LIMIT_CLOSE_TIP,
+                    disabled: rowBusy,
+                    onClick: (ev) => {
+                      ev.preventDefault();
+                      ev.stopPropagation();
+                      if (typeof opts.onLimit === "function") opts.onLimit(p);
+                    },
+                  },
+                  "Limit"
+                ),
+                h(
+                  "button",
+                  {
+                    type: "button",
+                    class: "orders-cancel out-close",
+                    disabled: rowBusy,
+                    onClick: (ev) => {
+                      ev.preventDefault();
+                      ev.stopPropagation();
+                      if (typeof opts.onMarket === "function") opts.onMarket(p);
+                    },
+                  },
+                  "Market"
+                )
+              )
+            : null;
           return h(
             "tr",
             Object.keys(trAttrs).length ? trAttrs : null,
@@ -98,7 +185,8 @@ export function buildPositionsTable(rows, mids, opts = {}) {
             h("td", null, marks[p.coin] == null ? "—" : fmtPx(marks[p.coin])),
             h("td", null, p.liquidationPx ? fmtPx(p.liquidationPx) : "—"),
             h("td", null, levLabel(p.leverage)),
-            h("td", { class: pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true }))
+            h("td", { class: pnlClass(p.unrealizedPnl) }, fmtUsd(p.unrealizedPnl, { signed: true })),
+            actions
           );
         })
       )
@@ -386,7 +474,7 @@ function renderPortHist(state) {
     }
   }
 
-  const posRoot = document.getElementById("port-positions");
+    const posRoot = document.getElementById("port-positions");
   if (posRoot) {
     if (!connected) empty("port-positions", "positions");
     else {
@@ -395,7 +483,32 @@ function renderPortHist(state) {
       if (!rows.length) emptyHist(posRoot, "No open perps.");
       else {
         clear(posRoot);
-        posRoot.appendChild(buildPositionsTable(rows, mids));
+        const refreshPort = () => {
+          const dashEl = document.getElementById("dashboard");
+          if (dashEl && dashEl._lastState) renderDashboard(dashEl._lastEl || {}, dashEl._lastState);
+        };
+        const closeOpts = (p) => ({
+          row: p,
+          markets: state.markets || [],
+          mids,
+          onSettled: refreshPort,
+        });
+        posRoot.appendChild(
+          buildPositionsTable(rows, mids, {
+            showClose: canClosePerps(state),
+            closeBusy: isPerpCloseBusy(),
+            closeBusyCoin: perpCloseBusyCoin(),
+            onLimit: (p) => startPerpClose({ kind: "limit", ...closeOpts(p) }).then(refreshPort),
+            onMarket: (p) => startPerpClose({ kind: "market", ...closeOpts(p) }).then(refreshPort),
+            onCloseAll: () =>
+              closeAllPerps({
+                rows,
+                markets: state.markets || [],
+                mids,
+                onSettled: refreshPort,
+              }).then(refreshPort),
+          })
+        );
       }
     }
   }

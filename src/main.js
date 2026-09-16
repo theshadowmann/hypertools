@@ -23,6 +23,7 @@ import {
   showConnectStatus,
 } from "./nav-connect.js";
 import { bindOutcomeCloseApp } from "./outcome-close.js";
+import { bindPerpCloseApp } from "./perp-close.js";
 
 const state = {
   address: null,
@@ -80,6 +81,7 @@ const app = {
 };
 
 bindOutcomeCloseApp(() => app);
+bindPerpCloseApp(() => app);
 
 async function getTrade() {
   if (!tradeView) {

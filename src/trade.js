@@ -90,6 +90,13 @@ import {
   startOutcomeClose,
 } from "./outcome-close.js";
 import {
+  canClosePerps,
+  closeAllPerps,
+  isPerpCloseBusy,
+  perpCloseBusyCoin,
+  startPerpClose,
+} from "./perp-close.js";
+import {
   aggregateLevels,
   bookPrecisions,
   defaultPrecision,
@@ -1495,10 +1502,39 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("No open perps."));
       return;
     }
+    const showClose = canClosePerps(app.state);
+    const closeOpts = (p) => ({
+      row: p,
+      markets,
+      mids,
+      onSuccess: async () => {
+        await refreshUserTables();
+      },
+      onSettled: () => {
+        renderPositions();
+      },
+    });
     root.appendChild(
       buildPositionsTable(rows, mids, {
         rowClass: "cursor-pointer",
         onRowClick: (p) => setMarket(p.coin),
+        showClose,
+        closeBusy: isPerpCloseBusy(),
+        closeBusyCoin: perpCloseBusyCoin(),
+        onLimit: (p) => startPerpClose({ kind: "limit", ...closeOpts(p) }).then(() => renderPositions()),
+        onMarket: (p) => startPerpClose({ kind: "market", ...closeOpts(p) }).then(() => renderPositions()),
+        onCloseAll: () =>
+          closeAllPerps({
+            rows,
+            markets,
+            mids,
+            onSuccess: async () => {
+              await refreshUserTables();
+            },
+            onSettled: () => {
+              renderPositions();
+            },
+          }).then(() => renderPositions()),
       })
     );
   }
