@@ -18,7 +18,8 @@ let infoPaused = false;
 
 export function pauseHlInfo(ms = 8000) {
   infoPaused = true;
-  setTimeout(() => {
+  clearTimeout(pauseHlInfo._t);
+  pauseHlInfo._t = setTimeout(() => {
     infoPaused = false;
     pumpInfoQueue();
   }, ms);
@@ -35,6 +36,12 @@ function pumpInfoQueue() {
 function enqueueInfo(run) {
   return new Promise((resolve, reject) => {
     const start = () => {
+      // If pause flipped on after we were dequeued, release the slot and re-queue.
+      if (infoPaused) {
+        infoInflight -= 1;
+        infoWaiters.unshift(start);
+        return;
+      }
       Promise.resolve()
         .then(run)
         .then(resolve, reject)
@@ -49,14 +56,15 @@ function enqueueInfo(run) {
 }
 
 async function hlInfoOnce(body, attempt = 0) {
-  while (infoPaused) await sleep(200);
   const res = await fetch(HL_INFO, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 429 && attempt < 4) {
-    await sleep(2500 * (attempt + 1));
+  if (res.status === 429 && attempt < 5) {
+    // Release queue pressure during backoff by sleeping outside a held slot:
+    // caller still holds the slot, so keep backoff moderate.
+    await sleep(1200 * (attempt + 1));
     return hlInfoOnce(body, attempt + 1);
   }
   if (!res.ok) {
@@ -84,12 +92,27 @@ function settledValue(result, label, errors) {
 export async function loadAccount(address) {
   const errors = [];
   // Two at a time (queue also caps). Balances first so Available to Trade fills.
-  const bal = await Promise.allSettled([
+  let bal = await Promise.allSettled([
     hlInfo({ type: "clearinghouseState", user: address }),
     hlInfo({ type: "spotClearinghouseState", user: address }),
   ]);
-  const perps = settledValue(bal[0], "clearinghouseState", errors);
-  const spot = settledValue(bal[1], "spotClearinghouseState", errors);
+  let perps = settledValue(bal[0], "clearinghouseState", errors);
+  let spot = settledValue(bal[1], "spotClearinghouseState", errors);
+  if ((!perps || !spot) && errors.some((e) => /429|Too Many|HTTP 429/i.test(e))) {
+    await sleep(2000);
+    // Clear 429 noise for the retry labels.
+    for (let i = errors.length - 1; i >= 0; i--) {
+      if (/clearinghouseState|spotClearinghouseState/i.test(errors[i]) && /429|Too Many|HTTP 429/i.test(errors[i])) {
+        errors.splice(i, 1);
+      }
+    }
+    bal = await Promise.allSettled([
+      hlInfo({ type: "clearinghouseState", user: address }),
+      hlInfo({ type: "spotClearinghouseState", user: address }),
+    ]);
+    perps = settledValue(bal[0], "clearinghouseState", errors) || perps;
+    spot = settledValue(bal[1], "spotClearinghouseState", errors) || spot;
+  }
 
   const midAbs = await Promise.allSettled([
     hlInfo({ type: "userAbstraction", user: address }),

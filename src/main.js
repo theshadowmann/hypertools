@@ -201,25 +201,33 @@ async function refreshAccount(address) {
     if (el.loading) el.loading.classList.remove("hidden");
     if (el.errorBanner) el.errorBanner.classList.add("hidden");
   }
+  const emptyExtras = {
+    historicalOrders: [],
+    fundingHistory: [],
+    twapHistory: [],
+    twapFills: [],
+    userFees: null,
+  };
+  const prev = state.data;
   try {
-    const emptyExtras = {
-      historicalOrders: [],
-      fundingHistory: [],
-      twapHistory: [],
-      twapFills: [],
-      userFees: null,
-    };
-    const [acct, extra, mkts] = await Promise.all([
-      loadAccount(address),
-      loadTradeExtras(address).catch(() => emptyExtras),
-      state.markets && state.markets.length
-        ? Promise.resolve(state.markets)
-        : loadMarkets().catch(() => []),
-    ]);
-    const { data, errors } = acct;
+    // Account first — never race balances against markets/extras (that caused empty Available + No perps).
+    let acct = await loadAccount(address);
+    let { data, errors } = acct;
+    if ((!data.perps || !data.spot) && errors.some((e) => /429|Too Many|HTTP 429/i.test(e))) {
+      await new Promise((r) => setTimeout(r, 2500));
+      acct = await loadAccount(address);
+      data = acct.data;
+      errors = acct.errors;
+    }
+    // Keep last good clearinghouse if this pass still failed those fields.
+    if (prev && typeof prev === "object") {
+      if (!data.perps && prev.perps) data = { ...data, perps: prev.perps };
+      if (!data.spot && prev.spot) data = { ...data, spot: prev.spot };
+      if (data.abstraction == null && prev.abstraction != null) {
+        data = { ...data, abstraction: prev.abstraction };
+      }
+    }
     state.data = data;
-    state.extras = extra || emptyExtras;
-    if (mkts && mkts.length) state.markets = mkts;
     if (errors.length) {
       state.error =
         "Could not load some Hyperliquid data. " +
@@ -228,18 +236,45 @@ async function refreshAccount(address) {
     } else {
       state.error = null;
     }
+    state.loading = false;
+    renderChrome();
+    renderDashboard(el, state);
+    if (tradeView) tradeView.onData();
+
+    // Markets only if missing — after balances painted.
+    if (!(state.markets && state.markets.length)) {
+      try {
+        const mkts = await loadMarkets();
+        if (mkts && mkts.length) {
+          state.markets = mkts;
+          if (tradeView) tradeView.onData();
+          renderDashboard(el, state);
+        }
+      } catch {
+        /* markets optional on refresh; chart may already be up */
+      }
+    }
+
+    // History extras last — never block balances.
+    loadTradeExtras(address)
+      .catch(() => emptyExtras)
+      .then((extra) => {
+        state.extras = extra || emptyExtras;
+        if (tradeView) tradeView.onData();
+        renderDashboard(el, state);
+      });
   } catch (err) {
-    state.data = null;
-    state.extras = null;
+    if (!state.data) state.data = null;
+    state.extras = state.extras || emptyExtras;
     state.error =
       "Hyperliquid Info API request failed: " +
       ((err && err.message) || String(err)) +
       ". If this is CORS, your browser blocked the public API; we will not fake portfolio data.";
+    state.loading = false;
+    renderChrome();
+    renderDashboard(el, state);
+    if (tradeView) tradeView.onData();
   }
-  state.loading = false;
-  renderChrome();
-  renderDashboard(el, state);
-  if (tradeView) tradeView.onData();
 }
 
 function setAddress(address, source) {
