@@ -6,11 +6,15 @@ import {
   LIMIT_CLOSE_TIP,
   SKIP_MARKET_CLOSE_KEY,
   buildOutcomePositionsTable,
+  canCloseOutcomes,
   closeNotional,
+  closeOutcomeCloseAllModal,
   closeOutcomeCloseModal,
   closeSharesFromPct,
+  isOutcomeCloseAllModalOpen,
   isOutcomeCloseModalOpen,
   marketForOutcomeRow,
+  openCloseAllOutcomesModal,
   openOutcomeCloseModal,
   outcomeCloseLeg,
   outcomeSizeLabel,
@@ -22,7 +26,16 @@ import {
 
 afterEach(() => {
   closeOutcomeCloseModal();
+  closeOutcomeCloseAllModal();
   document.body.innerHTML = "";
+});
+
+describe("outcome close gates", () => {
+  it("gates close to connected wallets only", () => {
+    expect(canCloseOutcomes({ source: "wallet", provider: {}, address: "0x1" })).toBe(true);
+    expect(canCloseOutcomes({ source: "paste", provider: null, address: "0x1" })).toBe(false);
+    expect(canCloseOutcomes({ source: "wallet", provider: null, address: "0x1" })).toBe(false);
+  });
 });
 
 describe("outcome close math", () => {
@@ -85,24 +98,66 @@ describe("outcome close table and modals", () => {
     marketId: "outcome:1457:0",
   };
 
-  it("renders Size as 25 Yes and cyan Limit + Market with the Limit tooltip", () => {
-    const table = buildOutcomePositionsTable([row], { showClose: true });
+  it("renders Size as 25 Yes, Limit + Market, and Close All with the Limit tooltip", () => {
+    let closeAll = 0;
+    const table = buildOutcomePositionsTable([row], {
+      showClose: true,
+      onCloseAll: () => {
+        closeAll += 1;
+      },
+    });
     expect(table.querySelector("th").textContent).toBe("Market");
     expect([...table.querySelectorAll("th")].map((t) => t.textContent)).toContain("Available Size");
     expect(table.textContent).toContain("25 Yes");
     expect(table.textContent).not.toContain("+14570");
+    expect(table.textContent).toContain("Close All");
     const limit = [...table.querySelectorAll("button")].find((b) => b.textContent === "Limit");
     const market = [...table.querySelectorAll("button")].find((b) => b.textContent === "Market");
+    const allBtn = [...table.querySelectorAll("button")].find((b) => b.textContent === "Close All");
     expect(limit.title).toBe(LIMIT_CLOSE_TIP);
     expect(limit.className).toMatch(/orders-cancel/);
     expect(market.className).toMatch(/out-close/);
+    expect(allBtn.className).toMatch(/orders-cancel/);
     expect(table.querySelectorAll(".out-close").length).toBe(2);
+    allBtn.click();
+    expect(closeAll).toBe(1);
+  });
+
+  it("omits Close All when onCloseAll is missing even if showClose", () => {
+    const table = buildOutcomePositionsTable([row], { showClose: true });
+    expect([...table.querySelectorAll("button")].some((b) => b.textContent === "Close All")).toBe(false);
+    expect([...table.querySelectorAll("button")].some((b) => b.textContent === "Limit")).toBe(true);
+  });
+
+  it("disables Close All and row actions while closeBusy", () => {
+    const table = buildOutcomePositionsTable([row], {
+      showClose: true,
+      closeBusy: true,
+      onCloseAll: () => {},
+    });
+    const buttons = [...table.querySelectorAll("button")].filter((b) =>
+      ["Limit", "Market", "Close All"].includes(b.textContent)
+    );
+    expect(buttons.length).toBe(3);
+    expect(buttons.every((b) => b.disabled)).toBe(true);
+  });
+
+  it("opens Close All confirm modal", () => {
+    openCloseAllOutcomesModal({ rows: [row] });
+    expect(isOutcomeCloseAllModalOpen()).toBe(true);
+    const modal = document.getElementById("ht-out-close-all-modal");
+    expect(modal.textContent).toContain("Close All");
+    expect(modal.textContent).toContain("Market close all outcome positions?");
+    expect(modal.querySelector("#out-close-all-submit").textContent).toBe("Market Close All");
+    closeOutcomeCloseAllModal();
+    expect(isOutcomeCloseAllModalOpen()).toBe(false);
   });
 
   it("omits close actions when showClose is false", () => {
-    const table = buildOutcomePositionsTable([row], { showClose: false });
+    const table = buildOutcomePositionsTable([row], { showClose: false, onCloseAll: () => {} });
     expect([...table.querySelectorAll("button")].some((b) => b.textContent === "Limit")).toBe(false);
     expect([...table.querySelectorAll("button")].some((b) => b.textContent === "Market")).toBe(false);
+    expect([...table.querySelectorAll("button")].some((b) => b.textContent === "Close All")).toBe(false);
     expect(table.querySelector(".out-close")).toBeNull();
   });
 

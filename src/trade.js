@@ -84,6 +84,7 @@ import {
 import {
   buildOutcomePositionsTable,
   canCloseOutcomes,
+  closeAllOutcomes,
   isOutcomeCloseBusy,
   outcomeCloseBusyCoin,
   startOutcomeClose,
@@ -1622,6 +1623,17 @@ export function createTradeView(app) {
         onTitleClick: (p) => jumpToOutcome(p),
         onLimit: (p) => startOutcomeClose({ kind: "limit", ...closeOutcomeOpts(p) }).then(() => renderOutcomes()),
         onMarket: (p) => startOutcomeClose({ kind: "market", ...closeOutcomeOpts(p) }).then(() => renderOutcomes()),
+        onCloseAll: () =>
+          closeAllOutcomes({
+            rows,
+            markets,
+            onSuccess: async () => {
+              await refreshUserTables();
+            },
+            onSettled: () => {
+              renderOutcomes();
+            },
+          }).then(() => renderOutcomes()),
       })
     );
   }

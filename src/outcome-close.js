@@ -21,7 +21,9 @@ import { DEFAULT_MAX_SLIPPAGE } from "./ticket-math.js";
 
 export const SKIP_MARKET_CLOSE_KEY = "ht-skip-outcome-market-close";
 export const OUTCOME_CLOSE_MODAL_ID = "ht-out-close-modal";
+export const OUTCOME_CLOSE_ALL_MODAL_ID = "ht-out-close-all-modal";
 export const LIMIT_CLOSE_TIP = "Close at a limit price";
+export const CLOSE_ALL_GAP_MS = 550;
 
 export const OUTCOME_POS_HEADERS = [
   "Market",
@@ -36,6 +38,7 @@ export const OUTCOME_POS_HEADERS = [
 let getApp = () => null;
 let closeBusy = false;
 let closeBusyCoin = "";
+let closeAllBusy = false;
 let activeOpts = null;
 
 export function bindOutcomeCloseApp(fn) {
@@ -43,7 +46,11 @@ export function bindOutcomeCloseApp(fn) {
 }
 
 export function isOutcomeCloseBusy() {
-  return closeBusy;
+  return closeBusy || closeAllBusy;
+}
+
+export function isOutcomeCloseAllBusy() {
+  return closeAllBusy;
 }
 
 export function outcomeCloseBusyCoin() {
@@ -202,6 +209,10 @@ function reduceOnlyRejected(err) {
   return /reduce.?only/i.test(String((err && err.message) || err || ""));
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function submitOutcomeClose({
   kind,
   row,
@@ -271,6 +282,37 @@ export function closeOutcomeCloseModal() {
   activeOpts = null;
 }
 
+export function isOutcomeCloseAllModalOpen() {
+  const el = typeof document !== "undefined" ? document.getElementById(OUTCOME_CLOSE_ALL_MODAL_ID) : null;
+  return !!(el && el.classList.contains("is-open"));
+}
+
+export function closeOutcomeCloseAllModal() {
+  const overlay = typeof document !== "undefined" ? document.getElementById(OUTCOME_CLOSE_ALL_MODAL_ID) : null;
+  if (overlay) overlay.classList.remove("is-open");
+}
+
+function ensureCloseAllModal() {
+  if (typeof document === "undefined") return null;
+  let overlay = document.getElementById(OUTCOME_CLOSE_ALL_MODAL_ID);
+  if (overlay) return overlay;
+  overlay = document.createElement("div");
+  overlay.id = OUTCOME_CLOSE_ALL_MODAL_ID;
+  overlay.className = "out-close-modal";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-labelledby", "out-close-all-title");
+  const panel = document.createElement("div");
+  panel.className = "out-close-panel";
+  panel.setAttribute("data-ht-panel", "1");
+  overlay.appendChild(panel);
+  overlay.addEventListener("click", (ev) => {
+    if (ev.target === overlay) closeOutcomeCloseAllModal();
+  });
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
 function ensureModal() {
   if (typeof document === "undefined") return null;
   let overlay = document.getElementById(OUTCOME_CLOSE_MODAL_ID);
@@ -291,7 +333,9 @@ function ensureModal() {
   if (!document._htOutCloseEsc) {
     document._htOutCloseEsc = true;
     document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape" && isOutcomeCloseModalOpen()) closeOutcomeCloseModal();
+      if (ev.key !== "Escape") return;
+      if (isOutcomeCloseAllModalOpen()) closeOutcomeCloseAllModal();
+      else if (isOutcomeCloseModalOpen()) closeOutcomeCloseModal();
     });
   }
   document.body.appendChild(overlay);
@@ -444,7 +488,7 @@ function paintModal(overlay, opts) {
   );
 
   async function onConfirm() {
-    if (closeBusy) return;
+    if (closeBusy || closeAllBusy) return;
     const sess = session();
     if (!canCloseOutcomes(sess)) {
       closeOutcomeCloseModal();
@@ -626,6 +670,155 @@ export async function startOutcomeClose(opts) {
   return { opened: true };
 }
 
+export async function runCloseAllOutcomes({
+  rows,
+  markets,
+  gapMs,
+  onStatus,
+  onSuccess,
+  onSettled,
+} = {}) {
+  const sess = session();
+  assertCanTrade(sess.source);
+  if (!canCloseOutcomes(sess)) throw new Error("Connect a wallet to place orders.");
+  const list = (rows || []).filter((r) => Number(r && r.available) > 0);
+  if (!list.length) throw new Error("No open outcomes to close.");
+  const gap = Number(gapMs);
+  const wait = Number.isFinite(gap) && gap >= 0 ? gap : CLOSE_ALL_GAP_MS;
+  const status = onStatus || ((msg) => toast(msg));
+
+  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
+  if (!ready.feeOk || !ready.agentOk) {
+    await enableTrading({
+      provider: sess.provider,
+      address: sess.address,
+      onStatus: status,
+    });
+  }
+
+  closeAllBusy = true;
+  let ok = 0;
+  let failed = 0;
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const row = list[i];
+      closeBusyCoin = String(row.coin || "");
+      const label = row.title || row.coin || "position";
+      status("Closing " + label + " (" + (i + 1) + "/" + list.length + ")…");
+      const shares = closeSharesFromPct(row.available, 100);
+      try {
+        await submitOutcomeClose({
+          kind: "market",
+          row,
+          shares,
+          price: Number(row.markPx),
+          markets: markets || sess.markets,
+          onStatus: status,
+        });
+        ok += 1;
+      } catch (err) {
+        failed += 1;
+        toast(userMessage(err), "err");
+      }
+      if (i < list.length - 1) await sleep(wait);
+    }
+    if (failed && !ok) throw new Error("Close All failed.");
+    const msg =
+      failed > 0
+        ? "Closed " + ok + " of " + list.length + " positions."
+        : "Closed " + ok + " position" + (ok === 1 ? "" : "s") + ".";
+    toast(msg, failed ? "err" : "ok");
+    if (typeof onSuccess === "function") await onSuccess({ ok, failed, total: list.length });
+    if (sess.app && typeof sess.app.reloadAccount === "function") sess.app.reloadAccount();
+    return { ok, failed, total: list.length };
+  } finally {
+    closeAllBusy = false;
+    closeBusyCoin = "";
+    if (typeof onSettled === "function") onSettled();
+  }
+}
+
+export function openCloseAllOutcomesModal(opts) {
+  const overlay = ensureCloseAllModal();
+  if (!overlay) return null;
+  const rows = (opts && opts.rows) || [];
+  const panel = overlay.querySelector(".out-close-panel");
+  clear(panel);
+  const count = rows.filter((r) => Number(r && r.available) > 0).length;
+  panel.appendChild(
+    h(
+      "button",
+      { type: "button", class: "out-close-x", "aria-label": "Close", onClick: () => closeOutcomeCloseAllModal() },
+      "×"
+    )
+  );
+  panel.appendChild(h("h2", { id: "out-close-all-title", class: "out-close-title" }, "Close All"));
+  panel.appendChild(
+    h(
+      "p",
+      { class: "out-close-sub" },
+      "Market close all outcome positions?" +
+        (count ? " (" + count + " open)" : "") +
+        " This cannot be undone from this dialog."
+    )
+  );
+  const status = h("p", { class: "out-close-status", id: "out-close-all-status", role: "status" });
+  const submit = h(
+    "button",
+    { type: "button", class: "out-close-submit", id: "out-close-all-submit" },
+    "Market Close All"
+  );
+  submit.addEventListener("click", async () => {
+    if (closeBusy || closeAllBusy) return;
+    const sess = session();
+    if (!canCloseOutcomes(sess)) {
+      closeOutcomeCloseAllModal();
+      sess.app && sess.app.connectFromNav && sess.app.connectFromNav();
+      return;
+    }
+    submit.disabled = true;
+    status.textContent = "";
+    status.classList.remove("err", "ok");
+    try {
+      await runCloseAllOutcomes({
+        rows,
+        markets: opts.markets,
+        onStatus: (msg) => {
+          status.textContent = msg || "";
+          toast(msg);
+        },
+        onSuccess: opts.onSuccess,
+        onSettled: () => {
+          if (typeof opts.onSettled === "function") opts.onSettled();
+        },
+      });
+      closeOutcomeCloseAllModal();
+    } catch (err) {
+      const msg = userMessage(err);
+      status.textContent = msg;
+      status.classList.add("err");
+      toast(msg, "err");
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  panel.appendChild(submit);
+  panel.appendChild(status);
+  overlay.classList.add("is-open");
+  return overlay;
+}
+
+export async function closeAllOutcomes(opts) {
+  const sess = session();
+  if (!canCloseOutcomes(sess)) {
+    if (sess.app && sess.app.connectFromNav) sess.app.connectFromNav();
+    else toast("Connect a wallet to place orders.", "err");
+    return { opened: false };
+  }
+  openCloseAllOutcomesModal(opts || {});
+  return { opened: true };
+}
+
 export function buildOutcomePositionsTable(rows, opts = {}) {
   const showClose = !!opts.showClose;
   const busy = !!opts.closeBusy;
@@ -634,16 +827,33 @@ export function buildOutcomePositionsTable(rows, opts = {}) {
   const onTitle = opts.onTitleClick;
   const list = rows || [];
   const colSpan = String(OUTCOME_POS_HEADERS.length + (showClose ? 1 : 0));
-  const head = h(
-    "thead",
-    null,
-    h(
-      "tr",
-      null,
-      ...OUTCOME_POS_HEADERS.map((label) => h("th", null, label)),
-      showClose ? h("th", { class: "orders-cancel-h" }, "") : null
-    )
-  );
+  const showCloseAll = showClose && typeof opts.onCloseAll === "function" && list.length > 0;
+  const headCells = OUTCOME_POS_HEADERS.map((label) => h("th", null, label));
+  if (showClose) {
+    headCells.push(
+      h(
+        "th",
+        { class: "orders-cancel-h" },
+        showCloseAll
+          ? h(
+              "button",
+              {
+                type: "button",
+                class: "orders-cancel",
+                disabled: busy,
+                onClick: (ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  opts.onCloseAll();
+                },
+              },
+              "Close All"
+            )
+          : ""
+      )
+    );
+  }
+  const head = h("thead", null, h("tr", null, ...headCells));
   if (!list.length) {
     return h(
       "table",

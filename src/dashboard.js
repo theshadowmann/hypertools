@@ -16,6 +16,7 @@ import { outcomePositionsFromSpot } from "./outcomes.js";
 import {
   buildOutcomePositionsTable,
   canCloseOutcomes,
+  closeAllOutcomes,
   isOutcomeCloseBusy,
   outcomeCloseBusyCoin,
   startOutcomeClose,
@@ -524,6 +525,10 @@ function renderPortHist(state) {
     else {
       const rows = outcomePositionsFromSpot((data.spot && data.spot.balances) || [], state.markets || []);
       clear(outRoot);
+      const refreshOutcomes = () => {
+        const dash = document.getElementById("dashboard");
+        if (dash && dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
+      };
       outRoot.appendChild(
         buildOutcomePositionsTable(rows, {
           showClose: canCloseOutcomes(state),
@@ -535,21 +540,21 @@ function renderPortHist(state) {
               kind: "limit",
               row: p,
               markets: state.markets || [],
-              onSettled: () => {
-                const dash = document.getElementById("dashboard");
-                if (dash && dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
-              },
+              onSettled: refreshOutcomes,
             }),
           onMarket: (p) =>
             startOutcomeClose({
               kind: "market",
               row: p,
               markets: state.markets || [],
-              onSettled: () => {
-                const dash = document.getElementById("dashboard");
-                if (dash && dash._lastState) renderDashboard(dash._lastEl || {}, dash._lastState);
-              },
+              onSettled: refreshOutcomes,
             }),
+          onCloseAll: () =>
+            closeAllOutcomes({
+              rows,
+              markets: state.markets || [],
+              onSettled: refreshOutcomes,
+            }).then(refreshOutcomes),
         })
       );
     }
