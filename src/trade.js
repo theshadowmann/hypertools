@@ -2,7 +2,6 @@ import {
   bookLevels,
   hlInfo,
   loadDailyPrevDay,
-  loadTradeExtras,
 } from "./api.js";
 import { clear, h, note } from "./dom.js";
 import {
@@ -652,7 +651,14 @@ export function createTradeView(app) {
     const px = sizePx();
     const ntl = Number.isFinite(sz) && Number.isFinite(px) ? orderValue(sz, px) : NaN;
     const w = withdrawable();
-    setText("ticket-avail", Number.isFinite(w) ? fmtUsd(w) + " USDC" : "— USDC");
+    setText(
+      "ticket-avail",
+      Number.isFinite(w)
+        ? fmtUsd(w) + " USDC"
+        : app.state.coreLoading || (app.state.address && !app.state.data)
+          ? "Loading…"
+          : "— USDC"
+    );
     const pos = currentPos();
     const posSz = pos ? num(pos.szi) : 0;
     const unitName = isSpot()
@@ -1408,9 +1414,18 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load balances."));
       return;
     }
-    const perps = (app.state.data && app.state.data.perps) || {};
-    const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
-    const mids = (app.state.data && app.state.data.mids) || {};
+    const data = app.state.data;
+    if (app.state.coreLoading || !data) {
+      root.appendChild(emptyNote("Loading balances…"));
+      return;
+    }
+    if (data.perps == null && data.spot == null) {
+      root.appendChild(emptyNote("No balances."));
+      return;
+    }
+    const perps = data.perps || {};
+    const spot = (data.spot && data.spot.balances) || [];
+    const mids = data.mids || {};
     const spotForPage =
       pageKind === "outcome" ? spot.filter((b) => b && isOutcomePageBalance(b.coin)) : spot;
     const rows = buildBalanceRows({
@@ -1419,7 +1434,7 @@ export function createTradeView(app) {
       mids,
       markets,
       hideSmall: hideSmallBalances,
-      abstraction: app.state.data && app.state.data.abstraction,
+      abstraction: data.abstraction,
     });
     if (!rows.length) {
       root.appendChild(emptyNote("No balances."));
@@ -1495,9 +1510,18 @@ export function createTradeView(app) {
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load positions."));
       return;
     }
-    const perps = (app.state.data && app.state.data.perps) || {};
+    const data = app.state.data;
+    if (app.state.coreLoading || !data) {
+      root.appendChild(emptyNote("Loading positions…"));
+      return;
+    }
+    if (data.perps == null) {
+      root.appendChild(emptyNote("No open perps."));
+      return;
+    }
+    const perps = data.perps || {};
     const rows = positionRows(perps.assetPositions || []);
-    const mids = (app.state.data && app.state.data.mids) || {};
+    const mids = data.mids || {};
     if (!rows.length) {
       root.appendChild(emptyNote("No open perps."));
       return;
@@ -1958,23 +1982,37 @@ export function createTradeView(app) {
     }
   }
 
+  function whenCoreIdle(fn, tries = 0) {
+    if (!app.state.coreLoading || tries > 40) {
+      fn();
+      return;
+    }
+    setTimeout(() => whenCoreIdle(fn, tries + 1), 150);
+  }
+
   async function refreshUserTables() {
     if (!app.state.address) {
       extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: extras.userFees };
       renderBottom();
       return;
     }
+    // Do not compete with clearinghouse — wait until core balances have painted.
+    if (app.state.coreLoading) {
+      clearTimeout(refreshUserTables._wait);
+      refreshUserTables._wait = setTimeout(() => refreshUserTables(), 350);
+      return;
+    }
     try {
-      const [orders, fills, more] = await Promise.all([
+      const [orders, fills] = await Promise.all([
         hlInfo({ type: "frontendOpenOrders", user: app.state.address }),
         hlInfo({ type: "userFills", user: app.state.address }),
-        loadTradeExtras(app.state.address),
       ]);
       if (app.state.data) {
         app.state.data.openOrders = Array.isArray(orders) ? orders : [];
         app.state.data.fills = Array.isArray(fills) ? fills : [];
       }
-      extras = more;
+      // History extras come from main.refreshAccount — sync if already present.
+      if (app.state.extras) extras = app.state.extras;
     } catch {
       /* keep previous */
     }
@@ -2019,6 +2057,7 @@ export function createTradeView(app) {
       trades = mergeTrades(trades, incoming);
       renderTrades();
     });
+    whenCoreIdle(() => {
     hlInfo({ type: "recentTrades", coin: c })
       .then((rows) => {
         if (gen !== marketGen) return;
@@ -2031,6 +2070,7 @@ export function createTradeView(app) {
         tradesSnapshotDone = true;
         renderTrades();
       });
+    });
     paneTimer = setTimeout(() => {
       if (gen !== marketGen) return;
       bookSnapshotDone = true;
@@ -2144,11 +2184,20 @@ export function createTradeView(app) {
     ensureChart();
     subscribeMarket();
     const thisGen = marketGen;
-    const snap = await hlInfo({ type: "l2Book", coin }).catch(() => null);
-    if (thisGen !== marketGen) return;
-    bookSnapshotDone = true;
-    if (snap) book = bookLevels(snap);
-    renderBook();
+    whenCoreIdle(() => {
+      hlInfo({ type: "l2Book", coin })
+        .then((snap) => {
+          if (thisGen !== marketGen) return;
+          bookSnapshotDone = true;
+          if (snap) book = bookLevels(snap);
+          renderBook();
+        })
+        .catch(() => {
+          if (thisGen !== marketGen) return;
+          bookSnapshotDone = true;
+          renderBook();
+        });
+    });
   }
 
   function setOutcomeLeg(next) {
@@ -2182,16 +2231,18 @@ export function createTradeView(app) {
     updateEstimate();
     ensureChart();
     subscribeMarket();
-    hlInfo({ type: "l2Book", coin })
-      .then((snap) => {
-        if (snap) book = bookLevels(snap);
-        bookSnapshotDone = true;
-        renderBook();
-      })
-      .catch(() => {
-        bookSnapshotDone = true;
-        renderBook();
-      });
+    whenCoreIdle(() => {
+      hlInfo({ type: "l2Book", coin })
+        .then((snap) => {
+          if (snap) book = bookLevels(snap);
+          bookSnapshotDone = true;
+          renderBook();
+        })
+        .catch(() => {
+          bookSnapshotDone = true;
+          renderBook();
+        });
+    });
   }
 
   let bound = false;
@@ -2440,6 +2491,7 @@ export function createTradeView(app) {
       if (app.state.address) refreshUserTables();
     },
     onData() {
+      if (app.state.extras) extras = app.state.extras;
       syncLeverageFromPos();
       renderBottom();
       updateEstimate();

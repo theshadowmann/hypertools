@@ -1,6 +1,6 @@
 import "./style.css";
 import { wipeAgents } from "./agent-store.js";
-import { ADDR_RE, loadAccount, loadMarkets, loadTradeExtras } from "./api.js";
+import { ADDR_RE, loadAccountBook, loadAccountCore, loadAccountSlow, loadMarkets, loadTradeExtras } from "./api.js";
 import { renderDashboard } from "./dashboard.js";
 import { clear, h } from "./dom.js";
 import { truncAddr } from "./format.js";
@@ -33,6 +33,7 @@ const state = {
   extras: null,
   markets: [],
   loading: false,
+  coreLoading: false,
   error: null,
   view: "portfolio",
 };
@@ -194,13 +195,16 @@ function clearPasteError() {
 }
 
 async function refreshAccount(address) {
+  const gen = (refreshAccount._gen = (refreshAccount._gen || 0) + 1);
   state.loading = true;
+  state.coreLoading = true;
   state.error = null;
   renderChrome();
   if (state.view === "portfolio") {
     if (el.loading) el.loading.classList.remove("hidden");
     if (el.errorBanner) el.errorBanner.classList.add("hidden");
   }
+  if (tradeView) tradeView.onData();
   const emptyExtras = {
     historicalOrders: [],
     fundingHistory: [],
@@ -209,71 +213,118 @@ async function refreshAccount(address) {
     userFees: null,
   };
   const prev = state.data;
-  try {
-    // Account first — never race balances against markets/extras (that caused empty Available + No perps).
-    let acct = await loadAccount(address);
-    let { data, errors } = acct;
-    if ((!data.perps || !data.spot) && errors.some((e) => /429|Too Many|HTTP 429/i.test(e))) {
-      await new Promise((r) => setTimeout(r, 2500));
-      acct = await loadAccount(address);
-      data = acct.data;
-      errors = acct.errors;
+  const keepClearinghouse = (data) => {
+    if (!prev || typeof prev !== "object") return data;
+    let next = data;
+    if (!next.perps && prev.perps) next = { ...next, perps: prev.perps };
+    if (!next.spot && prev.spot) next = { ...next, spot: prev.spot };
+    if (next.abstraction == null && prev.abstraction != null) {
+      next = { ...next, abstraction: prev.abstraction };
     }
-    // Keep last good clearinghouse if this pass still failed those fields.
-    if (prev && typeof prev === "object") {
-      if (!data.perps && prev.perps) data = { ...data, perps: prev.perps };
-      if (!data.spot && prev.spot) data = { ...data, spot: prev.spot };
-      if (data.abstraction == null && prev.abstraction != null) {
-        data = { ...data, abstraction: prev.abstraction };
-      }
-    }
-    state.data = data;
-    if (errors.length) {
-      state.error =
-        "Could not load some Hyperliquid data. " +
-        errors.join(" · ") +
-        " If this is a browser CORS block, the request never reached Hyperliquid — we do not invent substitute numbers.";
-    } else {
-      state.error = null;
-    }
-    state.loading = false;
+    return next;
+  };
+  const paint = () => {
+    if (gen !== refreshAccount._gen) return;
     renderChrome();
     renderDashboard(el, state);
     if (tradeView) tradeView.onData();
+  };
+  const mergeErrors = (errors) => {
+    if (!errors || !errors.length) return;
+    state.error =
+      "Could not load some Hyperliquid data. " +
+      errors.join(" · ") +
+      " If this is a browser CORS block, the request never reached Hyperliquid — we do not invent substitute numbers.";
+  };
 
-    // Markets only if missing — after balances painted.
+  try {
+    // 1) Core balances/positions first — paint immediately.
+    let core = await loadAccountCore(address);
+    if (gen !== refreshAccount._gen) return;
+    let data = keepClearinghouse(core.data);
+    let errors = core.errors.slice();
+    if ((!data.perps || !data.spot) && errors.some((e) => /429|Too Many|HTTP 429/i.test(e))) {
+      await new Promise((r) => setTimeout(r, 600));
+      if (gen !== refreshAccount._gen) return;
+      core = await loadAccountCore(address);
+      if (gen !== refreshAccount._gen) return;
+      data = keepClearinghouse({ ...data, ...core.data });
+      errors = core.errors.slice();
+    }
+    // Preserve book/slow fields from prev while background stages catch up.
+    if (prev && typeof prev === "object") {
+      data = {
+        ...prev,
+        ...data,
+        openOrders: Array.isArray(prev.openOrders) ? prev.openOrders : data.openOrders,
+        fills: Array.isArray(prev.fills) ? prev.fills : data.fills,
+        mids: prev.mids && typeof prev.mids === "object" ? prev.mids : data.mids,
+        portfolio: prev.portfolio != null ? prev.portfolio : data.portfolio,
+        userFees: prev.userFees != null ? prev.userFees : data.userFees,
+        staking: prev.staking != null ? prev.staking : data.staking,
+        delegations: prev.delegations != null ? prev.delegations : data.delegations,
+        subAccounts: Array.isArray(prev.subAccounts) ? prev.subAccounts : data.subAccounts,
+      };
+      data = keepClearinghouse(data);
+    }
+    state.data = data;
+    state.coreLoading = false;
+    state.loading = false;
+    if (errors.length) mergeErrors(errors);
+    else state.error = null;
+    paint();
+
+    // 2) Orders/fills/mids in background (never block balances).
+    loadAccountBook(address)
+      .then((book) => {
+        if (gen !== refreshAccount._gen || !state.data) return;
+        state.data = { ...state.data, ...book.data };
+        if (book.errors.length) mergeErrors(book.errors);
+        paint();
+      })
+      .catch(() => {});
+
+    // 3) Markets only if missing — after core painted.
     if (!(state.markets && state.markets.length)) {
-      try {
-        const mkts = await loadMarkets();
-        if (mkts && mkts.length) {
+      loadMarkets()
+        .then((mkts) => {
+          if (gen !== refreshAccount._gen || !mkts || !mkts.length) return;
           state.markets = mkts;
-          if (tradeView) tradeView.onData();
-          renderDashboard(el, state);
-        }
-      } catch {
-        /* markets optional on refresh; chart may already be up */
-      }
+          paint();
+        })
+        .catch(() => {});
     }
 
-    // History extras last — never block balances.
-    loadTradeExtras(address)
-      .catch(() => emptyExtras)
-      .then((extra) => {
-        state.extras = extra || emptyExtras;
-        if (tradeView) tradeView.onData();
-        renderDashboard(el, state);
-      });
+    // 4) Portfolio chrome + trade history extras — delayed so they cannot starve core.
+    setTimeout(() => {
+      if (gen !== refreshAccount._gen) return;
+      loadAccountSlow(address)
+        .then((slow) => {
+          if (gen !== refreshAccount._gen || !state.data) return;
+          state.data = { ...state.data, ...slow.data };
+          if (slow.errors.length) mergeErrors(slow.errors);
+          paint();
+        })
+        .catch(() => {});
+      loadTradeExtras(address)
+        .catch(() => emptyExtras)
+        .then((extra) => {
+          if (gen !== refreshAccount._gen) return;
+          state.extras = extra || emptyExtras;
+          paint();
+        });
+    }, 400);
   } catch (err) {
+    if (gen !== refreshAccount._gen) return;
     if (!state.data) state.data = null;
     state.extras = state.extras || emptyExtras;
     state.error =
       "Hyperliquid Info API request failed: " +
       ((err && err.message) || String(err)) +
       ". If this is CORS, your browser blocked the public API; we will not fake portfolio data.";
+    state.coreLoading = false;
     state.loading = false;
-    renderChrome();
-    renderDashboard(el, state);
-    if (tradeView) tradeView.onData();
+    paint();
   }
 }
 
@@ -304,6 +355,7 @@ function disconnect() {
   state.extras = null;
   state.error = null;
   state.loading = false;
+  state.coreLoading = false;
   renderChrome();
   if (tradeView) tradeView.onAccount();
   if (state.view === "portfolio") {

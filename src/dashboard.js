@@ -443,7 +443,9 @@ function renderPortHist(state) {
   if (balRoot) {
     clear(balRoot);
     if (!connected) emptyHist(balRoot, "Connect wallet to view balances.");
-    else {
+    else if (state.coreLoading) {
+      emptyHist(balRoot, "Loading balances…");
+    } else {
       const rows = buildBalanceRows({
         perps: data.perps || {},
         spotBalances: (data.spot && data.spot.balances) || [],
@@ -477,7 +479,9 @@ function renderPortHist(state) {
     const posRoot = document.getElementById("port-positions");
   if (posRoot) {
     if (!connected) empty("port-positions", "positions");
-    else {
+    else if (state.coreLoading) {
+      emptyHist(posRoot, "Loading positions…");
+    } else {
       const rows = positionRows((data.perps && data.perps.assetPositions) || []);
       const mids = data.mids || {};
       if (!rows.length) emptyHist(posRoot, "No open perps.");

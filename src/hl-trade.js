@@ -92,8 +92,8 @@ export async function enableTrading({ provider, address, onStatus }) {
   assertCanTrade("wallet");
   if (!provider) throw new Error("Connect a wallet to trade.");
   const user = address;
-  // Stop balance/markets Info traffic while we talk to exchange + wallet.
-  pauseHlInfo(10000);
+  // Pause bulk Info only (markets/candles/history) — balances stay unblocked.
+  pauseHlInfo(6000);
 
   const existing = getAgent(user);
   if (existing && existing.privateKey) {

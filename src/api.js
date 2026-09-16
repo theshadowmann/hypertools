@@ -10,72 +10,104 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Max concurrent Info POSTs. HL 429s when the page fans out 10–20 at once. */
+/**
+ * Two-lane Info queue: critical (balances/clearinghouse) always drains before
+ * bulk (markets/candles/history). Global max 2 in-flight. Bulk lane can be
+ * paused without freezing balances. 429 backoff releases the slot.
+ */
 const INFO_MAX_INFLIGHT = 2;
 let infoInflight = 0;
-const infoWaiters = [];
-let infoPaused = false;
+const criticalWaiters = [];
+const bulkWaiters = [];
+let bulkPaused = false;
 
+/** Pause only the bulk lane — never blocks clearinghouse / balance fetches. */
 export function pauseHlInfo(ms = 8000) {
-  infoPaused = true;
+  bulkPaused = true;
   clearTimeout(pauseHlInfo._t);
   pauseHlInfo._t = setTimeout(() => {
-    infoPaused = false;
+    bulkPaused = false;
     pumpInfoQueue();
   }, ms);
 }
 
 function pumpInfoQueue() {
-  while (!infoPaused && infoInflight < INFO_MAX_INFLIGHT && infoWaiters.length) {
-    const next = infoWaiters.shift();
+  while (infoInflight < INFO_MAX_INFLIGHT && criticalWaiters.length) {
+    const next = criticalWaiters.shift();
+    infoInflight += 1;
+    next();
+  }
+  while (!bulkPaused && infoInflight < INFO_MAX_INFLIGHT && bulkWaiters.length) {
+    const next = bulkWaiters.shift();
     infoInflight += 1;
     next();
   }
 }
 
-function enqueueInfo(run) {
+function withInfoSlot(priority, fn) {
+  const critical = priority === "critical";
   return new Promise((resolve, reject) => {
     const start = () => {
-      // If pause flipped on after we were dequeued, release the slot and re-queue.
-      if (infoPaused) {
+      if (!critical && bulkPaused) {
         infoInflight -= 1;
-        infoWaiters.unshift(start);
+        bulkWaiters.unshift(start);
         return;
       }
       Promise.resolve()
-        .then(run)
+        .then(fn)
         .then(resolve, reject)
         .finally(() => {
           infoInflight -= 1;
           pumpInfoQueue();
         });
     };
-    infoWaiters.push(start);
+    if (critical) criticalWaiters.push(start);
+    else bulkWaiters.push(start);
     pumpInfoQueue();
   });
 }
 
-async function hlInfoOnce(body, attempt = 0) {
-  const res = await fetch(HL_INFO, {
+function criticalBackoffMs(attempt) {
+  return [400, 800, 1600, 1600][attempt] || 1600;
+}
+
+function bulkBackoffMs(attempt) {
+  return 1200 * (attempt + 1);
+}
+
+async function fetchInfoRaw(body) {
+  return fetch(HL_INFO, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 429 && attempt < 5) {
-    // Release queue pressure during backoff by sleeping outside a held slot:
-    // caller still holds the slot, so keep backoff moderate.
-    await sleep(1200 * (attempt + 1));
-    return hlInfoOnce(body, attempt + 1);
-  }
-  if (!res.ok) {
-    throw new Error("HTTP " + res.status + " from Hyperliquid Info API");
-  }
-  return res.json();
 }
 
-/** Queued Info POST with backoff on HTTP 429. */
-export function hlInfo(body) {
-  return enqueueInfo(() => hlInfoOnce(body));
+/**
+ * Queued Info POST. opts.priority: "critical" | "bulk" (default).
+ * Slot is released during 429 backoff so balances are not stuck behind retries.
+ */
+export function hlInfo(body, opts = {}) {
+  const priority = opts.priority === "critical" ? "critical" : "bulk";
+  const maxTries = priority === "critical" ? 4 : 6;
+
+  async function attempt(n) {
+    const res = await withInfoSlot(priority, () => fetchInfoRaw(body));
+    if (res.status === 429 && n < maxTries - 1) {
+      const delay = priority === "critical" ? criticalBackoffMs(n) : bulkBackoffMs(n);
+      await sleep(delay);
+      return attempt(n + 1);
+    }
+    if (!res.ok) {
+      throw new Error("HTTP " + res.status + " from Hyperliquid Info API");
+    }
+    return res.json();
+  }
+  return attempt(0);
+}
+
+export function hlInfoCritical(body) {
+  return hlInfo(body, { priority: "critical" });
 }
 
 function settledValue(result, label, errors) {
@@ -85,92 +117,149 @@ function settledValue(result, label, errors) {
   return null;
 }
 
+function emptyAccountShell() {
+  return {
+    perps: null,
+    spot: null,
+    staking: null,
+    delegations: null,
+    mids: {},
+    validatorNames: {},
+    openOrders: [],
+    fills: [],
+    portfolio: null,
+    userFees: null,
+    userVaultEquities: [],
+    leadingVaults: [],
+    subAccounts: [],
+    abstraction: null,
+  };
+}
+
 /**
- * Trade/portfolio hot path. Keep this small — a 14-way Info burst trips HL 429s
- * and then balances + Enable trading both fail for the same reason.
+ * Fast path: only what Available to Trade / Balances / Positions need.
+ * Paint as soon as this returns — do not wait for orders/fills/portfolio.
  */
-export async function loadAccount(address) {
+export async function loadAccountCore(address) {
   const errors = [];
-  // Two at a time (queue also caps). Balances first so Available to Trade fills.
   let bal = await Promise.allSettled([
-    hlInfo({ type: "clearinghouseState", user: address }),
-    hlInfo({ type: "spotClearinghouseState", user: address }),
+    hlInfo({ type: "clearinghouseState", user: address }, { priority: "critical" }),
+    hlInfo({ type: "spotClearinghouseState", user: address }, { priority: "critical" }),
+    hlInfo({ type: "userAbstraction", user: address }, { priority: "critical" }),
   ]);
   let perps = settledValue(bal[0], "clearinghouseState", errors);
   let spot = settledValue(bal[1], "spotClearinghouseState", errors);
+  let abstraction = bal[2].status === "fulfilled" ? bal[2].value : null;
+
   if ((!perps || !spot) && errors.some((e) => /429|Too Many|HTTP 429/i.test(e))) {
-    await sleep(2000);
-    // Clear 429 noise for the retry labels.
+    await sleep(500);
     for (let i = errors.length - 1; i >= 0; i--) {
       if (/clearinghouseState|spotClearinghouseState/i.test(errors[i]) && /429|Too Many|HTTP 429/i.test(errors[i])) {
         errors.splice(i, 1);
       }
     }
     bal = await Promise.allSettled([
-      hlInfo({ type: "clearinghouseState", user: address }),
-      hlInfo({ type: "spotClearinghouseState", user: address }),
+      hlInfo({ type: "clearinghouseState", user: address }, { priority: "critical" }),
+      hlInfo({ type: "spotClearinghouseState", user: address }, { priority: "critical" }),
+      abstraction == null
+        ? hlInfo({ type: "userAbstraction", user: address }, { priority: "critical" })
+        : Promise.resolve(abstraction),
     ]);
     perps = settledValue(bal[0], "clearinghouseState", errors) || perps;
     spot = settledValue(bal[1], "spotClearinghouseState", errors) || spot;
-  }
-
-  const midAbs = await Promise.allSettled([
-    hlInfo({ type: "userAbstraction", user: address }),
-    hlInfo({ type: "allMids" }),
-  ]);
-  const abstraction = midAbs[0].status === "fulfilled" ? midAbs[0].value : null;
-  const mids = settledValue(midAbs[1], "allMids", errors);
-
-  const book = await Promise.allSettled([
-    hlInfo({ type: "frontendOpenOrders", user: address }),
-    hlInfo({ type: "userFills", user: address }),
-  ]);
-  const openOrders = settledValue(book[0], "frontendOpenOrders", errors);
-  const fills = settledValue(book[1], "userFills", errors);
-
-  // Portfolio chrome last — skip if we already tripped rate limits.
-  let portfolio = null;
-  let userFees = null;
-  let staking = null;
-  let dels = null;
-  let subAccounts = [];
-  if (!errors.some((e) => /429|Too Many/i.test(e))) {
-    await sleep(400);
-    const slow = await Promise.allSettled([
-      hlInfo({ type: "portfolio", user: address }),
-      hlInfo({ type: "userFees", user: address }),
-    ]);
-    portfolio = settledValue(slow[0], "portfolio", errors);
-    userFees = settledValue(slow[1], "userFees", errors);
-    await sleep(300);
-    const slow2 = await Promise.allSettled([
-      hlInfo({ type: "delegatorSummary", user: address }),
-      hlInfo({ type: "delegations", user: address }),
-      hlInfo({ type: "subAccounts", user: address }),
-    ]);
-    staking = settledValue(slow2[0], "delegatorSummary", errors);
-    dels = settledValue(slow2[1], "delegations", errors);
-    subAccounts = settledValue(slow2[2], "subAccounts", errors);
+    if (bal[2].status === "fulfilled") abstraction = bal[2].value;
   }
 
   return {
     data: {
+      ...emptyAccountShell(),
       perps,
       spot,
-      staking,
-      delegations: Array.isArray(dels) ? dels : dels == null ? null : [],
-      mids: mids && typeof mids === "object" ? mids : {},
-      validatorNames: {},
-      openOrders: Array.isArray(openOrders) ? openOrders : [],
-      fills: Array.isArray(fills) ? fills : [],
-      portfolio,
-      userFees: userFees && typeof userFees === "object" ? userFees : null,
-      userVaultEquities: [],
-      leadingVaults: [],
-      subAccounts: Array.isArray(subAccounts) ? subAccounts : [],
       abstraction,
     },
     errors,
+  };
+}
+
+/** Open orders, fills, mids — after core has painted. */
+export async function loadAccountBook(address) {
+  const errors = [];
+  const book = await Promise.allSettled([
+    hlInfo({ type: "frontendOpenOrders", user: address }),
+    hlInfo({ type: "userFills", user: address }),
+    hlInfo({ type: "allMids" }),
+  ]);
+  const openOrders = settledValue(book[0], "frontendOpenOrders", errors);
+  const fills = settledValue(book[1], "userFills", errors);
+  const mids = settledValue(book[2], "allMids", errors);
+  return {
+    data: {
+      openOrders: Array.isArray(openOrders) ? openOrders : [],
+      fills: Array.isArray(fills) ? fills : [],
+      mids: mids && typeof mids === "object" ? mids : {},
+    },
+    errors,
+  };
+}
+
+/** Portfolio chrome — lowest priority; skip-friendly on 429. */
+export async function loadAccountSlow(address) {
+  const errors = [];
+  await sleep(300);
+  const slow = await Promise.allSettled([
+    hlInfo({ type: "portfolio", user: address }),
+    hlInfo({ type: "userFees", user: address }),
+  ]);
+  const portfolio = settledValue(slow[0], "portfolio", errors);
+  const userFees = settledValue(slow[1], "userFees", errors);
+  if (errors.some((e) => /429|Too Many/i.test(e))) {
+    return {
+      data: {
+        portfolio,
+        userFees: userFees && typeof userFees === "object" ? userFees : null,
+        staking: null,
+        delegations: null,
+        subAccounts: [],
+      },
+      errors,
+    };
+  }
+  await sleep(250);
+  const slow2 = await Promise.allSettled([
+    hlInfo({ type: "delegatorSummary", user: address }),
+    hlInfo({ type: "delegations", user: address }),
+    hlInfo({ type: "subAccounts", user: address }),
+  ]);
+  const staking = settledValue(slow2[0], "delegatorSummary", errors);
+  const dels = settledValue(slow2[1], "delegations", errors);
+  const subAccounts = settledValue(slow2[2], "subAccounts", errors);
+  return {
+    data: {
+      portfolio,
+      userFees: userFees && typeof userFees === "object" ? userFees : null,
+      staking,
+      delegations: Array.isArray(dels) ? dels : dels == null ? null : [],
+      subAccounts: Array.isArray(subAccounts) ? subAccounts : [],
+    },
+    errors,
+  };
+}
+
+/**
+ * Full account load (core + book + slow). Prefer loadAccountCore + background
+ * stages in UI refresh paths so balances paint in ~1–3s.
+ */
+export async function loadAccount(address) {
+  const core = await loadAccountCore(address);
+  const book = await loadAccountBook(address);
+  const slow = await loadAccountSlow(address);
+  return {
+    data: {
+      ...core.data,
+      ...book.data,
+      ...slow.data,
+    },
+    errors: [...core.errors, ...book.errors, ...slow.errors],
   };
 }
 
