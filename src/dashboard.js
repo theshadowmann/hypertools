@@ -8,6 +8,7 @@ import {
   num,
   pnlClass,
 } from "./format.js";
+import { buildTradeHistoryTable } from "./fills.js";
 import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import { setOpenOrdersTabLabel } from "./open-orders.js";
@@ -332,7 +333,7 @@ function bindPortHistOnce() {
     dash.querySelectorAll("[data-port-tab]").forEach((b) => {
       b.setAttribute("aria-selected", b.getAttribute("data-port-tab") === portHistTab ? "true" : "false");
     });
-    ["balances", "positions", "outcomes", "orders", "twap", "funding", "history"].forEach((id) => {
+    ["balances", "positions", "outcomes", "orders", "twap", "fills", "funding", "history"].forEach((id) => {
       const pane = document.getElementById("port-" + id);
       if (pane) pane.classList.toggle("hidden", id !== portHistTab);
     });
@@ -617,6 +618,37 @@ function renderPortHist(state) {
     }
   }
 
+  const fillsRoot = document.getElementById("port-fills");
+  if (fillsRoot) {
+    if (!connected) empty("port-fills", "trade history");
+    else if (state.coreLoading) {
+      emptyHist(fillsRoot, "Loading trade history…");
+    } else {
+      const fills = (data.fills && Array.isArray(data.fills) ? data.fills : []).slice();
+      if (!fills.length) emptyHist(fillsRoot, "No trades yet.");
+      else {
+        clear(fillsRoot);
+        const markets = state.markets || [];
+        fillsRoot.appendChild(
+          buildTradeHistoryTable(h, fills, {
+            marketLabel: (f) => {
+              const coin = f && f.coin;
+              const m = markets.find(
+                (x) =>
+                  x &&
+                  (x.coin === coin ||
+                    x.noCoin === coin ||
+                    x.balanceCoin === coin ||
+                    x.id === coin)
+              );
+              if (m && m.kind === "outcome") return m.pair || coin || "—";
+              return coin || "—";
+            },
+          })
+        );
+      }
+    }
+  }
   const fundRoot = document.getElementById("port-funding");
   if (fundRoot) {
     if (!connected) empty("port-funding", "funding history");

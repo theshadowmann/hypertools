@@ -107,6 +107,10 @@ import {
   tradeHashHref,
   tradeIsBuy,
 } from "./book.js";
+import {
+  buildTradeHistoryTable,
+  filterFillsByPage,
+} from "./fills.js";
 
 function byId(id) {
   return document.getElementById(id);
@@ -156,6 +160,7 @@ export function createTradeView(app) {
   let twaps = [];
   let extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: null };
   let bottomTab = "balances";
+  let fillsTabEnsured = false;
   let hideSmallBalances = true;
   let cancelBusy = false;
   let outcomeSideFilter = "all";
@@ -1791,6 +1796,35 @@ export function createTradeView(app) {
     root.appendChild(histTable(["Coin", "Side", "Size", "Minutes", "Status", ""], rows));
   }
 
+  function renderFills() {
+    const root = byId("trade-fills");
+    if (!root) return;
+    clear(root);
+    if (!app.state.address) {
+      root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load trade history."));
+      return;
+    }
+    if (app.state.coreLoading) {
+      root.appendChild(emptyNote("Loading trade history…"));
+      return;
+    }
+    const all = (app.state.data && app.state.data.fills) || [];
+    const fills = filterFillsByPage(all, pageKind === "outcome" ? "outcome" : "trade");
+    if (!fills.length) {
+      root.appendChild(emptyNote("No trades yet."));
+      return;
+    }
+    root.appendChild(
+      buildTradeHistoryTable(h, fills, {
+        outcome: pageKind === "outcome",
+        marketLabel: (f) => {
+          const m = marketForCoin(f && f.coin);
+          if (m && m.kind === "outcome") return m.pair || f.coin || "—";
+          return (f && f.coin) || "—";
+        },
+      })
+    );
+  }
   function renderFunding() {
     const root = byId("trade-funding");
     if (!root) return;
@@ -1896,6 +1930,7 @@ export function createTradeView(app) {
     renderOutcomes();
     renderOrders();
     renderTwap();
+    renderFills();
     renderFunding();
     renderHistory();
   }
@@ -1990,8 +2025,33 @@ export function createTradeView(app) {
     setTimeout(() => whenCoreIdle(fn, tries + 1), 150);
   }
 
+  async function ensureTradeFills() {
+    if (!app.state.address) {
+      renderFills();
+      return;
+    }
+    const existing = (app.state.data && app.state.data.fills) || [];
+    if (fillsTabEnsured || existing.length) {
+      renderFills();
+      return;
+    }
+    fillsTabEnsured = true;
+    const root = byId("trade-fills");
+    if (root) {
+      clear(root);
+      root.appendChild(emptyNote("Loading trade history…"));
+    }
+    try {
+      const fills = await hlInfo({ type: "userFills", user: app.state.address });
+      if (app.state.data) app.state.data.fills = Array.isArray(fills) ? fills : [];
+    } catch {
+      /* keep previous */
+    }
+    renderFills();
+  }
   async function refreshUserTables() {
     if (!app.state.address) {
+      fillsTabEnsured = false;
       extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: extras.userFees };
       renderBottom();
       return;
@@ -2408,11 +2468,12 @@ export function createTradeView(app) {
         document.querySelectorAll("[data-bottom-tab]").forEach((b) => {
           b.setAttribute("aria-selected", b.getAttribute("data-bottom-tab") === bottomTab ? "true" : "false");
         });
-        ["balances", "positions", "outcomes", "orders", "twap", "funding", "history"].forEach((id) => {
+        ["balances", "positions", "outcomes", "orders", "twap", "fills", "funding", "history"].forEach((id) => {
           byId("trade-" + id)?.classList.toggle("hidden", id !== bottomTab);
         });
         byId("bal-hide-wrap")?.classList.toggle("hidden", bottomTab !== "balances");
         byId("out-filter-wrap")?.classList.toggle("hidden", bottomTab !== "outcomes");
+        if (bottomTab === "fills") ensureTradeFills();
       });
     });
     byId("bal-hide-small")?.addEventListener("change", (ev) => {
@@ -2468,7 +2529,7 @@ export function createTradeView(app) {
         document.querySelectorAll("[data-bottom-tab]").forEach((b) => {
           b.setAttribute("aria-selected", b.getAttribute("data-bottom-tab") === bottomTab ? "true" : "false");
         });
-        ["balances", "positions", "outcomes", "orders", "twap", "funding", "history"].forEach((id) => {
+        ["balances", "positions", "outcomes", "orders", "twap", "fills", "funding", "history"].forEach((id) => {
           byId("trade-" + id)?.classList.toggle("hidden", id !== bottomTab);
         });
         byId("bal-hide-wrap")?.classList.toggle("hidden", true);
@@ -2484,6 +2545,7 @@ export function createTradeView(app) {
     },
     onAccount() {
       enabled = false;
+      fillsTabEnsured = false;
       refreshEnabled();
       subscribeUser();
       renderBottom();
