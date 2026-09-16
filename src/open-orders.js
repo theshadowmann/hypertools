@@ -1,13 +1,21 @@
-/** Tab copy: always include the live count, including zero. */
-export function openOrdersTabLabel(count) {
+/** HL-style hist tab label: omit (n) when count is 0. */
+export function histTabLabel(base, count) {
   const n = Number(count);
   const k = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
-  return "Open Orders (" + k + ")";
+  return k > 0 ? base + " (" + k + ")" : String(base);
+}
+
+export function setHistTabLabel(btn, base, count) {
+  if (!btn) return;
+  btn.textContent = histTabLabel(base, count);
+}
+
+export function openOrdersTabLabel(count) {
+  return histTabLabel("Open Orders", count);
 }
 
 export function setOpenOrdersTabLabel(btn, count) {
-  if (!btn) return;
-  btn.textContent = openOrdersTabLabel(count);
+  setHistTabLabel(btn, "Open Orders", count);
 }
 
 /**

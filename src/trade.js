@@ -67,7 +67,7 @@ import {
 } from "./markets.js";
 import { applyTicketKind, setCoinIcon } from "./ticket-ui.js";
 import { buildBalanceRows, formatPnlPct, perpsAvailableCollateral, spotUsdcParts } from "./balances.js";
-import { cancelAllCancels, setOpenOrdersTabLabel } from "./open-orders.js";
+import { cancelAllCancels, setHistTabLabel } from "./open-orders.js";
 import {
   formatChancePct,
   formatOutcomeCountdown,
@@ -1417,15 +1417,18 @@ export function createTradeView(app) {
     clear(root);
     byId("bal-hide-wrap")?.classList.toggle("hidden", bottomTab !== "balances");
     if (!app.state.address) {
+      paintBottomTab("balances", "Balances", 0);
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load balances."));
       return;
     }
     const data = app.state.data;
     if (app.state.coreLoading || !data) {
+      paintBottomTab("balances", "Balances", 0);
       root.appendChild(emptyNote("Loading balances…"));
       return;
     }
     if (data.perps == null && data.spot == null) {
+      paintBottomTab("balances", "Balances", 0);
       root.appendChild(emptyNote("No balances."));
       return;
     }
@@ -1442,6 +1445,7 @@ export function createTradeView(app) {
       hideSmall: hideSmallBalances,
       abstraction: data.abstraction,
     });
+    paintBottomTab("balances", "Balances", rows.length);
     if (!rows.length) {
       root.appendChild(emptyNote("No balances."));
       return;
@@ -1513,21 +1517,25 @@ export function createTradeView(app) {
     if (!root) return;
     clear(root);
     if (!app.state.address) {
+      paintBottomTab("positions", "Positions", 0);
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load positions."));
       return;
     }
     const data = app.state.data;
     if (app.state.coreLoading || !data) {
+      paintBottomTab("positions", "Positions", 0);
       root.appendChild(emptyNote("Loading positions…"));
       return;
     }
     if (data.perps == null) {
+      paintBottomTab("positions", "Positions", 0);
       root.appendChild(emptyNote("No open perps."));
       return;
     }
     const perps = data.perps || {};
     const rows = positionRows(perps.assetPositions || []);
     const mids = data.mids || {};
+    paintBottomTab("positions", "Positions", rows.length);
     if (!rows.length) {
       root.appendChild(emptyNote("No open perps."));
       return;
@@ -1604,13 +1612,16 @@ export function createTradeView(app) {
     });
     const showClose = canCloseOutcomes(app.state);
     if (!app.state.address) {
+      paintBottomTab("outcomes", "Outcomes", 0);
       root.appendChild(
         buildOutcomePositionsTable([], { showClose: false, emptyMessage: "No outcomes yet" })
       );
       return;
     }
     const spot = (app.state.data && app.state.data.spot && app.state.data.spot.balances) || [];
-    let rows = outcomePositionsFromSpot(spot, markets);
+    const allRows = outcomePositionsFromSpot(spot, markets);
+    paintBottomTab("outcomes", "Outcomes", allRows.length);
+    let rows = allRows;
     if (outcomeSideFilter === "Yes" || outcomeSideFilter === "No") {
       rows = rows.filter((r) => r.side === outcomeSideFilter);
     }
@@ -1645,8 +1656,8 @@ export function createTradeView(app) {
     return hit.asset;
   }
 
-  function paintOrdersTab(count) {
-    setOpenOrdersTabLabel(document.querySelector("#trade [data-bottom-tab=\"orders\"]"), count);
+  function paintBottomTab(tab, base, count) {
+    setHistTabLabel(document.querySelector('#trade [data-bottom-tab="' + tab + '"]'), base, count);
   }
 
   function renderOrders() {
@@ -1654,12 +1665,12 @@ export function createTradeView(app) {
     if (!root) return;
     clear(root);
     if (!app.state.address) {
-      paintOrdersTab(0);
+      paintBottomTab("orders", "Open Orders", 0);
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load open orders."));
       return;
     }
     const orders = forThisPage((app.state.data && app.state.data.openOrders) || []);
-    paintOrdersTab(orders.length);
+    paintBottomTab("orders", "Open Orders", orders.length);
     const tradeable = canTrade();
     if (!orders.length) {
       root.appendChild(emptyNote(pageKind === "outcome" ? "No open outcome orders." : "No open orders."));

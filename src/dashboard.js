@@ -11,7 +11,7 @@ import {
 import { buildTradeHistoryTable } from "./fills.js";
 import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
-import { setOpenOrdersTabLabel } from "./open-orders.js";
+import { setHistTabLabel } from "./open-orders.js";
 import { outcomePositionsFromSpot } from "./outcomes.js";
 import {
   buildOutcomePositionsTable,
@@ -430,6 +430,10 @@ function histTable(headers, rows) {
   );
 }
 
+function paintPortHistTab(tab, base, count) {
+  setHistTabLabel(document.querySelector('#dashboard [data-port-tab="' + tab + '"]'), base, count);
+}
+
 function renderPortHist(state) {
   bindPortHistOnce();
   const connected = !!(state && state.address);
@@ -444,8 +448,11 @@ function renderPortHist(state) {
   const balRoot = document.getElementById("port-balances");
   if (balRoot) {
     clear(balRoot);
-    if (!connected) emptyHist(balRoot, "Connect wallet to view balances.");
-    else if (state.coreLoading) {
+    if (!connected) {
+      paintPortHistTab("balances", "Balances", 0);
+      emptyHist(balRoot, "Connect wallet to view balances.");
+    } else if (state.coreLoading) {
+      paintPortHistTab("balances", "Balances", 0);
       emptyHist(balRoot, "Loading balances…");
     } else {
       const rows = buildBalanceRows({
@@ -456,6 +463,7 @@ function renderPortHist(state) {
         hideSmall: portHideSmall,
         abstraction: data.abstraction,
       });
+      paintPortHistTab("balances", "Balances", rows.length);
       if (!rows.length) emptyHist(balRoot, "No balances.");
       else {
         balRoot.appendChild(
@@ -478,14 +486,18 @@ function renderPortHist(state) {
     }
   }
 
-    const posRoot = document.getElementById("port-positions");
+  const posRoot = document.getElementById("port-positions");
   if (posRoot) {
-    if (!connected) empty("port-positions", "positions");
-    else if (state.coreLoading) {
+    if (!connected) {
+      paintPortHistTab("positions", "Positions", 0);
+      empty("port-positions", "positions");
+    } else if (state.coreLoading) {
+      paintPortHistTab("positions", "Positions", 0);
       emptyHist(posRoot, "Loading positions…");
     } else {
       const rows = positionRows((data.perps && data.perps.assetPositions) || []);
       const mids = data.mids || {};
+      paintPortHistTab("positions", "Positions", rows.length);
       if (!rows.length) emptyHist(posRoot, "No open perps.");
       else {
         clear(posRoot);
@@ -521,9 +533,12 @@ function renderPortHist(state) {
 
   const outRoot = document.getElementById("port-outcomes");
   if (outRoot) {
-    if (!connected) empty("port-outcomes", "outcomes");
-    else {
+    if (!connected) {
+      paintPortHistTab("outcomes", "Outcomes", 0);
+      empty("port-outcomes", "outcomes");
+    } else {
       const rows = outcomePositionsFromSpot((data.spot && data.spot.balances) || [], state.markets || []);
+      paintPortHistTab("outcomes", "Outcomes", rows.length);
       clear(outRoot);
       const refreshOutcomes = () => {
         const dash = document.getElementById("dashboard");
@@ -561,14 +576,13 @@ function renderPortHist(state) {
   }
 
   const ordRoot = document.getElementById("port-orders");
-  const ordersBtn = document.querySelector("#dashboard [data-port-tab=\"orders\"]");
   if (ordRoot) {
     if (!connected) {
-      setOpenOrdersTabLabel(ordersBtn, 0);
+      paintPortHistTab("orders", "Open Orders", 0);
       empty("port-orders", "open orders");
     } else {
       const orders = data.openOrders || [];
-      setOpenOrdersTabLabel(ordersBtn, orders.length);
+      paintPortHistTab("orders", "Open Orders", orders.length);
       if (!orders.length) emptyHist(ordRoot, "No open orders.");
       else {
         clear(ordRoot);

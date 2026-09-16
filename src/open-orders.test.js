@@ -1,13 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { cancelAllCancels, openOrdersTabLabel, setOpenOrdersTabLabel } from "./open-orders.js";
+import {
+  cancelAllCancels,
+  histTabLabel,
+  openOrdersTabLabel,
+  setHistTabLabel,
+  setOpenOrdersTabLabel,
+} from "./open-orders.js";
+
+describe("histTabLabel", () => {
+  it("shows (n) only when count > 0", () => {
+    expect(histTabLabel("Balances", 2)).toBe("Balances (2)");
+    expect(histTabLabel("Positions", 0)).toBe("Positions");
+    expect(histTabLabel("Outcomes", 1)).toBe("Outcomes (1)");
+    expect(histTabLabel("Open Orders", 20)).toBe("Open Orders (20)");
+    expect(histTabLabel("Open Orders", 0)).toBe("Open Orders");
+    expect(histTabLabel("Open Orders", null)).toBe("Open Orders");
+    expect(histTabLabel("Open Orders", -2)).toBe("Open Orders");
+    expect(histTabLabel("Open Orders", "7")).toBe("Open Orders (7)");
+  });
+
+  it("writes the label onto a tab button", () => {
+    const btn = { textContent: "Balances" };
+    setHistTabLabel(btn, "Balances", 4);
+    expect(btn.textContent).toBe("Balances (4)");
+    setHistTabLabel(btn, "Balances", 0);
+    expect(btn.textContent).toBe("Balances");
+    setHistTabLabel(null, "Balances", 1);
+  });
+});
 
 describe("openOrdersTabLabel", () => {
-  it("always includes the count, including zero", () => {
+  it("delegates to histTabLabel for Open Orders", () => {
     expect(openOrdersTabLabel(20)).toBe("Open Orders (20)");
     expect(openOrdersTabLabel(3)).toBe("Open Orders (3)");
-    expect(openOrdersTabLabel(0)).toBe("Open Orders (0)");
-    expect(openOrdersTabLabel(null)).toBe("Open Orders (0)");
-    expect(openOrdersTabLabel(-2)).toBe("Open Orders (0)");
+    expect(openOrdersTabLabel(0)).toBe("Open Orders");
+    expect(openOrdersTabLabel(null)).toBe("Open Orders");
+    expect(openOrdersTabLabel(-2)).toBe("Open Orders");
     expect(openOrdersTabLabel("7")).toBe("Open Orders (7)");
   });
 
@@ -15,6 +43,8 @@ describe("openOrdersTabLabel", () => {
     const btn = { textContent: "Open Orders" };
     setOpenOrdersTabLabel(btn, 4);
     expect(btn.textContent).toBe("Open Orders (4)");
+    setOpenOrdersTabLabel(btn, 0);
+    expect(btn.textContent).toBe("Open Orders");
     setOpenOrdersTabLabel(null, 1);
   });
 });
