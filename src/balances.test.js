@@ -4,6 +4,7 @@ import {
   balanceAssetLabel,
   balanceMarkPx,
   buildBalanceRows,
+  isOutcomeBalanceCoin,
   formatPnlPct,
   iconCoinFromBalance,
   normalizeAbstraction,
@@ -130,8 +131,9 @@ describe("account abstraction", () => {
     expect(usdc).toHaveLength(1);
     expect(usdc[0].total).toBeCloseTo(103.76893176);
     expect(usdc[0].available).toBeCloseTo(93.58299876);
-    expect(rows.find((r) => r.coin === "+14090").label).toBe("PONS above 1 on Sep 7? · Yes");
-    expect(rows.find((r) => r.coin === "+14090").label).not.toMatch(/^\+14090$/);
+    expect(rows.find((r) => r.coin === "+14090")).toBeUndefined();
+    expect(rows.some((r) => String(r.coin).startsWith("+"))).toBe(false);
+    expect(rows).toHaveLength(1);
   });
 
   it("labels outcome tokens with the market title, never a raw +id", () => {
@@ -182,8 +184,60 @@ describe("account abstraction", () => {
       expect(usdc).toHaveLength(1);
       expect(usdc[0].total).toBeCloseTo(90.21820076);
       expect(usdc[0].available).toBeCloseTo(18.98667276);
-      expect(rows.find((r) => r.coin === "+14570").label).toBe("Example market? · Yes");
-      expect(rows.find((r) => r.coin === "+14570").label).not.toMatch(/^\+14570$/);
+      expect(rows.find((r) => r.coin === "+14570")).toBeUndefined();
+      expect(rows.some((r) => String(r.label || "").includes("Example market"))).toBe(false);
     });
+  });
+});
+
+describe("spot-only Balances filter", () => {
+  it("excludes HIP-4 outcome share tokens and keeps spot + USDC", () => {
+    expect(isOutcomeBalanceCoin("+14090", [])).toBe(true);
+    expect(isOutcomeBalanceCoin("#14091", [])).toBe(true);
+    expect(isOutcomeBalanceCoin("HYPE", [])).toBe(false);
+    expect(isOutcomeBalanceCoin("UBTC", [])).toBe(false);
+    expect(isOutcomeBalanceCoin("USDC", [])).toBe(false);
+    const rows = buildBalanceRows({
+      perps: { marginSummary: { accountValue: "1" }, withdrawable: "1" },
+      spotBalances: [
+        { coin: "USDC", total: "9.85", hold: "0" },
+        { coin: "HYPE", total: "2", hold: "0", entryNtl: "40" },
+        { coin: "UBTC", total: "0.01", hold: "0" },
+        { coin: "+14090", total: "37", hold: "0", entryNtl: "35.5" },
+        { coin: "#14091", total: "10", hold: "0" },
+      ],
+      mids: { HYPE: "20", UBTC: "100000", "#14090": "0.96" },
+      markets: [
+        { kind: "spot", base: "HYPE", displayBase: "HYPE", coin: "HYPE/USDC", markPx: "20" },
+        { kind: "spot", base: "UBTC", displayBase: "BTC", coin: "UBTC/USDC", markPx: "100000" },
+        {
+          kind: "outcome",
+          outcomeId: 1409,
+          coin: "#14090",
+          balanceCoin: "+14090",
+          pair: "CL above 83.196 on Sep 29, 2026 at 9:00 PM?",
+          markPx: "0.96",
+        },
+      ],
+      hideSmall: false,
+    });
+    expect(rows.map((r) => r.coin)).toEqual(["USDC", "HYPE", "UBTC"]);
+    expect(rows.find((r) => r.coin === "UBTC").label).toMatch(/BTC/);
+    expect(rows.every((r) => !String(r.coin).startsWith("+") && !String(r.coin).startsWith("#"))).toBe(true);
+  });
+
+  it("hideSmall count matches filtered spot-only rows", () => {
+    const rows = buildBalanceRows({
+      perps: {},
+      spotBalances: [
+        { coin: "USDC", total: "9.85", hold: "0" },
+        { coin: "PURR", total: "1", hold: "0" },
+        { coin: "+14090", total: "37", hold: "0", entryNtl: "35" },
+      ],
+      mids: { PURR: "0.1", "#14090": "0.96" },
+      markets: [{ kind: "outcome", coin: "#14090", balanceCoin: "+14090", pair: "X?" }],
+      hideSmall: true,
+    });
+    expect(rows.map((r) => r.coin)).toEqual(["USDC"]);
   });
 });

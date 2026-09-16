@@ -129,6 +129,19 @@ function marketForBalanceCoin(coin, markets) {
   return byId;
 }
 
+
+/**
+ * HIP-4 share tokens (`+N` / `#N`) and markets with kind "outcome" belong on the
+ * Outcomes tab — never in Balances. Spot names (HYPE, UBTC, …) stay.
+ */
+export function isOutcomeBalanceCoin(coin, markets) {
+  const c = String(coin || "").trim();
+  if (!c || c.toUpperCase() === "USDC") return false;
+  if (isRawTokenId(c) || outcomeEncoding(c)) return true;
+  const m = marketForBalanceCoin(c, markets);
+  return !!(m && m.kind === "outcome");
+}
+
 function outcomeSideLabel(coin) {
   const parsed = outcomeEncoding(coin);
   if (!parsed) return "Outcome";
@@ -150,7 +163,7 @@ export function balanceAssetLabel(coin, markets) {
       return "Outcome · " + side;
     }
     if (title && !isRawTokenId(title)) return title;
-    if (m.base && !isRawTokenId(m.base)) return m.base;
+    if (m.base && !isRawTokenId(m.base)) return m.displayBase || m.base;
   }
   if (isRawTokenId(c)) return outcomeSideLabel(c);
   return c;
@@ -190,7 +203,9 @@ export function formatPnlPct(pct) {
 }
 
 /**
- * Live rows from spotClearinghouseState + optional perps USDC fallback.
+ * Live spot-only rows from spotClearinghouseState + optional perps USDC fallback.
+ * Outcome share tokens (HIP-4 `+N` / `#N`) and perp positions are excluded —
+ * those live on Outcomes / Positions tabs.
  * At most one USDC row: spot USDC wins; perps clearinghouse USDC only if spot has none.
  * hideSmall drops known USD values under $1; unknown values stay visible.
  */
@@ -201,6 +216,7 @@ export function buildBalanceRows({ perps, spotBalances, mids, markets, hideSmall
   let usdcSeen = false;
   (spotBalances || []).forEach((b) => {
     if (!b || b.coin == null || b.coin === "") return;
+    if (isOutcomeBalanceCoin(b.coin, markets)) return;
     const total = num(b.total);
     if (!Number.isFinite(total) || Math.abs(total) < DUST) return;
     if (String(b.coin).toUpperCase() === "USDC") {
@@ -213,10 +229,11 @@ export function buildBalanceRows({ perps, spotBalances, mids, markets, hideSmall
     const px = balanceMarkPx(b.coin, mids, markets);
     const value = usdValue(total, px);
     const m = marketForBalanceCoin(b.coin, markets);
+    if (m && m.kind === "perp") return;
     others.push({
       coin: b.coin,
       label: balanceAssetLabel(b.coin, markets),
-      iconCoin: (m && m.underlying) || iconCoinFromBalance(b.coin),
+      iconCoin: (m && (m.underlying || m.displayBase)) || iconCoinFromBalance(b.coin),
       total,
       available: availableBalance(b.total, b.hold),
       value,

@@ -190,12 +190,15 @@ describe("ticket DOM", () => {
     expect(js).not.toContain("if (input && Number.isFinite(mid())) input.value = String(mid())");
   });
 
-  it("uses Place order for the enabled ticket CTA and keeps USDC on /outcome Balances", () => {
+  it("uses Place order for the enabled ticket CTA; Balances stay spot-only", () => {
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
+    const bal = readFileSync(join(root, "src/balances.js"), "utf8");
     expect(js).toContain('submit.textContent = "Place order"');
     expect(js).toContain('submit.classList.toggle("buy", side === "buy")');
     expect(js).toContain('submit.classList.toggle("sell", side === "sell")');
-    expect(js).toContain("isOutcomePageBalance");
+    expect(js).toContain("spotBalances: spot");
+    expect(js).not.toContain("isOutcomePageBalance");
+    expect(bal).toContain("isOutcomeBalanceCoin");
     expect(js).not.toContain('submit.textContent = verb + " " + coin');
     expect(js).toContain('submit.textContent = modalOpen ? "Opening wallet…" : "Connect wallet"');
     expect(js).toContain('submit.textContent = "Enable trading"');

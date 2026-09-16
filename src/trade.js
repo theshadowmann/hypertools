@@ -73,7 +73,6 @@ import {
   formatOutcomeCountdown,
   formatOutcomeOdds,
   isOutcomeCoin,
-  isOutcomePageBalance,
   outcomeCandleCoin,
   outcomeLegAsset,
   outcomeLegBalance,
@@ -1435,11 +1434,10 @@ export function createTradeView(app) {
     const perps = data.perps || {};
     const spot = (data.spot && data.spot.balances) || [];
     const mids = data.mids || {};
-    const spotForPage =
-      pageKind === "outcome" ? spot.filter((b) => b && isOutcomePageBalance(b.coin)) : spot;
+    // Spot-only Balances on every page; outcomes filtered inside buildBalanceRows.
     const rows = buildBalanceRows({
       perps,
-      spotBalances: spotForPage,
+      spotBalances: spot,
       mids,
       markets,
       hideSmall: hideSmallBalances,
