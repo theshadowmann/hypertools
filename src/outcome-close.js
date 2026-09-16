@@ -5,6 +5,7 @@
 import { formatPnlPct } from "./balances.js";
 import { clear, h } from "./dom.js";
 import { fmtPx, fmtQty, fmtUsd, num } from "./format.js";
+import { getAgent } from "./agent-store.js";
 import {
   enableTrading,
   placePerpOrder,
@@ -175,6 +176,19 @@ export function canCloseOutcomes(state) {
   return s.source === "wallet" && !!s.provider && !!s.address;
 }
 
+async function ensureOutcomeCloseTrading(onStatus) {
+  const sess = session();
+  if (getAgent(sess.address)) return;
+  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
+  if (!ready.feeOk || !ready.agentOk) {
+    await enableTrading({
+      provider: sess.provider,
+      address: sess.address,
+      onStatus,
+    });
+  }
+}
+
 function toast(msg, kind) {
   const app = getApp && getApp();
   if (app && typeof app.setStatus === "function") app.setStatus(msg, kind);
@@ -239,14 +253,7 @@ export async function submitOutcomeClose({
   if (isMkt && skipAgain) setSkipMarketCloseModal(true);
 
   const status = onStatus || ((s) => toast(s));
-  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
-  if (!ready.feeOk || !ready.agentOk) {
-    await enableTrading({
-      provider: sess.provider,
-      address: sess.address,
-      onStatus: status,
-    });
-  }
+  await ensureOutcomeCloseTrading(status);
 
   const args = {
     source: sess.source,
@@ -687,18 +694,12 @@ export async function runCloseAllOutcomes({
   const wait = Number.isFinite(gap) && gap >= 0 ? gap : CLOSE_ALL_GAP_MS;
   const status = onStatus || ((msg) => toast(msg));
 
-  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
-  if (!ready.feeOk || !ready.agentOk) {
-    await enableTrading({
-      provider: sess.provider,
-      address: sess.address,
-      onStatus: status,
-    });
-  }
+  await ensureOutcomeCloseTrading(status);
 
   closeAllBusy = true;
   let ok = 0;
   let failed = 0;
+  const failures = [];
   try {
     for (let i = 0; i < list.length; i++) {
       const row = list[i];
@@ -718,19 +719,29 @@ export async function runCloseAllOutcomes({
         ok += 1;
       } catch (err) {
         failed += 1;
-        toast(userMessage(err), "err");
+        const reason = userMessage(err);
+        failures.push({ coin: String(row.coin || "outcome"), message: reason });
+        status(String(row.coin || "outcome") + ": " + reason);
       }
       if (i < list.length - 1) await sleep(wait);
     }
-    if (failed && !ok) throw new Error("Close All failed.");
+    if (failed && !ok) {
+      const detail = failures.map((f) => f.coin + ": " + f.message).join("; ");
+      throw new Error(detail || "Close All failed.");
+    }
     const msg =
       failed > 0
-        ? "Closed " + ok + " of " + list.length + " positions."
+        ? "Closed " +
+          ok +
+          " of " +
+          list.length +
+          " positions. Failed: " +
+          failures.map((f) => f.coin + ": " + f.message).join("; ")
         : "Closed " + ok + " position" + (ok === 1 ? "" : "s") + ".";
     toast(msg, failed ? "err" : "ok");
-    if (typeof onSuccess === "function") await onSuccess({ ok, failed, total: list.length });
+    if (typeof onSuccess === "function") await onSuccess({ ok, failed, total: list.length, failures });
     if (sess.app && typeof sess.app.reloadAccount === "function") sess.app.reloadAccount();
-    return { ok, failed, total: list.length };
+    return { ok, failed, total: list.length, failures };
   } finally {
     closeAllBusy = false;
     closeBusyCoin = "";

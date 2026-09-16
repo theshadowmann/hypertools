@@ -1,12 +1,15 @@
 /**
  * @vitest-environment happy-dom
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LIMIT_CLOSE_TIP,
   SKIP_PERP_MARKET_CLOSE_KEY,
+  bindPerpCloseApp,
   canClosePerps,
+  closeCoinSizeForRow,
   closeNotional,
+  closePerpCloseAllModal,
   closePerpCloseModal,
   closeSideForPosition,
   closeSizeFromPct,
@@ -17,6 +20,7 @@ import {
   pctFromCloseSize,
   positionAbsSize,
   positionIsLong,
+  runCloseAllPerps,
   setSkipPerpMarketCloseModal,
   sizeFromNotional,
   skipPerpMarketCloseModal,
@@ -25,7 +29,11 @@ import { buildPositionsTable } from "./dashboard.js";
 
 afterEach(() => {
   closePerpCloseModal();
+  closePerpCloseAllModal();
+  bindPerpCloseApp(() => null);
   document.body.innerHTML = "";
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("perp close math", () => {
@@ -56,6 +64,26 @@ describe("perp close math", () => {
     expect(marketForPerpRow({ coin: "ETH" }, markets)).toBeNull();
     expect(midForPerpRow({ coin: "BTC", entryPx: 1 }, { BTC: 65000 })).toBe(65000);
     expect(midForPerpRow({ coin: "BTC", entryPx: "100" }, {})).toBe(100);
+  });
+
+  it("prefers market mid/mark when allMids map is empty (core fast path)", () => {
+    const mkt = { coin: "BTC", kind: "perp", midPx: "75756", markPx: "75700", szDecimals: 5 };
+    expect(midForPerpRow({ coin: "BTC", entryPx: "75930" }, {}, mkt)).toBe(75756);
+    expect(midForPerpRow({ coin: "BTC", entryPx: "75930" }, {}, { markPx: "75700" })).toBe(75700);
+  });
+
+  it("closeCoinSizeForRow uses abs(szi) even when positionValue is USDC display", () => {
+    const markets = [{ id: "perp:BTC", kind: "perp", coin: "BTC", szDecimals: 5, asset: 0 }];
+    const row = {
+      coin: "BTC",
+      szi: "0.00048",
+      positionValue: "36.36",
+      entryPx: "75930.60",
+    };
+    expect(positionAbsSize(row)).toBe(0.00048);
+    expect(closeCoinSizeForRow(row, markets)).toBe(0.00048);
+    // Must not treat $36.36 notional as coin size
+    expect(closeCoinSizeForRow(row, markets)).not.toBe(36.36);
   });
 
   it("gates close to connected wallets only", () => {
@@ -169,5 +197,106 @@ describe("perp positions close UI", () => {
     expect(modal.textContent).toContain("Don't show this again");
     expect(modal.querySelector("#perp-close-submit").textContent).toBe("Market Close");
     expect(modal.querySelector(".out-close-coral").textContent).toMatch(/BTC/);
+  });
+});
+
+describe("runCloseAllPerps errors and size wiring", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("surfaces real exchange errors instead of generic Close All failed.", async () => {
+    vi.doMock("./agent-store.js", () => ({
+      getAgent: () => ({ privateKey: "0xabc", address: "0xagent" }),
+      rememberAgent: () => {},
+      wipeAgents: () => {},
+    }));
+    vi.doMock("./hl-trade.js", () => ({
+      enableTrading: vi.fn(),
+      tradingStatus: vi.fn(async () => ({ feeOk: true, agentOk: true })),
+      placePerpOrder: vi.fn(async () => {
+        throw new Error("Insufficient margin to place order.");
+      }),
+      userMessage: (err) => (err && err.message) || "Request failed.",
+    }));
+
+    const { bindPerpCloseApp, runCloseAllPerps } = await import("./perp-close.js");
+    bindPerpCloseApp(() => ({
+      state: {
+        source: "wallet",
+        address: "0xfcf0",
+        provider: {},
+        markets: [{ id: "perp:BTC", kind: "perp", coin: "BTC", szDecimals: 5, asset: 0, markPx: "75756" }],
+        data: { mids: { BTC: 75756 } },
+      },
+      setStatus: () => {},
+    }));
+
+    const row = {
+      coin: "BTC",
+      szi: "0.00048",
+      positionValue: "36.36",
+      entryPx: "75930.60",
+    };
+    await expect(
+      runCloseAllPerps({
+        rows: [row],
+        markets: [{ id: "perp:BTC", kind: "perp", coin: "BTC", szDecimals: 5, asset: 0, markPx: "75756" }],
+        mids: { BTC: 75756 },
+        gapMs: 0,
+      })
+    ).rejects.toThrow(/Insufficient margin/);
+  });
+
+  it("submits reduce-only sell using coin szi not USDC positionValue", async () => {
+    const placed = [];
+    vi.doMock("./agent-store.js", () => ({
+      getAgent: () => ({ privateKey: "0xabc", address: "0xagent" }),
+      rememberAgent: () => {},
+      wipeAgents: () => {},
+    }));
+    vi.doMock("./hl-trade.js", () => ({
+      enableTrading: vi.fn(),
+      tradingStatus: vi.fn(async () => ({ feeOk: true, agentOk: true })),
+      placePerpOrder: vi.fn(async (args) => {
+        placed.push(args);
+        return { status: "ok" };
+      }),
+      userMessage: (err) => (err && err.message) || "Request failed.",
+    }));
+
+    const { bindPerpCloseApp, runCloseAllPerps } = await import("./perp-close.js");
+    bindPerpCloseApp(() => ({
+      state: {
+        source: "wallet",
+        address: "0xfcf0",
+        provider: {},
+        markets: [{ id: "perp:BTC", kind: "perp", coin: "BTC", szDecimals: 5, asset: 0, markPx: "75756" }],
+        data: { mids: {} },
+      },
+      setStatus: () => {},
+      reloadAccount: () => {},
+    }));
+
+    const row = {
+      coin: "BTC",
+      szi: "0.00048",
+      positionValue: "36.36",
+      entryPx: "75930.60",
+    };
+    const result = await runCloseAllPerps({
+      rows: [row],
+      markets: [{ id: "perp:BTC", kind: "perp", coin: "BTC", szDecimals: 5, asset: 0, markPx: "75756", midPx: "75756" }],
+      mids: {},
+      gapMs: 0,
+    });
+    expect(result.ok).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(placed).toHaveLength(1);
+    expect(placed[0].side).toBe("sell");
+    expect(placed[0].reduceOnly).toBe(true);
+    expect(placed[0].size).toBe(0.00048);
+    expect(placed[0].type).toBe("market");
+    expect(placed[0].mid).toBe(75756);
   });
 });

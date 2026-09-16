@@ -4,6 +4,7 @@
  */
 import { clear, h } from "./dom.js";
 import { fmtPx, fmtQty, fmtUsd, num } from "./format.js";
+import { getAgent } from "./agent-store.js";
 import {
   enableTrading,
   placePerpOrder,
@@ -93,13 +94,26 @@ export function marketForPerpRow(row, markets) {
   );
 }
 
-export function midForPerpRow(row, mids) {
+export function midForPerpRow(row, mids, market) {
   const marks = mids || {};
   const coin = row && row.coin;
   const fromMid = coin != null ? Number(marks[coin]) : NaN;
   if (Number.isFinite(fromMid) && fromMid > 0) return fromMid;
+  const fromMktMid = market != null ? Number(market.midPx) : NaN;
+  if (Number.isFinite(fromMktMid) && fromMktMid > 0) return fromMktMid;
+  const fromMktMark = market != null ? Number(market.markPx) : NaN;
+  if (Number.isFinite(fromMktMark) && fromMktMark > 0) return fromMktMark;
   const entry = Number(row && row.entryPx);
   return Number.isFinite(entry) && entry > 0 ? entry : NaN;
+}
+
+/** Full close size in coin from position.szi (never USD display / positionValue). */
+export function closeCoinSizeForRow(row, markets) {
+  const abs = positionAbsSize(row);
+  if (!(abs > 0)) return 0;
+  const mkt = marketForPerpRow(row, markets);
+  const szDec = mkt && mkt.szDecimals != null ? mkt.szDecimals : 5;
+  return closeSizeFromPct(abs, 100, szDec);
 }
 
 /** Size in coin from a 0–100 percent of abs(szi), rounded to market decimals. */
@@ -158,6 +172,20 @@ export function canClosePerps(state) {
   return s.source === "wallet" && !!s.provider && !!s.address;
 }
 
+/** Ensure agent exists; skip Info tradingStatus when session agent is already present. */
+async function ensureCloseTrading(onStatus) {
+  const sess = session();
+  if (getAgent(sess.address)) return;
+  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
+  if (!ready.feeOk || !ready.agentOk) {
+    await enableTrading({
+      provider: sess.provider,
+      address: sess.address,
+      onStatus,
+    });
+  }
+}
+
 function toast(msg, kind) {
   const app = getApp && getApp();
   if (app && typeof app.setStatus === "function") app.setStatus(msg, kind);
@@ -209,10 +237,11 @@ export async function submitPerpClose({
   if (!mkt) throw new Error("Unknown perp market");
   const abs = positionAbsSize(row);
   const szDec = mkt.szDecimals != null ? mkt.szDecimals : 5;
+  // Size must be coin qty from szi — never USD notional / positionValue display.
   const sz = roundSz(Number(size), szDec);
   if (!Number.isFinite(sz) || sz <= 0) throw new Error("Enter a size greater than zero");
   if (sz > abs + 1e-12) throw new Error("Size exceeds position");
-  const mid = midForPerpRow(row, mids || sess.mids);
+  const mid = midForPerpRow(row, mids || sess.mids, mkt);
   const isMkt = kind === "market";
   const px = isMkt ? mid : Number(price);
   if (!isMkt && !(Number.isFinite(px) && px > 0)) throw new Error("Enter a limit price");
@@ -220,14 +249,7 @@ export async function submitPerpClose({
   if (isMkt && skipAgain) setSkipPerpMarketCloseModal(true);
 
   const status = onStatus || ((s) => toast(s));
-  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
-  if (!ready.feeOk || !ready.agentOk) {
-    await enableTrading({
-      provider: sess.provider,
-      address: sess.address,
-      onStatus: status,
-    });
-  }
+  await ensureCloseTrading(status);
 
   await placePerpOrder({
     source: sess.source,
@@ -321,9 +343,9 @@ function paintModal(overlay, opts) {
   const row = opts.row || {};
   const coin = String(row.coin || "");
   const available = positionAbsSize(row);
-  const mark = midForPerpRow(row, opts.mids);
   const list = opts.markets || session().markets;
   const mkt = marketForPerpRow(row, list);
+  const mark = midForPerpRow(row, opts.mids, mkt);
   const szDec = mkt && mkt.szDecimals != null ? mkt.szDecimals : 5;
   let unit = "usdc";
   let size = closeSizeFromPct(available, 100, szDec);
@@ -630,8 +652,7 @@ export async function startPerpClose(opts) {
     const row = opts.row || {};
     const list = opts.markets || sess.markets;
     const mkt = marketForPerpRow(row, list);
-    const szDec = mkt && mkt.szDecimals != null ? mkt.szDecimals : 5;
-    const size = closeSizeFromPct(positionAbsSize(row), 100, szDec);
+    const size = closeCoinSizeForRow(row, list);
     closeBusy = true;
     closeBusyCoin = String(row.coin || "");
     if (typeof opts.onSettled === "function") opts.onSettled();
@@ -640,7 +661,7 @@ export async function startPerpClose(opts) {
         kind: "market",
         row,
         size,
-        price: midForPerpRow(row, opts.mids || sess.mids),
+        price: midForPerpRow(row, opts.mids || sess.mids, mkt),
         markets: opts.markets,
         mids: opts.mids,
         onStatus: (s) => toast(s),
@@ -678,52 +699,57 @@ export async function runCloseAllPerps({
   const gap = Number(gapMs);
   const wait = Number.isFinite(gap) && gap >= 0 ? gap : CLOSE_ALL_GAP_MS;
   const status = onStatus || ((s) => toast(s));
+  const mktList = markets && markets.length ? markets : sess.markets;
+  const midMap = mids || sess.mids;
 
-  const ready = await tradingStatus(sess.address).catch(() => ({ feeOk: false, agentOk: false }));
-  if (!ready.feeOk || !ready.agentOk) {
-    await enableTrading({
-      provider: sess.provider,
-      address: sess.address,
-      onStatus: status,
-    });
-  }
+  await ensureCloseTrading(status);
 
   closeAllBusy = true;
   let ok = 0;
   let failed = 0;
+  const failures = [];
   try {
     for (let i = 0; i < list.length; i++) {
       const row = list[i];
       closeBusyCoin = String(row.coin || "");
       status("Closing " + (row.coin || "position") + " (" + (i + 1) + "/" + list.length + ")…");
-      const mkt = marketForPerpRow(row, markets || sess.markets);
-      const szDec = mkt && mkt.szDecimals != null ? mkt.szDecimals : 5;
-      const size = closeSizeFromPct(positionAbsSize(row), 100, szDec);
+      const size = closeCoinSizeForRow(row, mktList);
       try {
+        if (!(size > 0)) throw new Error("Enter a size greater than zero");
         await submitPerpClose({
           kind: "market",
           row,
           size,
-          markets: markets || sess.markets,
-          mids: mids || sess.mids,
+          markets: mktList,
+          mids: midMap,
           onStatus: status,
         });
         ok += 1;
       } catch (err) {
         failed += 1;
-        toast(userMessage(err), "err");
+        const reason = userMessage(err);
+        failures.push({ coin: String(row.coin || "position"), message: reason });
+        status(String(row.coin || "position") + ": " + reason);
       }
       if (i < list.length - 1) await sleep(wait);
     }
-    if (failed && !ok) throw new Error("Close All failed.");
+    if (failed && !ok) {
+      const detail = failures.map((f) => f.coin + ": " + f.message).join("; ");
+      throw new Error(detail || "Close All failed.");
+    }
     const msg =
       failed > 0
-        ? "Closed " + ok + " of " + list.length + " positions."
+        ? "Closed " +
+          ok +
+          " of " +
+          list.length +
+          " positions. Failed: " +
+          failures.map((f) => f.coin + ": " + f.message).join("; ")
         : "Closed " + ok + " position" + (ok === 1 ? "" : "s") + ".";
     toast(msg, failed ? "err" : "ok");
-    if (typeof onSuccess === "function") await onSuccess({ ok, failed, total: list.length });
+    if (typeof onSuccess === "function") await onSuccess({ ok, failed, total: list.length, failures });
     if (sess.app && typeof sess.app.reloadAccount === "function") sess.app.reloadAccount();
-    return { ok, failed, total: list.length };
+    return { ok, failed, total: list.length, failures };
   } finally {
     closeAllBusy = false;
     closeBusyCoin = "";

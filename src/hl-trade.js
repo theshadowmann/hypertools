@@ -67,8 +67,11 @@ export async function tradingStatus(user, attempt = 0) {
       await sleep(2000 * (attempt + 1));
       return tradingStatus(user, attempt + 1);
     }
-    // Soft-fail: return stored agent so UI can keep trading after refresh.
+    // Soft-fail: session agent is enough when Info is rate-limiting / unavailable.
     const stored = getAgent(user);
+    if (stored && stored.privateKey) {
+      return { feeOk: true, agentOk: true, maxFee: 0, stored, soft: true };
+    }
     throw Object.assign(err instanceof Error ? err : new Error(msg), { stored });
   }
   const stored = getAgent(user);
@@ -164,10 +167,8 @@ async function requireReadyAgent(address) {
   if (!stored || !stored.privateKey) {
     throw new Error("Enable trading first.");
   }
-  const ready = await tradingStatus(address);
-  if (!ready.feeOk || !ready.agentOk) {
-    throw new Error("Enable trading first.");
-  }
+  // Session agent is sufficient for signing — skip tradingStatus Info calls that
+  // re-trip HL 429s on every order (Enable trading / soft-fail already gate this).
   return stored;
 }
 
