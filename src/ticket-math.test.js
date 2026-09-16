@@ -192,6 +192,14 @@ describe("ticket DOM", () => {
     expect(js).not.toContain("if (input && Number.isFinite(mid())) input.value = String(mid())");
   });
 
+  it("rounds TWAP size with toWire(roundSz) and keeps 7d max", () => {
+    const hl = readFileSync(join(root, "src/hl-trade.js"), "utf8");
+    const math = readFileSync(join(root, "src/ticket-math.js"), "utf8");
+    expect(hl).toContain("toWire(roundSz(Number(size)");
+    expect(hl).not.toContain("s: String(size)");
+    expect(math).toContain("TWAP_MAX_MINUTES = 7 * 24 * 60");
+  });
+
   it("places TWAP without a limit price and wires randomize + reduceOnly", () => {
     const js = readFileSync(join(root, "src/trade.js"), "utf8");
     const hl = readFileSync(join(root, "src/hl-trade.js"), "utf8");
@@ -204,6 +212,7 @@ describe("ticket DOM", () => {
     expect(js).toContain("TWAP_MAX_MINUTES");
     expect(js).toContain('randomize: !!byId("ticket-random")?.checked');
     expect(js).toContain('reduceOnly: !!byId("ticket-reduce")?.checked');
+    expect(js).toContain("rejects TWAP orders under $100");
     expect(js).toContain("placeTwapOrder({");
     expect(js).toContain("minutes: twapMinutes");
     expect(js).toContain("reduceOnly: args.reduceOnly");

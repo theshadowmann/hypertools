@@ -17,8 +17,10 @@ import {
   hlAddress,
   isMissingApiWalletError,
   orderSucceeded,
+  roundSz,
   sealOrderPayload,
   slippagePrice,
+  toWire,
   userMessage,
 } from "./order-build.js";
 
@@ -303,7 +305,7 @@ export async function placeTwapOrder({
       twap: {
         a: market.asset,
         b: side === "buy",
-        s: String(size),
+        s: toWire(roundSz(Number(size), market && market.szDecimals != null ? market.szDecimals : 5)),
         r: !!reduceOnly,
         m,
         t: !!randomize,

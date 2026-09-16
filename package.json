@@ -4,10 +4,11 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/prepare-tv-embed.mjs && vite",
-    "build": "node scripts/prepare-tv-embed.mjs && vite build && cp staticwebapp.config.json dist/",
+    "postinstall": "node scripts/patch-hl-twap.mjs",
+    "dev": "node scripts/patch-hl-twap.mjs && node scripts/prepare-tv-embed.mjs && vite",
+    "build": "node scripts/patch-hl-twap.mjs && node scripts/prepare-tv-embed.mjs && vite build && cp staticwebapp.config.json dist/",
     "preview": "vite preview --host --port 4173",
-    "test": "vitest run"
+    "test": "node scripts/patch-hl-twap.mjs && vitest run"
   },
   "dependencies": {
     "@nktkas/hyperliquid": "0.33.3",

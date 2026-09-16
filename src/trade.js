@@ -698,7 +698,14 @@ export function createTradeView(app) {
       setText("sum-fees", "—");
     }
     const minNote = byId("ticket-min");
-    if (minNote) minNote.classList.toggle("hidden", isOutcome() || !Number.isFinite(ntl) || ntl >= 10 || !(sz > 0));
+    if (minNote) {
+      const minNtl = orderType === "twap" ? 100 : 10;
+      minNote.textContent =
+        orderType === "twap"
+          ? "Hyperliquid rejects TWAP orders under $100 notional."
+          : "Hyperliquid rejects orders under $10 notional.";
+      minNote.classList.toggle("hidden", isOutcome() || !Number.isFinite(ntl) || ntl >= minNtl || !(sz > 0));
+    }
     if (mkt) {
       const unitCoin = byId("unit-coin");
       if (unitCoin) {
@@ -1042,6 +1049,13 @@ export function createTradeView(app) {
       const px = num(fieldValue("ticket-price"));
       if (!Number.isFinite(px) || px <= 0) {
         ticketMessage("Enter a limit price", "err");
+        return;
+      }
+    }
+    if (orderType === "stop-limit" || orderType === "stop-market") {
+      const trig = num(fieldValue("ticket-trigger"));
+      if (!Number.isFinite(trig) || trig <= 0) {
+        ticketMessage("Enter a trigger price", "err");
         return;
       }
     }
