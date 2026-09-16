@@ -169,6 +169,7 @@ export function createTradeView(app) {
   let ticketBusy = false;
   let enabled = false;
   let twaps = [];
+  let twapLiveReady = false;
   let extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: null };
   let bottomTab = "balances";
   let twapSubTab = "active";
@@ -1779,7 +1780,7 @@ export function createTradeView(app) {
 
   function syncTwapTick() {
     const need =
-      bottomTab === "twap" && twapSubTab === "active" && app.state.address && collectActiveTwaps(twaps, extras.twapHistory || []).length > 0;
+      bottomTab === "twap" && twapSubTab === "active" && app.state.address && collectActiveTwaps(twapLiveReady ? twaps : null, extras.twapHistory || []).length > 0;
     if (need && !twapTickTimer) {
       twapTickTimer = setInterval(() => {
         if (bottomTab === "twap" && twapSubTab === "active") renderTwap();
@@ -1809,7 +1810,7 @@ export function createTradeView(app) {
     if (!root) return;
     clear(root);
     const histAll = forThisPage(extras.twapHistory || []);
-    const liveAll = forThisPage(twaps || []);
+    const liveAll = twapLiveReady ? forThisPage(twaps || []) : null;
     const activeRows = collectActiveTwaps(liveAll, histAll);
     paintBottomTab("twap", "TWAP", activeRows.length);
 
@@ -2289,6 +2290,7 @@ export function createTradeView(app) {
     const user = app.state.address;
     if (!user) {
       twaps = [];
+      twapLiveReady = false;
       twapFillsEnsured = false;
       stopTwapTick();
       renderBottom();
@@ -2299,6 +2301,7 @@ export function createTradeView(app) {
     unsubTwap = socket.subscribe({ type: "twapStates", user }, (data) => {
       const states = data && (data.states || data);
       if (Array.isArray(states)) {
+        twapLiveReady = true;
         twaps = states.map((pair) => (Array.isArray(pair) ? { id: pair[0], state: pair[1] } : pair));
       }
       renderTwap();

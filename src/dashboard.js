@@ -648,7 +648,7 @@ function renderPortHist(state) {
   const twapRoot = document.getElementById("port-twap");
   if (twapRoot) {
     const hist = extras.twapHistory || [];
-    const activeRows = collectActiveTwaps([], hist);
+    const activeRows = collectActiveTwaps(null, hist);
     paintPortHistTab("twap", "TWAP", connected ? activeRows.length : 0);
     if (!connected) empty("port-twap", "TWAPs");
     else {

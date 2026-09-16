@@ -45,6 +45,38 @@ export function twapIdOf(rec) {
   return null;
 }
 
+/** Dedup / latest-history key: prefer twapId, else coin + start timestamp. */
+export function twapRecKey(rec) {
+  const id = twapIdOf(rec);
+  if (Number.isFinite(id)) return "id:" + id;
+  const state = twapStateOf(rec);
+  return "coin:" + (state.coin || "") + ":" + (state.timestamp || "");
+}
+
+/** History record time as ms (HL `time` is seconds; state.timestamp is ms). */
+export function twapHistoryTimeMs(rec) {
+  const t = num(rec && rec.time);
+  if (Number.isFinite(t) && t > 0) return t < 1e12 ? t * 1000 : t;
+  return twapCreationMs(twapStateOf(rec), rec) || 0;
+}
+
+/**
+ * twapHistory is a lifecycle event log: one row per status change for the same
+ * twapId (activated, then finished/terminated, …). Keep the latest row per id.
+ */
+export function latestTwapHistoryById(hist) {
+  const byKey = new Map();
+  (Array.isArray(hist) ? hist : []).forEach((rec) => {
+    if (!rec) return;
+    const key = twapRecKey(rec);
+    const prev = byKey.get(key);
+    if (!prev || twapHistoryTimeMs(rec) >= twapHistoryTimeMs(prev)) {
+      byKey.set(key, rec);
+    }
+  });
+  return byKey;
+}
+
 /** Average fill px from executedNtl / executedSz when both present. */
 export function twapAvgPx(state) {
   const ntl = num(state && state.executedNtl);
@@ -107,6 +139,20 @@ export function twapElapsedSec(state, now = Date.now()) {
   return Math.max(0, (now - start) / 1000);
 }
 
+/**
+ * End conditions when status still says activated: duration elapsed or size filled.
+ * Used only for history fallback — live twapStates are authoritative.
+ */
+export function isTwapStillRunning(state, now = Date.now()) {
+  const planned = twapPlannedSec(state);
+  const elapsed = twapElapsedSec(state, now);
+  if (Number.isFinite(planned) && Number.isFinite(elapsed) && elapsed >= planned) return false;
+  const sz = num(state && state.sz);
+  const exec = num(state && state.executedSz);
+  if (Number.isFinite(sz) && sz > 0 && Number.isFinite(exec) && exec + 1e-12 >= sz) return false;
+  return true;
+}
+
 /** Active column: running / total as HH:MM:SS / HH:MM:SS. */
 export function twapRunningLabel(state, now = Date.now()) {
   const elapsed = twapElapsedSec(state, now);
@@ -151,34 +197,50 @@ export function twapCreationMs(state, rec) {
 }
 
 /**
- * Active rows: prefer live twapStates; fill gaps from twapHistory with activated.
+ * Active rows: live twapStates (array, incl. empty) are authoritative when
+ * provided. Pass null/undefined for live to fall back to twapHistory — using
+ * the latest status per twapId so old "activated" lifecycle rows do not stay
+ * Active after finished/terminated, plus end-condition guards.
  */
-export function collectActiveTwaps(live, hist) {
+export function collectActiveTwaps(live, hist, now = Date.now()) {
   const byId = new Map();
-  const push = (rec, source) => {
+  const push = (rec, source, statusOverride) => {
     const id = twapIdOf(rec);
     const state = twapStateOf(rec);
-    const key = Number.isFinite(id) ? "id:" + id : "coin:" + (state.coin || "") + ":" + (state.timestamp || "");
+    const key = twapRecKey(rec);
     if (byId.has(key) && source === "hist") return;
     byId.set(key, {
       id: Number.isFinite(id) ? id : null,
       state,
-      status: source === "live" ? "activated" : twapStatusRaw(rec) || "activated",
+      status:
+        statusOverride != null
+          ? statusOverride
+          : source === "live"
+            ? "activated"
+            : twapStatusRaw(rec) || "activated",
       source,
       raw: rec,
     });
   };
-  (Array.isArray(live) ? live : []).forEach((t) => push(t, "live"));
-  (Array.isArray(hist) ? hist : []).forEach((t) => {
-    if (isTwapActiveStatus(twapStatusRaw(t))) push(t, "hist");
+
+  if (Array.isArray(live)) {
+    live.forEach((t) => push(t, "live"));
+    return Array.from(byId.values());
+  }
+
+  latestTwapHistoryById(hist).forEach((rec) => {
+    const status = twapStatusRaw(rec);
+    if (!isTwapActiveStatus(status)) return;
+    if (!isTwapStillRunning(twapStateOf(rec), now)) return;
+    push(rec, "hist", status);
   });
   return Array.from(byId.values());
 }
 
 export function collectHistoryTwaps(hist) {
   return (Array.isArray(hist) ? hist.slice() : []).sort((a, b) => {
-    const ta = twapCreationMs(twapStateOf(a), a) || 0;
-    const tb = twapCreationMs(twapStateOf(b), b) || 0;
+    const ta = twapHistoryTimeMs(a) || twapCreationMs(twapStateOf(a), a) || 0;
+    const tb = twapHistoryTimeMs(b) || twapCreationMs(twapStateOf(b), b) || 0;
     return tb - ta;
   });
 }
@@ -348,5 +410,3 @@ export function buildTwapHistoryTable(h, rows) {
 export function buildTwapFillHistoryTable(h, fills, opts = {}) {
   return buildTradeHistoryTable(h, fills, opts);
 }
-
-

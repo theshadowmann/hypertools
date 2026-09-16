@@ -4,6 +4,8 @@ import {
   collectHistoryTwaps,
   formatHms,
   isTwapActiveStatus,
+  isTwapStillRunning,
+  latestTwapHistoryById,
   twapAvgPx,
   twapHistoryRuntimeLabel,
   twapMaxMinLabel,
@@ -79,19 +81,77 @@ describe("runtime labels", () => {
 });
 
 describe("collect / unwrap", () => {
-  it("merges live over hist activated and lists history", () => {
+  it("uses live array as authoritative Active set (ignores hist activated)", () => {
     const live = [{ id: 1, state: { coin: "BTC", sz: "0.002", timestamp: 100, minutes: 30 } }];
     const hist = [
-      { twapId: 1, state: { coin: "BTC", sz: "0.002", timestamp: 100, minutes: 30 }, status: { status: "activated" } },
-      { twapId: 2, state: { coin: "ETH", sz: "1", timestamp: 50, minutes: 10 }, status: { status: "terminated" } },
-      { twapId: 3, state: { coin: "SOL", sz: "2", timestamp: 200, minutes: 5 }, status: { status: "activated" } },
+      { twapId: 1, time: 1, state: { coin: "BTC", sz: "0.002", timestamp: 100, minutes: 30 }, status: { status: "activated" } },
+      { twapId: 2, time: 2, state: { coin: "ETH", sz: "1", timestamp: 50, minutes: 10 }, status: { status: "terminated" } },
+      { twapId: 3, time: 3, state: { coin: "SOL", sz: "2", timestamp: 200, minutes: 5 }, status: { status: "activated" } },
     ];
     const active = collectActiveTwaps(live, hist);
-    expect(active).toHaveLength(2);
-    expect(active.find((r) => r.id === 1).source).toBe("live");
-    expect(active.find((r) => r.id === 3).source).toBe("hist");
+    expect(active).toHaveLength(1);
+    expect(active[0].id).toBe(1);
+    expect(active[0].source).toBe("live");
+    const emptyLive = collectActiveTwaps([], hist);
+    expect(emptyLive).toHaveLength(0);
+  });
+
+  it("history fallback uses latest status per twapId (drops stale activated)", () => {
+    const start = Date.UTC(2026, 8, 15, 22, 0, 0);
+    const now = start + 5 * 60_000;
+    const hist = [
+      {
+        twapId: 10,
+        time: start / 1000,
+        state: { coin: "BTC", sz: "0.002", executedSz: "0", timestamp: start, minutes: 30 },
+        status: { status: "activated" },
+      },
+      {
+        twapId: 10,
+        time: start / 1000 + 120,
+        state: { coin: "BTC", sz: "0.002", executedSz: "0.001", timestamp: start, minutes: 30 },
+        status: { status: "terminated" },
+      },
+      {
+        twapId: 11,
+        time: start / 1000 + 60,
+        state: { coin: "ETH", sz: "1", executedSz: "0", timestamp: start + 60_000, minutes: 30 },
+        status: { status: "activated" },
+      },
+    ];
+    const latest = latestTwapHistoryById(hist);
+    expect(latest.get("id:10").status.status).toBe("terminated");
+    expect(latest.get("id:11").status.status).toBe("activated");
+    const active = collectActiveTwaps(null, hist, now);
+    expect(active).toHaveLength(1);
+    expect(active[0].id).toBe(11);
+    expect(active[0].source).toBe("hist");
     const histRows = collectHistoryTwaps(hist);
-    expect(histRows.map((r) => r.twapId)).toEqual([3, 1, 2]);
+    expect(histRows).toHaveLength(3);
+  });
+
+  it("history fallback excludes activated past duration or fully filled", () => {
+    const start = Date.UTC(2026, 8, 15, 20, 0, 0);
+    const now = start + 40 * 60_000;
+    expect(isTwapStillRunning({ timestamp: start, minutes: 30, sz: "1", executedSz: "0" }, now)).toBe(false);
+    expect(isTwapStillRunning({ timestamp: start, minutes: 60, sz: "1", executedSz: "1" }, now)).toBe(false);
+    expect(isTwapStillRunning({ timestamp: start, minutes: 60, sz: "1", executedSz: "0.2" }, now)).toBe(true);
+
+    const hist = [
+      {
+        twapId: 20,
+        time: start / 1000,
+        state: { coin: "BTC", sz: "1", executedSz: "0", timestamp: start, minutes: 30 },
+        status: { status: "activated" },
+      },
+      {
+        twapId: 21,
+        time: start / 1000,
+        state: { coin: "ETH", sz: "2", executedSz: "2", timestamp: start, minutes: 60 },
+        status: { status: "activated" },
+      },
+    ];
+    expect(collectActiveTwaps(null, hist, now)).toHaveLength(0);
   });
 
   it("unwraps slice fills", () => {
