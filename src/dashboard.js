@@ -9,6 +9,15 @@ import {
   pnlClass,
 } from "./format.js";
 import { buildTradeHistoryTable } from "./fills.js";
+import {
+  buildTwapActiveTable,
+  buildTwapFillHistoryTable,
+  buildTwapHistoryTable,
+  collectActiveTwaps,
+  collectHistoryTwaps,
+  unwrapTwapSliceFills,
+} from "./twap-hist.js";
+import { loadTwapSliceFills } from "./api.js";
 import { formatFeePct } from "./ticket-math.js";
 import { buildBalanceRows, formatPnlPct } from "./balances.js";
 import { setHistTabLabel } from "./open-orders.js";
@@ -233,6 +242,8 @@ let portPeriod = "week";
 let portChart = "pnl";
 let portAcct = "all";
 let portHistTab = "balances";
+let portTwapSubTab = "active";
+let portTwapFillsEnsured = false;
 let portHideSmall = true;
 let chartResizeBound = false;
 let portMenuDocBound = false;
@@ -346,6 +357,9 @@ function bindPortHistOnce() {
     });
     const hideWrap = document.getElementById("port-bal-hide-wrap");
     if (hideWrap) hideWrap.classList.toggle("hidden", portHistTab !== "balances");
+    if (portHistTab === "twap" && dash._lastState && dash._lastState.address) {
+      ensurePortTwapFills(dash._lastState);
+    }
   });
   dash.addEventListener("change", (ev) => {
     const t = ev.target;
@@ -436,6 +450,22 @@ function histTable(headers, rows) {
   );
 }
 
+async function ensurePortTwapFills(state) {
+  if (!state || !state.address || portTwapFillsEnsured) {
+    if (state) renderPortHist(state);
+    return;
+  }
+  portTwapFillsEnsured = true;
+  try {
+    const rows = await loadTwapSliceFills(state.address);
+    const prev = state.extras || {};
+    state.extras = { ...prev, twapFills: rows };
+  } catch {
+    /* keep */
+  }
+  renderPortHist(state);
+}
+
 function paintPortHistTab(tab, base, count) {
   setHistTabLabel(document.querySelector('#dashboard [data-port-tab="' + tab + '"]'), base, count);
 }
@@ -443,6 +473,7 @@ function paintPortHistTab(tab, base, count) {
 function renderPortHist(state) {
   bindPortHistOnce();
   const connected = !!(state && state.address);
+  if (!connected) portTwapFillsEnsured = false;
   const data = (state && state.data) || {};
   const extras = (state && state.extras) || {};
   const empty = (rootId, noun) => {
@@ -616,29 +647,75 @@ function renderPortHist(state) {
 
   const twapRoot = document.getElementById("port-twap");
   if (twapRoot) {
+    const hist = extras.twapHistory || [];
+    const activeRows = collectActiveTwaps([], hist);
+    paintPortHistTab("twap", "TWAP", connected ? activeRows.length : 0);
     if (!connected) empty("port-twap", "TWAPs");
     else {
-      const hist = extras.twapHistory || [];
-      if (!hist.length) emptyHist(twapRoot, "No TWAP orders.");
-      else {
-        clear(twapRoot);
-        twapRoot.appendChild(
-          histTable(
-            ["Coin", "Side", "Size", "Minutes", "Status"],
-            hist.slice(0, 50).map((t) => {
-              const st = t.state || t;
-              return h(
-                "tr",
-                null,
-                h("td", null, st.coin || "--"),
-                h("td", { class: st.side === "B" ? "text-buy" : "text-sell" }, st.side === "B" ? "Buy" : "Sell"),
-                h("td", null, fmtQty(st.sz)),
-                h("td", null, String(st.minutes || "")),
-                h("td", null, st.status || "--")
-              );
-            })
+      clear(twapRoot);
+      twapRoot.appendChild(
+        h(
+          "div",
+          { class: "twap-sub-tabs", role: "tablist", "aria-label": "TWAP views" },
+          ...[
+            ["active", "Active"],
+            ["history", "History"],
+            ["fills", "Fill History"],
+          ].map(([id, label]) =>
+            h(
+              "button",
+              {
+                type: "button",
+                class: "twap-sub-tab",
+                "data-port-twap-sub": id,
+                "aria-selected": portTwapSubTab === id ? "true" : "false",
+                onClick: () => {
+                  portTwapSubTab = id;
+                  if (id === "fills" && state.address) {
+                    ensurePortTwapFills(state);
+                  } else if (state) {
+                    renderPortHist(state);
+                  }
+                },
+              },
+              label
+            )
           )
-        );
+        )
+      );
+      const body = h("div", { class: "twap-sub-body" });
+      twapRoot.appendChild(body);
+      if (portTwapSubTab === "active") {
+        if (!activeRows.length) emptyHist(body, "No active TWAP orders.");
+        else body.appendChild(buildTwapActiveTable(h, activeRows, { canTerminate: false }));
+      } else if (portTwapSubTab === "history") {
+        const rows = collectHistoryTwaps(hist);
+        if (!rows.length) emptyHist(body, "No TWAP history.");
+        else body.appendChild(buildTwapHistoryTable(h, rows));
+      } else {
+        if (!portTwapFillsEnsured) {
+          emptyHist(body, "Loading TWAP fills…");
+          ensurePortTwapFills(state);
+        } else {
+          const fills = unwrapTwapSliceFills(extras.twapFills || []);
+          if (!fills.length) emptyHist(body, "No TWAP slice fills.");
+          else {
+            body.appendChild(
+              buildTwapFillHistoryTable(h, fills, {
+                marketLabel: (f) => {
+                  const coin = f && f.coin;
+                  const m = (state.markets || []).find(
+                    (x) =>
+                      x &&
+                      (x.coin === coin || x.noCoin === coin || x.balanceCoin === coin || x.id === coin)
+                  );
+                  if (m && m.kind === "outcome") return m.pair || coin || "—";
+                  return coin || "—";
+                },
+              })
+            );
+          }
+        }
       }
     }
   }

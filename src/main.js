@@ -310,7 +310,13 @@ async function refreshAccount(address) {
         .catch(() => emptyExtras)
         .then((extra) => {
           if (gen !== refreshAccount._gen) return;
-          state.extras = extra || emptyExtras;
+          const next = extra || emptyExtras;
+          const prevFills = state.extras && state.extras.twapFills;
+          // Preserve lazily loaded twapFills (loadTradeExtras does not fetch them).
+          if ((!next.twapFills || !next.twapFills.length) && prevFills && prevFills.length) {
+            next.twapFills = prevFills;
+          }
+          state.extras = next;
           paint();
         });
     }, 400);

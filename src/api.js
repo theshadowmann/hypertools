@@ -423,6 +423,7 @@ export async function loadDailyPrevDay(coin) {
 
 export async function loadTradeExtras(address) {
   // Sequential + small set — avoid stacking another 5-way burst on connect.
+  // TWAP slice fills are loaded lazily via loadTwapSliceFills when the TWAP tab opens.
   const startTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const historicalOrders = await hlInfo({ type: "historicalOrders", user: address }).catch(() => []);
   await sleep(150);
@@ -436,6 +437,14 @@ export async function loadTradeExtras(address) {
     twapFills: [],
     userFees: null,
   };
+}
+
+
+/** Lazy: userTwapSliceFills — call when TWAP / Fill History is opened, not on connect. */
+export async function loadTwapSliceFills(address) {
+  if (!address) return [];
+  const rows = await hlInfo({ type: "userTwapSliceFills", user: address }).catch(() => []);
+  return Array.isArray(rows) ? rows : [];
 }
 
 export function bookLevels(snapshot) {

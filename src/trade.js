@@ -2,6 +2,7 @@ import {
   bookLevels,
   hlInfo,
   loadDailyPrevDay,
+  loadTwapSliceFills,
 } from "./api.js";
 import { clear, h, note } from "./dom.js";
 import {
@@ -113,6 +114,14 @@ import {
   buildTradeHistoryTable,
   filterFillsByPage,
 } from "./fills.js";
+import {
+  buildTwapActiveTable,
+  buildTwapFillHistoryTable,
+  buildTwapHistoryTable,
+  collectActiveTwaps,
+  collectHistoryTwaps,
+  unwrapTwapSliceFills,
+} from "./twap-hist.js";
 
 function byId(id) {
   return document.getElementById(id);
@@ -162,6 +171,9 @@ export function createTradeView(app) {
   let twaps = [];
   let extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: null };
   let bottomTab = "balances";
+  let twapSubTab = "active";
+  let twapFillsEnsured = false;
+  let twapTickTimer = null;
   let fillsTabEnsured = false;
   let hideSmallBalances = true;
   let cancelBusy = false;
@@ -1758,75 +1770,139 @@ export function createTradeView(app) {
     );
   }
 
+  function stopTwapTick() {
+    if (twapTickTimer) {
+      clearInterval(twapTickTimer);
+      twapTickTimer = null;
+    }
+  }
+
+  function syncTwapTick() {
+    const need =
+      bottomTab === "twap" && twapSubTab === "active" && app.state.address && collectActiveTwaps(twaps, extras.twapHistory || []).length > 0;
+    if (need && !twapTickTimer) {
+      twapTickTimer = setInterval(() => {
+        if (bottomTab === "twap" && twapSubTab === "active") renderTwap();
+        else stopTwapTick();
+      }, 1000);
+    } else if (!need) {
+      stopTwapTick();
+    }
+  }
+
+  async function ensureTwapSliceFills() {
+    if (!app.state.address) return;
+    if (twapFillsEnsured) return;
+    twapFillsEnsured = true;
+    try {
+      const rows = await loadTwapSliceFills(app.state.address);
+      extras = { ...extras, twapFills: rows };
+      if (app.state.extras) app.state.extras = { ...app.state.extras, twapFills: rows };
+    } catch {
+      /* keep previous */
+    }
+    if (bottomTab === "twap") renderTwap();
+  }
+
   function renderTwap() {
     const root = byId("trade-twap");
     if (!root) return;
     clear(root);
+    const histAll = forThisPage(extras.twapHistory || []);
+    const liveAll = forThisPage(twaps || []);
+    const activeRows = collectActiveTwaps(liveAll, histAll);
+    paintBottomTab("twap", "TWAP", activeRows.length);
+
     if (!app.state.address) {
+      stopTwapTick();
       root.appendChild(emptyNote("Connect a wallet to trade, or paste an address to load TWAPs."));
       return;
     }
-    const hist = forThisPage(extras.twapHistory || []);
-    const fills = forThisPage(extras.twapFills || []);
-    const live = forThisPage(twaps || []);
-    if (!hist.length && !live.length && !fills.length) {
-      root.appendChild(emptyNote(pageKind === "outcome" ? "No outcome TWAPs." : "No TWAP orders."));
+
+    const subTabs = h(
+      "div",
+      { class: "twap-sub-tabs", role: "tablist", "aria-label": "TWAP views" },
+      ...[
+        ["active", "Active"],
+        ["history", "History"],
+        ["fills", "Fill History"],
+      ].map(([id, label]) =>
+        h(
+          "button",
+          {
+            type: "button",
+            class: "twap-sub-tab",
+            "data-twap-sub": id,
+            "aria-selected": twapSubTab === id ? "true" : "false",
+            onClick: () => {
+              twapSubTab = id;
+              if (id === "fills") ensureTwapSliceFills();
+              renderTwap();
+            },
+          },
+          label
+        )
+      )
+    );
+    root.appendChild(subTabs);
+    const body = h("div", { class: "twap-sub-body" });
+    root.appendChild(body);
+
+    if (twapSubTab === "active") {
+      if (!activeRows.length) {
+        body.appendChild(emptyNote(pageKind === "outcome" ? "No active outcome TWAPs." : "No active TWAP orders."));
+      } else {
+        body.appendChild(
+          buildTwapActiveTable(h, activeRows, {
+            canTerminate: canTrade(),
+            onTerminate: (c, id) => onCancelTwap(c, id),
+          })
+        );
+      }
+      syncTwapTick();
       return;
     }
-    const rows = [];
-    live.forEach((t) => {
-      const st = t.state || t;
-      rows.push(
-        h(
-          "tr",
-          null,
-          h("td", { class: "px-2 py-1.5 text-white" }, st.coin || "—"),
-          h("td", { class: "px-2 py-1.5" }, st.side === "B" ? "Buy" : "Sell"),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(st.sz)),
-          h("td", { class: "px-2 py-1.5" }, String(st.minutes || "") + "m"),
-          h("td", { class: "px-2 py-1.5" }, "activated"),
-          h(
-            "td",
-            { class: "px-2 py-1.5" },
-            canTrade() && t.id != null
-              ? h("button", { type: "button", class: "text-sell hover:underline", onClick: () => onCancelTwap(st.coin || "", Number(t.id)) }, "Cancel")
-              : ""
-          )
+
+    stopTwapTick();
+
+    if (twapSubTab === "history") {
+      const rows = collectHistoryTwaps(histAll);
+      if (!rows.length) {
+        body.appendChild(emptyNote(pageKind === "outcome" ? "No outcome TWAP history." : "No TWAP history."));
+      } else {
+        body.appendChild(buildTwapHistoryTable(h, rows));
+      }
+      return;
+    }
+
+    // Fill History
+    if (!twapFillsEnsured) {
+      body.appendChild(emptyNote("Loading TWAP fills…"));
+      ensureTwapSliceFills();
+      return;
+    }
+    const sliceRows = unwrapTwapSliceFills(extras.twapFills || []);
+    const fills = forThisPage(sliceRows);
+    if (!fills.length) {
+      body.appendChild(
+        emptyNote(
+          pageKind === "outcome"
+            ? "No outcome TWAP fills."
+            : "No TWAP slice fills. (Loaded via userTwapSliceFills.)"
         )
       );
-    });
-    hist.slice(0, 40).forEach((t) => {
-      const st = t.state || {};
-      const status = t.status && t.status.status ? t.status.status : "";
-      rows.push(
-        h(
-          "tr",
-          null,
-          h("td", { class: "px-2 py-1.5 text-white" }, st.coin || "—"),
-          h("td", { class: "px-2 py-1.5" }, st.side === "B" ? "Buy" : "Sell"),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(st.sz)),
-          h("td", { class: "px-2 py-1.5" }, String(st.minutes || "") + "m"),
-          h("td", { class: "px-2 py-1.5" }, status),
-          h("td", { class: "px-2 py-1.5" }, "")
-        )
-      );
-    });
-    fills.slice(0, 20).forEach((f) => {
-      const fill = f.fill || f;
-      rows.push(
-        h(
-          "tr",
-          null,
-          h("td", { class: "px-2 py-1.5 text-white" }, fill.coin || "—"),
-          h("td", { class: "px-2 py-1.5" }, fill.side === "B" ? "Buy" : "Sell"),
-          h("td", { class: "px-2 py-1.5 font-mono" }, fmtQty(fill.sz)),
-          h("td", { class: "px-2 py-1.5" }, "slice"),
-          h("td", { class: "px-2 py-1.5" }, fill.closedPnl != null ? "filled" : "slice fill"),
-          h("td", { class: "px-2 py-1.5" }, "")
-        )
-      );
-    });
-    root.appendChild(histTable(["Coin", "Side", "Size", "Minutes", "Status", ""], rows));
+      return;
+    }
+    body.appendChild(
+      buildTwapFillHistoryTable(h, fills, {
+        outcome: pageKind === "outcome",
+        marketLabel: (f) => {
+          const m = marketForCoin(f && f.coin);
+          if (m && m.kind === "outcome") return m.pair || f.coin || "—";
+          return (f && f.coin) || "—";
+        },
+      })
+    );
   }
 
   function renderFills() {
@@ -2085,6 +2161,8 @@ export function createTradeView(app) {
   async function refreshUserTables() {
     if (!app.state.address) {
       fillsTabEnsured = false;
+      twapFillsEnsured = false;
+      stopTwapTick();
       extras = { historicalOrders: [], fundingHistory: [], twapHistory: [], twapFills: [], userFees: extras.userFees };
       renderBottom();
       return;
@@ -2105,7 +2183,14 @@ export function createTradeView(app) {
         app.state.data.fills = Array.isArray(fills) ? fills : [];
       }
       // History extras come from main.refreshAccount — sync if already present.
-      if (app.state.extras) extras = app.state.extras;
+      // Keep lazily loaded TWAP slice fills (loadTradeExtras leaves twapFills empty).
+      if (app.state.extras) {
+        const prevTwapFills = extras.twapFills;
+        extras = { ...app.state.extras };
+        if ((!extras.twapFills || !extras.twapFills.length) && prevTwapFills && prevTwapFills.length) {
+          extras.twapFills = prevTwapFills;
+        }
+      }
     } catch {
       /* keep previous */
     }
@@ -2204,6 +2289,8 @@ export function createTradeView(app) {
     const user = app.state.address;
     if (!user) {
       twaps = [];
+      twapFillsEnsured = false;
+      stopTwapTick();
       renderBottom();
       return;
     }
@@ -2507,6 +2594,12 @@ export function createTradeView(app) {
         byId("bal-hide-wrap")?.classList.toggle("hidden", bottomTab !== "balances");
         byId("out-filter-wrap")?.classList.toggle("hidden", bottomTab !== "outcomes");
         if (bottomTab === "fills") ensureTradeFills();
+        if (bottomTab === "twap") {
+          ensureTwapSliceFills();
+          renderTwap();
+        } else {
+          stopTwapTick();
+        }
       });
     });
     byId("bal-hide-small")?.addEventListener("change", (ev) => {
@@ -2579,6 +2672,8 @@ export function createTradeView(app) {
     onAccount() {
       enabled = false;
       fillsTabEnsured = false;
+      twapFillsEnsured = false;
+      stopTwapTick();
       refreshEnabled();
       subscribeUser();
       renderBottom();
@@ -2586,7 +2681,13 @@ export function createTradeView(app) {
       if (app.state.address) refreshUserTables();
     },
     onData() {
-      if (app.state.extras) extras = app.state.extras;
+      if (app.state.extras) {
+        const prevTwapFills = extras.twapFills;
+        extras = { ...app.state.extras };
+        if ((!extras.twapFills || !extras.twapFills.length) && prevTwapFills && prevTwapFills.length) {
+          extras.twapFills = prevTwapFills;
+        }
+      }
       syncLeverageFromPos();
       renderBottom();
       updateEstimate();
