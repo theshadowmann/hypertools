@@ -20,7 +20,6 @@ export function popupHint(name) {
 export function setConnectUiStatus(msg, kind) {
   const nodes = [
     typeof document !== "undefined" ? document.getElementById("ticket-status") : null,
-    typeof document !== "undefined" ? document.getElementById("nav-connect-status") : null,
     typeof document !== "undefined" ? document.getElementById("ht-connect-status") : null,
   ];
   nodes.forEach((el) => {
@@ -35,7 +34,7 @@ export function markConnectButtonsOpening() {
   if (typeof document === "undefined") return;
   const nav = document.getElementById("btn-nav-connect");
   if (nav) {
-    if (!nav.dataset.htLabel) nav.dataset.htLabel = nav.textContent || "Connect to trade";
+    if (!nav.dataset.htLabel) nav.dataset.htLabel = nav.textContent || "Connect wallet";
     nav.textContent = OPENING_WALLET_MSG;
   }
   const ticket = document.getElementById("ticket-submit");

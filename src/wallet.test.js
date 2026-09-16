@@ -40,7 +40,7 @@ function rabbyEntry(request) {
 function connectDom() {
   document.body.innerHTML =
     '<span id="nav-connect-status"></span>' +
-    '<button id="btn-nav-connect" type="button">Connect to trade</button>' +
+    '<button id="btn-nav-connect" type="button">Connect wallet</button>' +
     '<p id="ticket-status"></p>' +
     '<button id="ticket-submit" type="button" class="ticket-submit connect">Connect wallet</button>';
 }
@@ -92,7 +92,7 @@ describe("main.js boot without landing paste-form", () => {
   it("binds #btn-nav-connect when #paste-form is missing", () => {
     resetConnectCaptureForTests();
     document.body.innerHTML =
-      '<button id="btn-nav-connect" type="button">Connect to trade</button>' +
+      '<button id="btn-nav-connect" type="button">Connect wallet</button>' +
       '<p id="ticket-status"></p>';
     const connectFromNav = vi.fn();
     expect(() =>
