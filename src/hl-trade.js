@@ -374,4 +374,4 @@ export async function setLeverage({ source, address, provider, asset, isCross, l
   });
 }
 
-export { invalidateAgentOnWalletError, isMissingApiWalletError, userMessage };
+export { isMissingApiWalletError, userMessage };
